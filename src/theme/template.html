@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Peniel — Ministério Profético Casa de Adoração</title>
+  <link rel="icon" href="/docs/Foguinho%20vazado.png" type="image/png" />
+  <link rel="apple-touch-icon" href="/docs/Foguinho%20vazado.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cor-primaria:     #D4161B;
+      --cor-chama:        #E8000D;
+      --cor-dourado:      #FFB300;
+      --cor-dourado-claro:#FFD54F;
+      --cor-branco:       #FFFFFF;
+      --cor-fundo:        #0F0000;
+      --cor-fundo-card:   #1A0505;
+      --cor-fundo-claro:  #FFF5F5;
+      --cor-texto:        #FFFFFF;
+      --cor-texto-escuro: #1A0000;
+      --cor-texto-mutado: #A08080;
+      --cor-borda:        #4A1010;
+      --cor-borda-clara:  #FFD0D0;
+      --cor-sucesso:      #4CAF50;
+      --cor-alerta:       #FF9800;
+      --cor-erro:         #F44336;
+      --fonte-display:    'Playfair Display', Georgia, serif;
+      --fonte-corpo:      'Inter', 'Segoe UI', sans-serif;
+      --fonte-script:     'Dancing Script', cursive;
+      --raio:             8px;
+      --raio-grande:      16px;
+      --sombra-card:      0 4px 24px rgba(212,22,27,0.15);
+      --sombra-destaque:  0 0 20px rgba(232,0,13,0.4);
+    }
+
+    body {
+      font-family: var(--fonte-corpo);
+      background: var(--cor-fundo);
+      color: var(--cor-texto);
+      min-height: 100vh;
+    }
+
+    /* ===== HEADER / NAVBAR ===== */
+    .header {
+      background: linear-gradient(135deg, #1A0000 0%, #3D0000 50%, #1A0000 100%);
+      border-bottom: 2px solid var(--cor-primaria);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .header-logo img.icone {
+      height: 44px;
+      width: auto;
+      filter: drop-shadow(0 0 8px rgba(232,0,13,0.6));
+    }
+
+    .header-logo img.logo-principal {
+      height: 40px;
+      width: auto;
+    }
+
+    .header-nav {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+
+    .header-nav a {
+      color: var(--cor-texto-mutado);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .header-nav a:hover,
+    .header-nav a.ativo {
+      color: var(--cor-dourado);
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      background: linear-gradient(135deg, #1A0000 0%, #3D0000 50%, #1A0000 100%);
+      padding: 4rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(212,22,27,0.15) 0%, transparent 70%);
+    }
+
+    .hero-icone {
+      height: 80px;
+      filter: drop-shadow(0 0 20px rgba(232,0,13,0.7));
+      margin-bottom: 1.5rem;
+      animation: pulsar 3s ease-in-out infinite;
+    }
+
+    @keyframes pulsar {
+      0%, 100% { filter: drop-shadow(0 0 20px rgba(232,0,13,0.7)); }
+      50%       { filter: drop-shadow(0 0 35px rgba(255,179,0,0.8)); }
+    }
+
+    .hero-logo {
+      max-width: 600px;
+      width: 90%;
+      margin: 0 auto 1rem;
+      filter: brightness(0) invert(1);
+    }
+
+    .hero-subtitulo {
+      font-family: var(--fonte-script);
+      font-size: 1.5rem;
+      color: var(--cor-dourado);
+      margin-top: 0.5rem;
+    }
+
+    /* ===== SEÇÃO PRINCIPAL ===== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .secao-titulo {
+      font-family: var(--fonte-display);
+      font-size: 1.75rem;
+      color: var(--cor-primaria);
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .secao-titulo::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, var(--cor-primaria), transparent);
+    }
+
+    /* ===== CARDS ===== */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .card {
+      background: var(--cor-fundo-card);
+      border: 1px solid var(--cor-borda);
+      border-radius: var(--raio-grande);
+      padding: 1.5rem;
+      box-shadow: var(--sombra-card);
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+
+    .card:hover {
+      border-color: var(--cor-primaria);
+      box-shadow: var(--sombra-destaque);
+      transform: translateY(-2px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-icone {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--cor-primaria), #8B0000);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .card-titulo {
+      font-family: var(--fonte-display);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--cor-branco);
+    }
+
+    .card-subtitulo {
+      font-size: 0.75rem;
+      color: var(--cor-texto-mutado);
+    }
+
+    .card-corpo {
+      font-size: 0.875rem;
+      color: var(--cor-texto-mutado);
+      line-height: 1.6;
+    }
+
+    /* ===== BADGES / TAGS ===== */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .badge-vermelho  { background: rgba(212,22,27,0.2);  color: #FF6B6B; border: 1px solid rgba(212,22,27,0.4); }
+    .badge-dourado   { background: rgba(255,179,0,0.15); color: var(--cor-dourado);  border: 1px solid rgba(255,179,0,0.3); }
+    .badge-sucesso   { background: rgba(76,175,80,0.15); color: #81C784;  border: 1px solid rgba(76,175,80,0.3); }
+    .badge-info      { background: rgba(33,150,243,0.15);color: #64B5F6;  border: 1px solid rgba(33,150,243,0.3); }
+
+    /* ===== ESCALA / TABELA ===== */
+    .tabela-wrapper {
+      overflow-x: auto;
+      border-radius: var(--raio-grande);
+      border: 1px solid var(--cor-borda);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: linear-gradient(135deg, #3D0000, #1A0505);
+      color: var(--cor-dourado);
+      font-family: var(--fonte-display);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 1rem 1.25rem;
+      text-align: left;
+    }
+
+    td {
+      padding: 0.875rem 1.25rem;
+      border-top: 1px solid var(--cor-borda);
+      color: var(--cor-texto);
+      font-size: 0.875rem;
+    }
+
+    tr:hover td {
+      background: rgba(212,22,27,0.05);
+    }
+
+    /* ===== BOTÕES ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.4rem;
+      border-radius: var(--raio);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-primario {
+      background: linear-gradient(135deg, var(--cor-primaria), #8B0000);
+      color: var(--cor-branco);
+      box-shadow: 0 2px 12px rgba(212,22,27,0.35);
+    }
+
+    .btn-primario:hover {
+      box-shadow: 0 4px 20px rgba(212,22,27,0.55);
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--cor-primaria);
+      border: 1px solid var(--cor-primaria);
+    }
+
+    .btn-outline:hover {
+      background: rgba(212,22,27,0.1);
+    }
+
+    .btn-dourado {
+      background: linear-gradient(135deg, var(--cor-dourado), #E65100);
+      color: var(--cor-texto-escuro);
+    }
+
+    /* ===== AGENTE / CHAT ===== */
+    .chat-wrapper {
+      background: var(--cor-fundo-card);
+      border: 1px solid var(--cor-borda);
+      border-radius: var(--raio-grande);
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background: linear-gradient(135deg, #3D0000, #1A0505);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--cor-borda);
+    }
+
+    .chat-header-icone {
+      height: 32px;
+      filter: drop-shadow(0 0 6px rgba(232,0,13,0.6));
+    }
+
+    .chat-header-titulo {
+      font-family: var(--fonte-display);
+      font-size: 1rem;
+      color: var(--cor-branco);
+    }
+
+    .chat-header-status {
+      font-size: 0.7rem;
+      color: var(--cor-sucesso);
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .chat-header-status::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--cor-sucesso);
+      animation: piscar 1.5s infinite;
+    }
+
+    @keyframes piscar {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    .chat-mensagens {
+      padding: 1.5rem;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .mensagem-agente {
+      background: linear-gradient(135deg, rgba(212,22,27,0.1), rgba(139,0,0,0.1));
+      border-left: 3px solid var(--cor-primaria);
+      border-radius: 0 var(--raio) var(--raio) 0;
+      padding: 1rem 1.25rem;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      max-width: 80%;
+    }
+
+    .mensagem-usuario {
+      background: rgba(255,255,255,0.05);
+      border-right: 3px solid var(--cor-dourado);
+      border-radius: var(--raio) 0 0 var(--raio);
+      padding: 1rem 1.25rem;
+      font-size: 0.9rem;
+      align-self: flex-end;
+      max-width: 80%;
+    }
+
+    .chat-input {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--cor-borda);
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .chat-input input {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--cor-borda);
+      border-radius: var(--raio);
+      color: var(--cor-texto);
+      padding: 0.65rem 1rem;
+      font-family: var(--fonte-corpo);
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .chat-input input:focus {
+      border-color: var(--cor-primaria);
+    }
+
+    .chat-input input::placeholder {
+      color: var(--cor-texto-mutado);
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      border-top: 1px solid var(--cor-borda);
+      padding: 2rem;
+      text-align: center;
+      color: var(--cor-texto-mutado);
+      font-size: 0.8rem;
+    }
+
+    .footer-logo {
+      height: 32px;
+      opacity: 0.6;
+      margin-bottom: 0.75rem;
+      filter: brightness(0) invert(1);
+    }
+
+    /* ===== UTILITÁRIOS ===== */
+    .flex         { display: flex; }
+    .items-center { align-items: center; }
+    .gap-2        { gap: 0.5rem; }
+    .gap-4        { gap: 1rem; }
+    .mt-4         { margin-top: 1rem; }
+    .mb-4         { margin-bottom: 1rem; }
+    .text-dourado { color: var(--cor-dourado); }
+    .text-vermelho{ color: var(--cor-primaria); }
+    .text-mutado  { color: var(--cor-texto-mutado); }
+    .font-display { font-family: var(--fonte-display); }
+    .font-script  { font-family: var(--fonte-script); }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-logo">
+      <img class="icone" src="/docs/Foguinho vazado.png" alt="Peniel" />
+      <img class="logo-principal" src="/docs/LOGO OFICIAL.png" alt="Peniel Ministério Profético Casa de Adoração" />
+    </div>
+    <nav class="header-nav">
+      <a href="#escalas" class="ativo">Escalas</a>
+      <a href="#equipe">Equipe</a>
+      <a href="#departamentos">Departamentos</a>
+      <a href="#agente">Pastor IA</a>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <img class="hero-icone" src="/docs/Foguinho vazado.png" alt="" />
+    <img class="hero-logo" src="/docs/LOGO OFICIAL.png" alt="Peniel" />
+    <p class="hero-subtitulo">Sistema de Gestão da Equipe de Mídia</p>
+  </section>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="container">
+
+    <!-- CARDS RESUMO -->
+    <section id="escalas">
+      <h2 class="secao-titulo">📅 Próximas Escalas</h2>
+      <div class="grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icone">🎥</div>
+            <div>
+              <div class="card-titulo">Câmera</div>
+              <div class="card-subtitulo">Domingo — 11/05/2026</div>
+            </div>
+          </div>
+          <div class="card-corpo">Voluntários: João, Maria</div>
+          <div class="mt-4">
+            <span class="badge badge-sucesso">Confirmada</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icone">🎵</div>
+            <div>
+              <div class="card-titulo">Som / Áudio</div>
+              <div class="card-subtitulo">Domingo — 11/05/2026</div>
+            </div>
+          </div>
+          <div class="card-corpo">Voluntários: Pedro</div>
+          <div class="mt-4">
+            <span class="badge badge-alerta">Aguardando confirmação</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icone">📺</div>
+            <div>
+              <div class="card-titulo">Transmissão ao vivo</div>
+              <div class="card-subtitulo">Domingo — 11/05/2026</div>
+            </div>
+          </div>
+          <div class="card-corpo">Sem voluntário escalado</div>
+          <div class="mt-4">
+            <span class="badge badge-vermelho">Vaga em aberto</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABELA DE ESCALAS -->
+    <section>
+      <h2 class="secao-titulo">📋 Histórico de Escalas</h2>
+      <div class="tabela-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Departamento</th>
+              <th>Voluntários</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>11/05/2026</td>
+              <td>Câmera</td>
+              <td>João, Maria</td>
+              <td><span class="badge badge-sucesso">Confirmada</span></td>
+            </tr>
+            <tr>
+              <td>11/05/2026</td>
+              <td>Som</td>
+              <td>Pedro</td>
+              <td><span class="badge badge-alerta">Pendente</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- AGENTE IA -->
+    <section id="agente" class="mt-4" style="margin-top:2.5rem">
+      <h2 class="secao-titulo">🔥 Pastor da Mídia — IA</h2>
+      <div class="chat-wrapper">
+        <div class="chat-header">
+          <img class="chat-header-icone" src="/docs/Foguinho vazado.png" alt="" />
+          <div>
+            <div class="chat-header-titulo">Pastor da Mídia</div>
+            <div class="chat-header-status">Conectado</div>
+          </div>
+        </div>
+        <div class="chat-mensagens">
+          <div class="mensagem-agente">
+            🔥 Shalom! Sou o Pastor da Mídia da Peniel. Posso criar escalas, sugerir voluntários e organizar sua equipe. Como posso ajudar hoje?
+          </div>
+        </div>
+        <div class="chat-input">
+          <input type="text" placeholder="Pergunte ao Pastor da Mídia... ex: Crie uma escala para câmera no domingo" />
+          <button class="btn btn-primario">Enviar 🔥</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <img class="footer-logo" src="/docs/LOGO OFICIAL.png" alt="Peniel" />
+    <p>Peniel — Ministério Profético Casa de Adoração</p>
+    <p style="margin-top:0.25rem">Sistema de Gestão da Equipe de Mídia</p>
+  </footer>
+
+</body>
+</html>

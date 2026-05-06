@@ -1,0 +1,4347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Peniel — Sistema de Mídia</title>
+  <link rel="icon" href="/docs/Foguinho%20vazado.png" type="image/png"/>
+  <link rel="apple-touch-icon" href="/docs/Foguinho%20vazado.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primaria:      #c94a52;
+      --primaria-muda: #a63d44;
+      --dourado:       #c9a876;
+      --acento:        #8b9dc3;
+      --fundo:         #0c0e11;
+      --fundo-elevado: #12151a;
+      --fundo-card:    #161a21;
+      --texto:         #e8eaed;
+      --texto-mutado:  #8d96a3;
+      --borda:         rgba(255, 255, 255, 0.07);
+      --borda-forte:   rgba(255, 255, 255, 0.11);
+      --sucesso:       #5cad6a;
+      --alerta:        #d4a017;
+      --erro:          #e85d5d;
+      --info:          #6b9bd1;
+      --raio:          10px;
+      --raio-lg:       14px;
+      --sombra-card:   0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 32px rgba(0, 0, 0, 0.28);
+      --fonte-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --fonte-corpo:   'Inter', system-ui, sans-serif;
+    }
+
+    body {
+      font-family: var(--fonte-corpo);
+      background: var(--fundo);
+      color: var(--texto);
+      min-height: 100vh;
+      font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── LOGIN ─────────────────────────────────────────────── */
+    #tela-login {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(ellipse 120% 80% at 50% -20%, rgba(201, 74, 82, 0.12), transparent 50%),
+        radial-gradient(ellipse 80% 50% at 100% 100%, rgba(139, 157, 195, 0.06), transparent 45%),
+        linear-gradient(165deg, #0c0e11 0%, #10141a 100%);
+      padding: 1.5rem;
+    }
+
+    .login-card {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio-lg);
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: var(--sombra-card);
+      text-align: center;
+    }
+
+    .login-icone {
+      height: 56px;
+      opacity: 0.92;
+      margin-bottom: 1rem;
+    }
+
+    .login-logo {
+      max-width: 200px;
+      filter: brightness(0) invert(1);
+      opacity: 0.94;
+      margin-bottom: 0.35rem;
+    }
+
+    .login-subtitulo {
+      font-family: var(--fonte-corpo);
+      color: var(--texto-mutado);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      margin-bottom: 1.5rem;
+      line-height: 1.45;
+    }
+
+    .login-titulo-painel {
+      font-family: var(--fonte-display);
+      color: var(--texto);
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      text-align: center;
+      letter-spacing: -0.02em;
+    }
+
+    .login-painel.oculto { display: none !important; }
+
+    .login-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      margin-top: 1.25rem;
+      text-align: center;
+      font-size: 0.82rem;
+    }
+
+    .login-links button.link {
+      background: none;
+      border: none;
+      color: var(--acento);
+      cursor: pointer;
+      font-family: var(--fonte-corpo);
+      font-size: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(139, 157, 195, 0.35);
+      padding: 0 0 1px 0;
+    }
+
+    .login-links button.link:hover { color: #a8b8de; border-bottom-color: rgba(168, 184, 222, 0.5); }
+
+    .login-links .muted {
+      color: var(--texto-mutado);
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    /* ── FORMS ─────────────────────────────────────────────── */
+    .form-grupo {
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+
+    .form-grupo label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--texto-mutado);
+      letter-spacing: 0.01em;
+      margin-bottom: 0.4rem;
+    }
+
+    .form-grupo input,
+    .form-grupo select,
+    .form-grupo textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--borda-forte);
+      border-radius: var(--raio);
+      color: var(--texto);
+      padding: 0.65rem 1rem;
+      font-family: var(--fonte-corpo);
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .form-grupo input:focus,
+    .form-grupo select:focus,
+    .form-grupo textarea:focus {
+      border-color: rgba(201, 74, 82, 0.45);
+      box-shadow: 0 0 0 3px rgba(201, 74, 82, 0.12);
+    }
+    .form-grupo input::placeholder { color: var(--texto-mutado); opacity: 0.75; }
+    .form-grupo textarea::placeholder { color: var(--texto-mutado); opacity: 0.75; }
+    .form-grupo select option { background: #1a1f26; color: var(--texto); }
+
+    /* Campos de mensagem fixos, porém responsivos ao tamanho da tela */
+    #conv-mensagem,
+    #aviso-corpo {
+      resize: none;
+      height: clamp(140px, 24vh, 300px);
+      min-height: 140px;
+      max-height: 300px;
+    }
+
+    .select-inline {
+      padding: 0.35rem 0.65rem;
+      border-radius: var(--raio);
+      border: 1px solid var(--borda-forte);
+      background: rgba(255,255,255,0.04);
+      color: var(--texto);
+      font-size: 0.8125rem;
+      max-width: 12rem;
+      font-family: var(--fonte-corpo);
+    }
+    .select-inline:focus { outline: none; border-color: rgba(201, 74, 82, 0.45); }
+    .select-inline option { background: #1a1f26; color: var(--texto); }
+
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+
+    .erro-msg {
+      color: var(--erro);
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+      display: none;
+    }
+
+    /* ── BUTTONS ───────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.6rem 1.4rem;
+      border-radius: var(--raio);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      font-family: var(--fonte-corpo);
+      white-space: nowrap;
+    }
+
+    .btn-primario {
+      background: var(--primaria);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(201, 74, 82, 0.22);
+    }
+
+    .btn-primario:hover:not(:disabled) {
+      background: var(--primaria-muda);
+      box-shadow: 0 4px 16px rgba(201, 74, 82, 0.28);
+    }
+
+    .btn-primario:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--texto);
+      border: 1px solid var(--borda-forte);
+    }
+
+    .btn-outline:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.14); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--texto-mutado);
+      border: 1px solid var(--borda);
+    }
+
+    .btn-ghost:hover { color: var(--texto); border-color: rgba(255,255,255,0.16); }
+
+    .btn-sm { padding: 0.35rem 0.875rem; font-size: 0.8rem; }
+    .btn-full { width: 100%; justify-content: center; }
+
+    /* ── HEADER ────────────────────────────────────────────── */
+    .header {
+      background: rgba(18, 21, 26, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--borda);
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 1rem;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-shrink: 0;
+    }
+
+    .header-logo .icone {
+      height: 32px;
+      opacity: 0.95;
+    }
+
+    .logo-text {
+      font-family: var(--fonte-display);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--texto);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .logo-text small {
+      display: block;
+      font-family: var(--fonte-corpo);
+      font-size: 0.65rem;
+      color: var(--texto-mutado);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .header-nav {
+      display: flex;
+      gap: 0.2rem;
+      align-items: center;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .nav-link {
+      color: var(--texto-mutado);
+      text-decoration: none;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      padding: 0.45rem 0.75rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: color 0.15s ease, background 0.15s ease;
+      background: none;
+      border: none;
+      font-family: var(--fonte-corpo);
+      white-space: nowrap;
+    }
+
+    .nav-link:hover { color: var(--texto); background: rgba(255,255,255,0.06); }
+    .nav-link.ativo { color: var(--texto); background: rgba(201, 74, 82, 0.14); }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .usuario-info {
+      text-align: right;
+    }
+
+    .usuario-nome {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--texto);
+    }
+
+    .usuario-role {
+      display: inline-block;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .role-admin  { background: rgba(201, 74, 82, 0.18); color: #e8a8ac; }
+    .role-lider  { background: rgba(212, 168, 75, 0.12); color: #d4b896; }
+    .role-membro { background: rgba(107, 155, 209, 0.12); color: #9bb8dc; }
+
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0.4rem;
+    }
+
+    .hamburger span {
+      display: block;
+      width: 20px; height: 2px;
+      background: var(--texto-mutado);
+      border-radius: 2px;
+    }
+
+    /* ── MAIN ──────────────────────────────────────────────── */
+    .main-content {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    .pagina-titulo {
+      font-family: var(--fonte-display);
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--texto);
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .pagina-titulo::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, rgba(255,255,255,0.12), transparent);
+    }
+
+    .pagina-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .pagina-actions .pagina-titulo { margin-bottom: 0; }
+
+    /* ── STAT CARDS ────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio-lg);
+      padding: 1.25rem 1.5rem;
+      box-shadow: var(--sombra-card);
+    }
+
+    .stat-icone { font-size: 1.35rem; margin-bottom: 0.45rem; opacity: 0.9; }
+
+    .stat-label {
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--texto-mutado);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+
+    .stat-valor {
+      font-family: var(--fonte-display);
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: var(--texto);
+    }
+
+    .stat-unidade {
+      font-size: 0.8rem;
+      color: var(--texto-mutado);
+      font-family: var(--fonte-corpo);
+      font-weight: 400;
+      margin-left: 0.25rem;
+    }
+
+    /* ── CARDS GRID ────────────────────────────────────────── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio-lg);
+      padding: 1.25rem;
+      box-shadow: var(--sombra-card);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(255,255,255,0.12);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.05) inset,
+        0 12px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.875rem;
+    }
+
+    .card-icone {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    .card-titulo {
+      font-family: var(--fonte-display);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .card-subtitulo { font-size: 0.75rem; color: var(--texto-mutado); margin-top: 0.1rem; }
+
+    .card-body { font-size: 0.875rem; color: var(--texto-mutado); line-height: 1.6; }
+
+    .card-footer {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* ── TABLE ─────────────────────────────────────────────── */
+    .tabela-wrapper {
+      overflow-x: auto;
+      border-radius: var(--raio-lg);
+      border: 1px solid var(--borda);
+      margin-bottom: 2rem;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    th {
+      background: rgba(255,255,255,0.03);
+      color: var(--texto-mutado);
+      font-family: var(--fonte-display);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.75rem 1.25rem;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 0.75rem 1.25rem;
+      border-top: 1px solid var(--borda);
+      font-size: 0.875rem;
+      vertical-align: middle;
+    }
+
+    tr:hover td { background: rgba(255,255,255,0.03); }
+
+    .tabela-vazia {
+      padding: 3rem;
+      text-align: center;
+      color: var(--texto-mutado);
+      font-size: 0.875rem;
+    }
+
+    /* ── DASHBOARD ESCALAS ─────────────────────────────────── */
+    .dash-escalas {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin-bottom: 2rem;
+    }
+
+    .dash-escala-card {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio-lg);
+      padding: 1rem 1.15rem;
+      box-shadow: var(--sombra-card);
+    }
+
+    .dash-escala-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .dash-escala-data {
+      font-family: var(--fonte-display);
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+      color: var(--texto);
+    }
+
+    .dash-escala-depto {
+      font-size: 0.8125rem;
+      color: var(--texto-mutado);
+    }
+
+    .dash-escala-evento {
+      font-size: 0.78rem;
+      color: var(--acento);
+      margin-bottom: 0.65rem;
+    }
+
+    .dash-escala-vols-label {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--texto-mutado);
+      margin-bottom: 0.4rem;
+    }
+
+    .dash-escala-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .chip-vol {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.22rem 0.55rem;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--borda);
+      border-radius: 999px;
+      font-size: 0.78rem;
+      color: var(--texto);
+    }
+
+    .dash-escala-sem-vol {
+      font-size: 0.8rem;
+      color: var(--texto-mutado);
+      font-style: italic;
+    }
+
+    .depto-membros-box {
+      margin-top: 0.65rem;
+      padding-top: 0.65rem;
+      border-top: 1px solid var(--borda);
+    }
+
+    .lista-membros-depto {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      font-size: 0.8125rem;
+    }
+
+    .lista-membros-depto li {
+      padding: 0.28rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .lista-membros-meta {
+      color: var(--texto-mutado);
+      font-size: 0.72rem;
+      text-transform: capitalize;
+      margin-left: 0.35rem;
+    }
+
+    .aviso-painel-linha {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--borda);
+    }
+    .aviso-painel-linha:last-child { border-bottom: none; }
+    .aviso-card {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio-lg);
+      padding: 1rem 1.15rem;
+      margin-bottom: 0.85rem;
+      text-align: left;
+    }
+    .aviso-card-meta {
+      font-size: 0.72rem;
+      color: var(--texto-mutado);
+      margin-bottom: 0.35rem;
+    }
+
+    .esc-membros-checkboxes {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid var(--borda-forte);
+      border-radius: var(--raio);
+      padding: 0.5rem 0.75rem;
+      margin-top: 0.35rem;
+      text-align: left;
+    }
+
+    .esc-membro-linha {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0.4rem 0;
+      cursor: pointer;
+      font-weight: 400;
+      font-size: 0.84rem;
+    }
+
+    .esc-membro-linha input { width: auto; flex-shrink: 0; }
+
+    .historico-trocas { margin-top: 0.65rem; font-size: 0.78rem; color: var(--texto-mutado); }
+    .historico-trocas summary {
+      cursor: pointer;
+      user-select: none;
+      color: var(--acento);
+      font-weight: 500;
+      list-style: none;
+    }
+    .historico-trocas summary::-webkit-details-marker { display: none; }
+    .historico-troca-linha {
+      padding: 0.35rem 0 0.35rem 0.55rem;
+      margin: 0.35rem 0 0;
+      border-left: 2px solid rgba(201, 74, 82, 0.35);
+      line-height: 1.45;
+    }
+    .historico-troca-meta { font-size: 0.68rem; opacity: 0.85; display: block; margin-top: 0.15rem; }
+    .dash-escala-acoes { margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
+    /* ── BADGES ────────────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 0.18rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .badge-vermelho { background: rgba(201,74,82,0.15); color: #e8a8ac; border: 1px solid rgba(201,74,82,0.22); }
+    .badge-dourado  { background: rgba(212,168,75,0.1); color: #d4b896; border: 1px solid rgba(212,168,75,0.2); }
+    .badge-sucesso  { background: rgba(92,173,106,0.12); color: #8fcf98; border: 1px solid rgba(92,173,106,0.22); }
+    .badge-info     { background: rgba(107,155,209,0.12); color: #9bb8dc; border: 1px solid rgba(107,155,209,0.22); }
+    .badge-alerta   { background: rgba(212,160,23,0.1); color: #d9c07a; border: 1px solid rgba(212,160,23,0.22); }
+
+    /* ── SEÇÃO LABEL ───────────────────────────────────────── */
+    .secao-label {
+      font-family: var(--fonte-display);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--texto-mutado);
+      letter-spacing: -0.01em;
+      margin: 2rem 0 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .secao-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, rgba(255,255,255,0.1), transparent);
+    }
+
+    /* ── CHAT ──────────────────────────────────────────────── */
+    .chat-wrapper {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 230px);
+      min-height: 420px;
+    }
+
+    .chat-topo {
+      background: rgba(255,255,255,0.03);
+      padding: 0.875rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--borda);
+      flex-shrink: 0;
+    }
+
+    .chat-topo-icone { height: 28px; opacity: 0.92; }
+    .chat-topo-nome { font-family: var(--fonte-display); font-size: 0.9rem; font-weight: 600; letter-spacing: -0.02em; }
+
+    .chat-status {
+      font-size: 0.65rem;
+      color: var(--sucesso);
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .chat-status::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--sucesso);
+      animation: piscar 1.5s infinite;
+    }
+
+    .chat-msgs {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.875rem;
+    }
+
+    .msg {
+      max-width: 82%;
+      padding: 0.875rem 1.125rem;
+      font-size: 0.875rem;
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+
+    .msg-agente {
+      background: rgba(255,255,255,0.04);
+      border-left: 3px solid rgba(201, 74, 82, 0.55);
+      border-radius: 0 var(--raio) var(--raio) 0;
+      align-self: flex-start;
+    }
+
+    .msg-usuario {
+      background: rgba(139, 157, 195, 0.08);
+      border-right: 3px solid rgba(139, 157, 195, 0.35);
+      border-radius: var(--raio) 0 0 var(--raio);
+      align-self: flex-end;
+    }
+
+    .msg-typing {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 0.875rem 1.125rem;
+      align-self: flex-start;
+      background: rgba(255,255,255,0.03);
+      border-left: 3px solid rgba(201, 74, 82, 0.35);
+      border-radius: 0 var(--raio) var(--raio) 0;
+    }
+
+    .msg-typing span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--texto-mutado);
+      opacity: 0.7;
+      animation: typing 1.2s ease-in-out infinite;
+    }
+
+    .msg-typing span:nth-child(2) { animation-delay: 0.2s; }
+    .msg-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+    .chat-rodape {
+      padding: 0.875rem 1.25rem;
+      border-top: 1px solid var(--borda);
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .chat-rodape input {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio);
+      color: var(--texto);
+      padding: 0.6rem 1rem;
+      font-family: var(--fonte-corpo);
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .chat-rodape input:focus { border-color: rgba(201, 74, 82, 0.45); box-shadow: 0 0 0 3px rgba(201, 74, 82, 0.1); }
+    .chat-rodape input::placeholder { color: var(--texto-mutado); }
+    .chat-rodape input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── MODAL ─────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 8, 12, 0.72);
+      backdrop-filter: blur(6px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .modal-overlay.aberto { display: flex; }
+
+    .modal {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda-forte);
+      border-radius: var(--raio-lg);
+      padding: 2rem;
+      width: 100%;
+      max-width: 480px;
+      max-height: calc(100vh - 3rem);
+      overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.55);
+    }
+
+    .modal-titulo {
+      font-family: var(--fonte-display);
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--texto);
+      letter-spacing: -0.02em;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+
+    .modal.modal-edit-membro { max-width: 520px; }
+
+    .modal-entrada-corpo {
+      font-size: 0.9rem;
+      color: var(--texto-mutado);
+      line-height: 1.6;
+    }
+    .modal-entrada-corpo p { margin: 0; }
+    .modal-entrada-corpo p + p { margin-top: 0.65rem; }
+    .edit-usuario-depto-linha {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.55rem 0.65rem;
+      margin-bottom: 0.45rem;
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio);
+    }
+    .edit-usuario-depto-linha .select-inline { min-width: 7.5rem; }
+
+    /* ── TOAST ─────────────────────────────────────────────── */
+    .toast-area {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda-forte);
+      border-radius: var(--raio);
+      padding: 0.75rem 1.25rem;
+      font-size: 0.875rem;
+      box-shadow: var(--sombra-card);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      animation: slideIn 0.3s ease;
+      max-width: 320px;
+    }
+
+    .toast-ok  { border-left: 3px solid var(--sucesso); }
+    .toast-err { border-left: 3px solid var(--erro); }
+
+    /* ── LOADING ───────────────────────────────────────────── */
+    .carregando {
+      padding: 3rem;
+      text-align: center;
+      color: var(--texto-mutado);
+      font-size: 0.875rem;
+    }
+
+    /* ── EMPTY STATE ───────────────────────────────────────── */
+    .vazio {
+      padding: 3rem;
+      text-align: center;
+      color: var(--texto-mutado);
+      font-size: 0.875rem;
+    }
+
+    /* ── ANIMATIONS ────────────────────────────────────────── */
+    @keyframes piscar {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    @keyframes typing {
+      0%, 80%, 100% { transform: scale(0.5); opacity: 0.4; }
+      40%           { transform: scale(1);   opacity: 1; }
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to   { transform: translateX(0);   opacity: 1; }
+    }
+
+    /* ── RESPONSIVE ────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .header { padding: 0 1rem; }
+
+      .header-nav {
+        display: none;
+        position: fixed;
+        top: 60px; left: 0; right: 0;
+        background: var(--fundo-elevado);
+        border-bottom: 1px solid var(--borda);
+        padding: 0.75rem;
+        z-index: 99;
+        flex-direction: column;
+        gap: 0.25rem;
+        justify-content: flex-start;
+      }
+
+      .header-nav.aberto { display: flex; }
+      .hamburger { display: flex; }
+      .usuario-info { display: none; }
+      .main-content { padding: 1.25rem 1rem; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .cards-grid { grid-template-columns: 1fr; }
+
+      .chat-wrapper { height: calc(100vh - 210px); }
+
+      .nav-link { width: 100%; text-align: left; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LOGIN
+═══════════════════════════════════════════════════════════ -->
+<div id="tela-login">
+  <div class="login-card">
+    <img class="login-icone" src="/docs/Foguinho vazado.png" alt=""/>
+    <img class="login-logo" src="/docs/LOGO OFICIAL.png" alt="Peniel"/>
+    <p class="login-subtitulo">Sistema de Gestão da Equipe de Mídia</p>
+
+    <div id="painel-login" class="login-painel">
+      <h2 class="login-titulo-painel">Entrar</h2>
+      <form id="form-login" onsubmit="handleLogin(event)">
+        <div class="form-grupo">
+          <label>E-mail ou nome de login</label>
+          <input id="login-email" type="text" placeholder="seu@email.com ou Seu Nome" required autocomplete="username"/>
+        </div>
+        <div class="form-grupo">
+          <label>Senha</label>
+          <input id="login-senha" type="password" placeholder="••••••••" required autocomplete="current-password"/>
+          <label style="margin-top:0.45rem;font-size:0.74rem;text-transform:none;letter-spacing:0">
+            <input type="checkbox" style="width:auto;margin-right:0.4rem" onchange="toggleSenha('login-senha', this.checked)"/> Mostrar senha
+          </label>
+        </div>
+        <p id="login-erro" class="erro-msg"></p>
+        <button id="btn-login" type="submit" class="btn btn-primario btn-full" style="margin-top:1.25rem">
+          Entrar
+        </button>
+      </form>
+      <div class="login-links">
+        <span class="muted">Não tem conta?</span>
+        <button type="button" class="link" onclick="mostrarPainelCadastro()">Criar conta</button>
+        <button type="button" class="link" onclick="abrirModalEsqueciSenha()">Esqueci minha senha</button>
+      </div>
+    </div>
+
+    <div id="painel-cadastro" class="login-painel oculto">
+      <h2 class="login-titulo-painel">Criar conta de voluntário</h2>
+      <p class="muted" style="text-align:left;margin-bottom:1rem;font-size:0.8rem;line-height:1.5">
+        Preencha os dados abaixo e entre como <strong>membro</strong> (ver escalas do seu departamento, comunicações e solicitar trocas quando já estiver numa escala).
+        O <strong>líder</strong> é quem inclui cada pessoa na escala ao montá-la — o cadastro só entra na equipe (departamento), não num plantão específico.
+        Se souber a sua equipe, escolha o departamento; caso contrário, um líder pode vinculá-lo depois.
+      </p>
+      <form id="form-cadastro" onsubmit="handleCadastro(event)">
+        <div class="form-grupo">
+          <label>Nome completo</label>
+          <input id="cad-nome" type="text" placeholder="Seu nome" required autocomplete="name"/>
+        </div>
+        <div class="form-grupo">
+          <label>E-mail</label>
+          <input id="cad-email" type="email" placeholder="seu@email.com" required autocomplete="email"/>
+        </div>
+        <div class="form-grupo">
+          <label>Celular (opcional)</label>
+          <input id="cad-celular" type="tel" placeholder="WhatsApp / SMS" autocomplete="tel"/>
+        </div>
+        <div class="form-grupo">
+          <label>Departamento (opcional)</label>
+          <select id="cad-depto">
+            <option value="">Carregando equipes…</option>
+          </select>
+        </div>
+        <div class="form-grupo">
+          <label>Senha</label>
+          <input id="cad-senha" type="password" placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password"/>
+          <label style="margin-top:0.45rem;font-size:0.74rem;text-transform:none;letter-spacing:0">
+            <input type="checkbox" style="width:auto;margin-right:0.4rem" onchange="toggleSenha('cad-senha', this.checked)"/> Mostrar senha
+          </label>
+        </div>
+        <div class="form-grupo">
+          <label>Confirmar senha</label>
+          <input id="cad-senha2" type="password" placeholder="Repita a senha" required minlength="6" autocomplete="new-password"/>
+          <label style="margin-top:0.45rem;font-size:0.74rem;text-transform:none;letter-spacing:0">
+            <input type="checkbox" style="width:auto;margin-right:0.4rem" onchange="toggleSenha('cad-senha2', this.checked)"/> Mostrar senha
+          </label>
+        </div>
+        <p id="cadastro-erro" class="erro-msg"></p>
+        <button id="btn-cadastro" type="submit" class="btn btn-primario btn-full" style="margin-top:0.5rem">
+          Criar conta e entrar
+        </button>
+      </form>
+      <p class="muted" style="text-align:left;margin-top:1rem;font-size:0.76rem;line-height:1.45">
+        <strong>Líder ou administrador?</strong> O convite em <strong>Cadastros</strong> define o perfil completo (permissões de gestão).
+        <strong>Recebeu senha provisória?</strong> Use <button type="button" class="link" style="padding:0;vertical-align:baseline" onclick="mostrarPainelEntrar()">Entrar</button> acima.
+      </p>
+      <div class="login-links" style="margin-top:0.75rem">
+        <button type="button" class="link" onclick="mostrarPainelEntrar()">← Voltar ao login</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     APP
+═══════════════════════════════════════════════════════════ -->
+<div id="tela-app" style="display:none">
+
+  <header class="header">
+    <div class="header-logo">
+      <img class="icone" src="/docs/Foguinho vazado.png" alt=""/>
+      <div class="logo-text">
+        Peniel Mídia
+        <small>Sistema de Gestão</small>
+      </div>
+    </div>
+
+    <nav class="header-nav" id="header-nav">
+      <button class="nav-link ativo" data-pagina="dashboard" onclick="navegar('dashboard')">🏠 Painel</button>
+      <button class="nav-link" data-pagina="escalas"       onclick="navegar('escalas')">📅 Escalas</button>
+      <button class="nav-link" data-pagina="equipe"        onclick="navegar('equipe')">👥 Equipe</button>
+      <button class="nav-link" data-pagina="departamentos" onclick="navegar('departamentos')">🏛️ Departamentos</button>
+      <button class="nav-link" data-pagina="comunicacoes" onclick="navegar('comunicacoes')">💬 Comunicações</button>
+      <button class="nav-link" id="nav-cadastro" data-pagina="cadastros" onclick="navegar('cadastros')" style="display:none">⚙️ Cadastros</button>
+      <button class="nav-link" data-pagina="agente"        onclick="navegar('agente')">🔥 Pastor IA</button>
+    </nav>
+
+    <div class="header-right">
+      <div class="usuario-info">
+        <div class="usuario-nome" id="hdr-nome">—</div>
+        <span class="usuario-role" id="hdr-role"></span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sair</button>
+      <button class="hamburger" onclick="toggleMenu()">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- DASHBOARD -->
+    <div id="pagina-dashboard" class="pagina">
+      <div id="dashboard-conteudo"><p class="carregando">Carregando…</p></div>
+    </div>
+
+    <!-- ESCALAS -->
+    <div id="pagina-escalas" class="pagina" style="display:none">
+      <div class="pagina-actions">
+        <h2 class="pagina-titulo">📅 Escalas</h2>
+        <button class="btn btn-primario" id="btn-nova-escala" onclick="abrirModalEscala()">
+          + Nova Escala
+        </button>
+      </div>
+      <p class="muted" style="font-size:0.82rem;line-height:1.5;margin:-0.35rem 0 1rem;max-width:44rem;color:var(--texto-mutado)">
+        <strong style="color:var(--texto)">Quem entra na escala</strong> é definido pelo <strong>líder</strong> ou <strong>administrador</strong> ao criar ou editar a escala (não é automático ao cadastrar-se).
+        <strong>Troca:</strong> o líder pode trocar na hora; o voluntário pode <em>solicitar</em> troca — a liderança aprova em <strong>Comunicações</strong>.
+      </p>
+      <div id="escalas-conteudo"><p class="carregando">Carregando…</p></div>
+    </div>
+
+    <!-- EQUIPE -->
+    <div id="pagina-equipe" class="pagina" style="display:none">
+      <h2 class="pagina-titulo">👥 Equipe</h2>
+      <div id="equipe-conteudo"><p class="carregando">Carregando…</p></div>
+    </div>
+
+    <!-- DEPARTAMENTOS -->
+    <div id="pagina-departamentos" class="pagina" style="display:none">
+      <h2 class="pagina-titulo">🏛️ Departamentos</h2>
+      <div id="departamentos-conteudo"><p class="carregando">Carregando…</p></div>
+    </div>
+
+    <!-- COMUNICAÇÕES -->
+    <div id="pagina-comunicacoes" class="pagina" style="display:none">
+      <h2 class="pagina-titulo">💬 Comunicações</h2>
+      <p class="muted" style="color:var(--texto-mutado);font-size:0.85rem;margin:-1rem 0 1.25rem;max-width:40rem;line-height:1.5">
+        <strong>No app,</strong> todos com login veem os mesmos comunicados no Painel e aqui. O departamento escolhido ao publicar serve de <em>etiqueta</em> e para <strong>e-mail / WhatsApp</strong> (se ativos), não esconde a mensagem na tela.
+        Também pode <strong>convidar</strong> por e-mail em <strong>Cadastros</strong>.
+        <strong>Líderes e admins:</strong> aqui aparecem as <strong>solicitações de troca de escala</strong> dos voluntários para aprovar ou rejeitar.
+      </p>
+      <div id="comunicacoes-conteudo"><p class="carregando">Carregando…</p></div>
+    </div>
+
+    <!-- CADASTROS (admin / líder) -->
+    <div id="pagina-cadastros" class="pagina" style="display:none">
+      <h2 class="pagina-titulo">⚙️ Cadastros</h2>
+      <p class="muted" style="color:var(--texto-mutado);font-size:0.85rem;margin:-1rem 0 1.25rem">
+        Mapa de cadastros, convites, departamentos e tipos de culto. Para <strong style="color:var(--texto)">membros</strong> use <strong>Equipe</strong>; para <strong style="color:var(--texto)">escalas</strong> use <strong>Escalas</strong> (editar data/evento ou trocar integrante).
+      </p>
+      <div id="cadastros-conteudo"><p class="carregando">Carregando…</p></div>
+    </div>
+
+    <!-- PASTOR IA -->
+    <div id="pagina-agente" class="pagina" style="display:none">
+      <h2 class="pagina-titulo">🔥 Pastor da Mídia — IA</h2>
+      <div class="chat-wrapper">
+        <div class="chat-topo">
+          <img class="chat-topo-icone" src="/docs/Foguinho vazado.png" alt=""/>
+          <div>
+            <div class="chat-topo-nome">Pastor da Mídia</div>
+            <div class="chat-status">Conectado</div>
+          </div>
+        </div>
+        <div class="chat-msgs" id="chat-msgs">
+          <div class="msg msg-agente">🔥 Shalom! Sou o Pastor da Mídia da Peniel. Posso criar escalas, sugerir voluntários e organizar sua equipe. Como posso ajudar hoje?</div>
+        </div>
+        <div class="chat-rodape">
+          <input
+            id="chat-input"
+            type="text"
+            placeholder="Ex: Crie uma escala para câmera no domingo 25/05/2026"
+            onkeydown="if(event.key==='Enter' && !event.shiftKey) enviarMensagem()"
+          />
+          <button class="btn btn-primario" id="btn-enviar" onclick="enviarMensagem()">Enviar 🔥</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ESCOLHER CONTA (quando houver mais de um cadastro com mesmo login/senha) -->
+<div id="modal-escolher-conta" class="modal-overlay" onclick="if(event.target===this)fecharModalEscolherConta()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo">Escolha o cadastro para entrar</h3>
+    <p class="muted" style="font-size:0.82rem;line-height:1.45;margin:-0.5rem 0 1rem">
+      Encontramos mais de uma conta com este login. Selecione a correta.
+    </p>
+    <div class="form-grupo">
+      <label>Conta</label>
+      <select id="login-escolha-usuario"></select>
+    </div>
+    <p id="login-escolha-erro" class="erro-msg"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="fecharModalEscolherConta()">Cancelar</button>
+      <button type="button" class="btn btn-primario" onclick="confirmarEscolhaContaLogin()">Entrar com esta conta</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REENVIAR COMUNICADO -->
+<div id="modal-reenviar-comunicado" class="modal-overlay" onclick="if(event.target===this)fecharModalReenviarComunicado()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo">Reenviar mensagem</h3>
+    <p class="muted" style="font-size:0.82rem;line-height:1.45;margin:-0.5rem 0 1rem">
+      Selecione os canais para reenviar este comunicado.
+    </p>
+    <div class="form-grupo">
+      <label style="text-transform:none;letter-spacing:0;font-weight:400">
+        <input type="checkbox" id="reenviar-email" checked style="width:auto;margin-right:0.45rem"/>
+        Reenviar por e-mail
+      </label>
+    </div>
+    <div class="form-grupo" style="margin-top:-0.35rem">
+      <label style="text-transform:none;letter-spacing:0;font-weight:400">
+        <input type="checkbox" id="reenviar-whatsapp" checked style="width:auto;margin-right:0.45rem"/>
+        Reenviar por WhatsApp
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="fecharModalReenviarComunicado()">Cancelar</button>
+      <button type="button" class="btn btn-primario" onclick="confirmarReenviarComunicado()">Reenviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVA ESCALA -->
+<div id="modal-escala" class="modal-overlay">
+  <div class="modal">
+    <h3 class="modal-titulo">📅 Nova Escala</h3>
+    <form id="form-escala" onsubmit="criarEscala(event)">
+      <div class="form-grupo">
+        <label>Data do Culto</label>
+        <input id="esc-data" type="date" required/>
+      </div>
+      <div class="form-grupo">
+        <label>Departamento</label>
+        <select id="esc-depto" required onchange="onEscalaDeptoChange()">
+          <option value="">Selecione…</option>
+        </select>
+      </div>
+      <div class="form-grupo" id="esc-membros-wrap" style="display:none">
+        <label>Integrantes nesta escala</label>
+        <p class="muted" style="font-size:0.75rem;color:var(--texto-mutado);margin:0 0 0.25rem">
+          Marque quem já vai servir neste culto (opcional).
+        </p>
+        <div id="esc-membros-list" class="esc-membros-checkboxes"></div>
+      </div>
+      <div class="form-grupo">
+        <label>Tipo de culto / evento (opcional)</label>
+        <select id="esc-evento">
+          <option value="">— Nenhum —</option>
+        </select>
+      </div>
+      <p id="esc-erro" class="erro-msg"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="fecharModalEscala()">Cancelar</button>
+        <button type="submit" class="btn btn-primario" id="btn-criar-esc">Criar Escala</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL TROCAR INTEGRANTE NA ESCALA -->
+<div id="modal-troca-escala" class="modal-overlay" onclick="if(event.target===this)fecharModalTrocaEscala()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo" id="troca-modal-titulo">Trocar integrante</h3>
+    <p id="troca-escala-ajuda" class="muted" style="font-size:0.8rem;color:var(--texto-mutado);margin:-0.5rem 0 1rem;line-height:1.45"></p>
+    <form id="form-troca-escala" onsubmit="confirmarTrocaEscala(event)" data-modo="">
+      <input type="hidden" id="troca-escala-id"/>
+      <div class="form-grupo">
+        <label>Quem sai da escala</label>
+        <select id="troca-usuario-sai" required></select>
+      </div>
+      <div class="form-grupo">
+        <label>Quem assume no lugar</label>
+        <select id="troca-usuario-entra" required></select>
+      </div>
+      <div class="form-grupo">
+        <label>Observação (opcional)</label>
+        <input id="troca-obs" type="text" placeholder="Ex.: combinado entre eles no grupo"/>
+      </div>
+      <p id="troca-escala-erro" class="erro-msg"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="fecharModalTrocaEscala()">Cancelar</button>
+        <button type="submit" class="btn btn-primario" id="btn-confirmar-troca">Registrar troca</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EDITAR DEPARTAMENTO -->
+<div id="modal-edit-depto" class="modal-overlay" onclick="if(event.target===this)fecharModalEditDepto()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo">Editar departamento</h3>
+    <form id="form-edit-depto" onsubmit="salvarEditDepartamento(event)">
+      <input type="hidden" id="edit-depto-id"/>
+      <div class="form-grupo"><label>Nome</label><input id="edit-depto-nome" required/></div>
+      <div class="form-grupo"><label>Descrição</label><input id="edit-depto-desc"/></div>
+      <div class="form-grupo"><label>Palavra pastoral ao ministério</label>
+        <textarea id="edit-depto-pastoral" rows="5" placeholder="Ex.: encorajamento, lembrete bíblico ou direção para a equipe — aparece no painel de quem pertence a este departamento."></textarea>
+        <span class="muted" style="font-size:0.72rem;display:block;margin-top:0.35rem;line-height:1.4">Visível para todos os membros vinculados a este departamento. Só administradores e líderes do departamento editam.</span>
+      </div>
+      <div class="form-grupo"><label>Ícone</label><input id="edit-depto-icone" maxlength="4"/></div>
+      <div class="form-grupo"><label>Cor (hex)</label><input id="edit-depto-cor"/></div>
+      <div class="form-grupo"><label style="text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="edit-depto-ativo" style="width:auto;margin-right:0.5rem"/> Departamento ativo
+      </label></div>
+      <p id="edit-depto-erro" class="erro-msg"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" style="margin-right:auto;color:var(--erro)" onclick="excluirDepartamentoNoModal()">Excluir</button>
+        <button type="button" class="btn btn-ghost" onclick="fecharModalEditDepto()">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EDITAR MEMBRO -->
+<div id="modal-edit-usuario" class="modal-overlay" onclick="if(event.target===this)fecharModalEditUsuario()">
+  <div class="modal modal-edit-membro" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo">Editar membro</h3>
+    <form id="form-edit-usuario" onsubmit="salvarEditUsuario(event)">
+      <input type="hidden" id="edit-usuario-id"/>
+      <div class="form-grupo"><label>Nome</label><input id="edit-usuario-nome" required/></div>
+      <div class="form-grupo"><label>E-mail</label><input id="edit-usuario-email" type="email" required/></div>
+      <div class="form-grupo"><label>Celular</label><input id="edit-usuario-celular" type="tel" placeholder="(11) 99999-9999"/></div>
+      <div class="form-grupo" id="edit-usuario-perfil-wrap">
+        <label>Perfil e permissões</label>
+        <select id="edit-usuario-perfil">
+          <option value="voluntario">Voluntário — visualizar, comunicações, solicitar trocas</option>
+          <option value="lider">Líder — cadastros, escalas, convites e aprovações (nos departamentos)</option>
+          <option value="admin" id="edit-usuario-perfil-opt-admin">Administrador global — acesso total</option>
+        </select>
+        <p id="edit-usuario-perfil-ajuda" class="muted" style="font-size:0.78rem;margin:0.35rem 0 0;line-height:1.45"></p>
+      </div>
+      <div class="form-grupo"><label>Nova senha (opcional)</label><input id="edit-usuario-senha" type="password" autocomplete="new-password" placeholder="Deixe em branco para não alterar"/>
+        <label style="margin-top:0.45rem;font-size:0.74rem;text-transform:none;letter-spacing:0">
+          <input type="checkbox" style="width:auto;margin-right:0.4rem" onchange="toggleSenha('edit-usuario-senha', this.checked)"/> Mostrar senha
+        </label>
+      </div>
+      <div class="form-grupo"><label style="text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="edit-usuario-ativo" style="width:auto;margin-right:0.5rem"/> Conta ativa
+      </label></div>
+      <div class="form-grupo" id="edit-usuario-deptos-wrap">
+        <label>Departamentos</label>
+        <p class="muted" style="font-size:0.78rem;margin:0 0 0.5rem;line-height:1.45">
+          Pode haver <strong style="color:var(--texto)">vários</strong> ao mesmo tempo. Em cada um o membro é <strong style="color:var(--texto)">líder</strong> ou <strong style="color:var(--texto)">membro</strong> da equipe.
+        </p>
+        <div id="edit-usuario-deptos-list" class="edit-usuario-deptos-list"></div>
+        <div id="edit-usuario-add-depto-row" style="margin-top:0.85rem;display:flex;flex-wrap:wrap;gap:0.5rem;align-items:flex-end">
+          <div class="form-grupo" style="flex:1;min-width:11rem;margin:0">
+            <label style="font-size:0.72rem;text-transform:none;letter-spacing:0">Vincular a outro departamento</label>
+            <select id="edit-usuario-add-depto" style="width:100%"><option value="">Selecione…</option></select>
+          </div>
+          <div class="form-grupo" style="width:8.5rem;margin:0">
+            <label style="font-size:0.72rem;text-transform:none;letter-spacing:0">Papel</label>
+            <select id="edit-usuario-add-role" style="width:100%">
+              <option value="membro">Membro</option>
+              <option value="lider">Líder</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="vincularDeptoEditUsuario()">Vincular</button>
+        </div>
+      </div>
+      <p id="edit-usuario-erro" class="erro-msg"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="inativarUsuarioEditUsuario()">Inativar</button>
+        <button type="button" class="btn btn-ghost" style="margin-right:auto;color:var(--erro)" onclick="excluirUsuarioEditUsuario()">Excluir membro</button>
+        <button type="button" class="btn btn-ghost" onclick="fecharModalEditUsuario()">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EDITAR ESCALA -->
+<div id="modal-edit-escala" class="modal-overlay" onclick="if(event.target===this)fecharModalEditEscala()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo">Editar escala</h3>
+    <p class="muted" style="font-size:0.78rem;margin:-0.5rem 0 1rem">Data, tipo de culto e observação. Integrantes: use <strong>Trocar</strong> na lista.</p>
+    <form id="form-edit-escala" onsubmit="salvarEditEscala(event)">
+      <input type="hidden" id="edit-escala-id"/>
+      <div class="form-grupo"><label>Data do culto</label><input id="edit-escala-data" type="date" required/></div>
+      <div class="form-grupo"><label>Tipo de culto / evento</label><select id="edit-escala-evento"><option value="">— Nenhum —</option></select></div>
+      <div class="form-grupo"><label>Observação</label><input id="edit-escala-obs" placeholder="Opcional"/></div>
+      <p id="edit-escala-erro" class="erro-msg"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" style="margin-right:auto;color:var(--erro)" onclick="excluirEscalaNoModal()">Excluir</button>
+        <button type="button" class="btn btn-ghost" onclick="fecharModalEditEscala()">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EDITAR TIPO DE EVENTO -->
+<div id="modal-edit-evento" class="modal-overlay" onclick="if(event.target===this)fecharModalEditEvento()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo">Editar tipo de culto / evento</h3>
+    <form id="form-edit-evento" onsubmit="salvarEditEvento(event)">
+      <input type="hidden" id="edit-evento-id"/>
+      <div class="form-grupo"><label>Nome</label><input id="edit-evento-nome" required/></div>
+      <div class="form-grupo"><label>Dia da semana</label><select id="edit-evento-dia"></select></div>
+      <div class="form-grupo"><label>Início</label><input id="edit-evento-ini" type="time"/></div>
+      <div class="form-grupo"><label>Fim</label><input id="edit-evento-fim" type="time"/></div>
+      <div class="form-grupo"><label>Observações</label><input id="edit-evento-desc"/></div>
+      <div class="form-grupo"><label style="text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="edit-evento-ativo" style="width:auto;margin-right:0.5rem"/> Ativo
+      </label></div>
+      <p id="edit-evento-erro" class="erro-msg"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" style="margin-right:auto;color:var(--erro)" onclick="excluirEventoNoModal()">Excluir</button>
+        <button type="button" class="btn btn-ghost" onclick="fecharModalEditEvento()">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TROCA OBRIGATÓRIA DE SENHA (primeiro acesso após convite) -->
+<div id="modal-troca-senha" class="modal-overlay" style="z-index:350">
+  <div class="modal">
+    <h3 class="modal-titulo">Defina sua nova senha</h3>
+    <p style="font-size:0.85rem;color:var(--texto-mutado);margin-bottom:1rem;line-height:1.5">
+      Sua conta foi criada com senha provisória. Por segurança, escolha uma nova senha para continuar.
+    </p>
+    <form id="form-troca-senha" onsubmit="handleTrocaSenhaObrigatoria(event)">
+      <div class="form-grupo">
+        <label>Nova senha</label>
+        <input id="troca-s1" type="password" required minlength="6" autocomplete="new-password"/>
+        <label style="margin-top:0.45rem;font-size:0.74rem;text-transform:none;letter-spacing:0">
+          <input type="checkbox" style="width:auto;margin-right:0.4rem" onchange="toggleSenha('troca-s1', this.checked)"/> Mostrar senha
+        </label>
+      </div>
+      <div class="form-grupo">
+        <label>Confirmar senha</label>
+        <input id="troca-s2" type="password" required minlength="6" autocomplete="new-password"/>
+        <label style="margin-top:0.45rem;font-size:0.74rem;text-transform:none;letter-spacing:0">
+          <input type="checkbox" style="width:auto;margin-right:0.4rem" onchange="toggleSenha('troca-s2', this.checked)"/> Mostrar senha
+        </label>
+      </div>
+      <p id="troca-erro" class="erro-msg"></p>
+      <div class="modal-actions" style="margin-top:1rem">
+        <button type="submit" class="btn btn-primario" id="btn-troca-senha">Salvar e continuar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ESQUECI A SENHA -->
+<div id="modal-esqueci" class="modal-overlay" onclick="if(event.target===this)fecharModalEsqueciSenha()">
+  <div class="modal">
+    <h3 class="modal-titulo">Esqueci minha senha</h3>
+    <p style="font-size:0.875rem;color:var(--texto-mutado);line-height:1.6;margin-bottom:1rem">
+      Não há recuperação automática por e-mail nesta versão. Peça a um <strong style="color:var(--texto)">administrador da mídia</strong> para redefinir seu acesso ou criar uma nova senha no sistema.
+    </p>
+    <p style="font-size:0.82rem;color:var(--texto-mutado);line-height:1.6;margin-bottom:1.25rem">
+      Na <strong style="color:var(--texto)">primeira instalação</strong>, o servidor cria um administrador padrão (veja <code style="color:var(--acento)">SEED_ADMIN_EMAIL</code> e <code style="color:var(--acento)">SEED_ADMIN_SENHA</code> no arquivo <code style="color:var(--acento)">.env</code> — padrão: <code style="color:var(--acento)">admin@peniel.com</code> / <code style="color:var(--acento)">peniel123</code>). Altere a senha após o primeiro acesso.
+    </p>
+    <div class="modal-actions" style="margin-top:0">
+      <button type="button" class="btn btn-primario" onclick="fecharModalEsqueciSenha()">Entendi</button>
+    </div>
+  </div>
+</div>
+
+<!-- Se window.open() for bloqueado, mostramos este modal como alternativa -->
+<div id="modal-entrada" class="modal-overlay modal-entrada" style="z-index:330" onclick="if(event.target===this)fecharPopupEntrada()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo">Bem-vindo ao Peniel Mídia</h3>
+    <p id="modal-entrada-aviso-bloqueio" class="muted" style="font-size:0.8rem;line-height:1.45;margin-bottom:0.85rem;display:none">
+      O navegador bloqueou a janela extra. Você pode permitir pop-ups para este site ou ler a mensagem abaixo.
+    </p>
+    <div id="modal-entrada-corpo" class="modal-entrada-corpo">
+      <p>Gestão de escalas, comunicações e equipe em um só lugar.</p>
+      <p>Entre com o e-mail cadastrado pela liderança ou com a conta que você criou no primeiro acesso.</p>
+    </div>
+    <label style="display:flex;align-items:flex-start;gap:0.5rem;margin-top:1rem;font-size:0.82rem;color:var(--texto-mutado);font-weight:400;cursor:pointer">
+      <input type="checkbox" id="entrada-nao-mostrar" style="width:auto;margin-top:0.15rem"/>
+      <span>Não voltar a mostrar esta mensagem neste dispositivo</span>
+    </label>
+    <div class="modal-actions" style="margin-top:1rem">
+      <button type="button" class="btn btn-primario" onclick="fecharPopupEntrada()">Entendi</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-area" id="toast-area"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════════
+let token    = localStorage.getItem('peniel_token')
+let usuario  = null
+let deptoCache = []   // departamentos carregados para lookups
+let eventoCache = []  // tipos de culto/evento
+let filtroEquipeStatus = 'ativos'
+let loginEscolhaPendente = null
+let popupEntradaTimer = null
+
+try {
+  usuario = JSON.parse(localStorage.getItem('peniel_usuario') || 'null')
+  if (usuario && !Array.isArray(usuario.departamentos)) usuario.departamentos = []
+} catch (e) {}
+
+// ═══════════════════════════════════════════════════════════
+// API
+// ═══════════════════════════════════════════════════════════
+async function api(method, path, body) {
+  const prevUsuarioId = usuario?.id
+  try {
+    const t = localStorage.getItem('peniel_token')
+    if (t !== null && t !== '') token = t
+    const raw = localStorage.getItem('peniel_usuario')
+    if (raw) {
+      usuario = JSON.parse(raw)
+      if (usuario && !Array.isArray(usuario.departamentos)) usuario.departamentos = []
+    } else if (!localStorage.getItem('peniel_token')) {
+      usuario = null
+      token = null
+    }
+  } catch (_) {}
+
+  if (
+    prevUsuarioId !== undefined &&
+    usuario?.id !== undefined &&
+    usuario.id !== prevUsuarioId &&
+    document.getElementById('tela-app')?.style.display === 'block'
+  ) {
+    mostrarApp()
+    const pagVis = document.querySelector('.pagina[style*="block"]')
+    const nomePag = pagVis?.id?.replace(/^pagina-/, '')
+    if (nomePag === 'comunicacoes') carregarComunicacoes()
+    else if (nomePag === 'dashboard') carregarDashboard()
+  }
+
+  const opts = { method, headers: { 'Content-Type': 'application/json' } }
+  if (token) opts.headers['Authorization'] = `Bearer ${token}`
+  if (body !== undefined) opts.body = JSON.stringify(body)
+  const r = await fetch(path, opts)
+  const data = await r.json()
+  if (!r.ok) throw data
+  return data
+}
+
+// ═══════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════
+function toast(msg, tipo = 'ok') {
+  const area = document.getElementById('toast-area')
+  const el = document.createElement('div')
+  el.className = `toast toast-${tipo}`
+  el.textContent = msg
+  area.appendChild(el)
+  setTimeout(() => el.remove(), 4500)
+}
+
+/** Após salvar no servidor, recarrega a página para alinhar painel, caches e permissões. */
+function recarregarAposMudanca(mensagem, delayMs = 480, tipoToast = 'ok') {
+  if (mensagem != null && mensagem !== '') {
+    sessionStorage.setItem('peniel_toast_apos_reload', mensagem)
+    sessionStorage.setItem('peniel_toast_tipo_apos_reload', tipoToast)
+  }
+  setTimeout(() => location.reload(), delayMs)
+}
+
+function exibirToastPendenteAposReload() {
+  const msg = sessionStorage.getItem('peniel_toast_apos_reload')
+  if (!msg) return
+  sessionStorage.removeItem('peniel_toast_apos_reload')
+  const tipo = sessionStorage.getItem('peniel_toast_tipo_apos_reload') || 'ok'
+  sessionStorage.removeItem('peniel_toast_tipo_apos_reload')
+  setTimeout(() => toast(msg, tipo), 400)
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════
+async function handleLogin(e) {
+  e.preventDefault()
+  const login = document.getElementById('login-email').value.trim()
+  const senha = document.getElementById('login-senha').value
+  const btn   = document.getElementById('btn-login')
+  const erro  = document.getElementById('login-erro')
+
+  btn.disabled = true
+  btn.textContent = 'Entrando…'
+  erro.style.display = 'none'
+  loginEscolhaPendente = null
+
+  try {
+    const data = await api('POST', '/auth/login', { login, senha })
+    token   = data.token
+    usuario = { ...data.usuario, departamentos: data.departamentos || [] }
+    localStorage.setItem('peniel_token',   token)
+    localStorage.setItem('peniel_usuario', JSON.stringify(usuario))
+    mostrarApp()
+    navegar('dashboard')
+    tentarAbrirPopupEntrada()
+  } catch(err) {
+    if (err.codigo === 'ESCOLHER_USUARIO' && Array.isArray(err.candidatos) && err.candidatos.length) {
+      loginEscolhaPendente = { login, senha, candidatos: err.candidatos }
+      abrirModalEscolherConta(err.candidatos)
+      return
+    }
+    erro.textContent  = err.erro || 'Falha ao fazer login.'
+    erro.style.display = 'block'
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'Entrar'
+  }
+}
+
+function abrirModalEscolherConta(candidatos) {
+  const sel = document.getElementById('login-escolha-usuario')
+  const err = document.getElementById('login-escolha-erro')
+  if (!sel) return
+  sel.innerHTML = (candidatos || [])
+    .map((u) => {
+      const celular = u.celular ? ` · ${u.celular}` : ''
+      return `<option value="${esc(u.id)}">${esc(u.nome)} · ${esc(u.email)}${esc(celular)}</option>`
+    })
+    .join('')
+  if (err) err.style.display = 'none'
+  document.getElementById('modal-escolher-conta')?.classList.add('aberto')
+}
+
+function fecharModalEscolherConta() {
+  document.getElementById('modal-escolher-conta')?.classList.remove('aberto')
+}
+
+async function confirmarEscolhaContaLogin() {
+  const ctx = loginEscolhaPendente
+  if (!ctx) return
+  const sel = document.getElementById('login-escolha-usuario')
+  const err = document.getElementById('login-escolha-erro')
+  const usuarioId = sel?.value
+  if (!usuarioId) return
+  if (err) err.style.display = 'none'
+  try {
+    const data = await api('POST', '/auth/login', {
+      login: ctx.login,
+      senha: ctx.senha,
+      usuario_id: usuarioId
+    })
+    token = data.token
+    usuario = { ...data.usuario, departamentos: data.departamentos || [] }
+    localStorage.setItem('peniel_token', token)
+    localStorage.setItem('peniel_usuario', JSON.stringify(usuario))
+    loginEscolhaPendente = null
+    fecharModalEscolherConta()
+    mostrarApp()
+    navegar('dashboard')
+    tentarAbrirPopupEntrada()
+  } catch (e) {
+    if (err) {
+      err.textContent = e.erro || 'Não foi possível autenticar com o cadastro escolhido.'
+      err.style.display = 'block'
+    } else {
+      toast(e.erro || 'Não foi possível autenticar.', 'err')
+    }
+  }
+}
+
+function mostrarPainelEntrar() {
+  document.getElementById('painel-login').classList.remove('oculto')
+  document.getElementById('painel-cadastro').classList.add('oculto')
+  const e1 = document.getElementById('login-erro')
+  const e2 = document.getElementById('cadastro-erro')
+  if (e1) e1.style.display = 'none'
+  if (e2) e2.style.display = 'none'
+}
+
+async function mostrarPainelCadastro() {
+  document.getElementById('painel-login').classList.add('oculto')
+  document.getElementById('painel-cadastro').classList.remove('oculto')
+  const e1 = document.getElementById('login-erro')
+  const e2 = document.getElementById('cadastro-erro')
+  if (e1) e1.style.display = 'none'
+  if (e2) e2.style.display = 'none'
+
+  const sel = document.getElementById('cad-depto')
+  if (sel && sel.dataset.loaded !== '1') {
+    sel.innerHTML = '<option value="">Carregando…</option>'
+    try {
+      const rows = await api('GET', '/departamento/cadastro-publico')
+      const list = Array.isArray(rows) ? rows : []
+      sel.innerHTML =
+        '<option value="">Não sei ainda / vincular depois</option>' +
+        list.map((d) => `<option value="${esc(d.id)}">${esc(d.icone || '')} ${esc(d.nome)}</option>`).join('')
+      sel.dataset.loaded = '1'
+    } catch {
+      sel.innerHTML = '<option value="">Não foi possível carregar equipes</option>'
+    }
+  }
+}
+
+function abrirModalEsqueciSenha() {
+  document.getElementById('modal-esqueci').classList.add('aberto')
+}
+
+function fecharModalEsqueciSenha() {
+  document.getElementById('modal-esqueci').classList.remove('aberto')
+}
+
+async function handleCadastro(e) {
+  e.preventDefault()
+  const nome = document.getElementById('cad-nome').value.trim()
+  const email = document.getElementById('cad-email').value.trim()
+  const celular = document.getElementById('cad-celular').value.trim()
+  const senha = document.getElementById('cad-senha').value
+  const senha2 = document.getElementById('cad-senha2').value
+  const departamento_id = document.getElementById('cad-depto')?.value?.trim() || ''
+  const btn = document.getElementById('btn-cadastro')
+  const erro = document.getElementById('cadastro-erro')
+
+  if (senha !== senha2) {
+    erro.textContent = 'As senhas não coincidem.'
+    erro.style.display = 'block'
+    return
+  }
+
+  btn.disabled = true
+  btn.textContent = 'Criando…'
+  erro.style.display = 'none'
+
+  try {
+    const body = { nome, email, celular, senha }
+    if (departamento_id) body.departamento_id = departamento_id
+    const data = await api('POST', '/auth/cadastro', body)
+    token = data.token
+    usuario = { ...data.usuario, departamentos: data.departamentos || [] }
+    localStorage.setItem('peniel_token', token)
+    localStorage.setItem('peniel_usuario', JSON.stringify(usuario))
+    document.getElementById('form-cadastro').reset()
+    const sel = document.getElementById('cad-depto')
+    if (sel) {
+      sel.dataset.loaded = '0'
+      sel.innerHTML = '<option value="">Carregando equipes…</option>'
+    }
+    mostrarPainelEntrar()
+    toast('Conta criada. Bem-vindo à equipe!')
+    mostrarApp()
+    navegar('dashboard')
+    tentarAbrirPopupEntrada()
+  } catch (err) {
+    erro.textContent = err.erro || 'Não foi possível criar a conta.'
+    erro.style.display = 'block'
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'Criar conta e entrar'
+  }
+}
+
+function logout() {
+  token = null; usuario = null; deptoCache = []
+  localStorage.removeItem('peniel_token')
+  localStorage.removeItem('peniel_usuario')
+  mostrarLogin()
+}
+
+// ═══════════════════════════════════════════════════════════
+// ALTERNÂNCIA DE TELAS
+// ═══════════════════════════════════════════════════════════
+function cancelarPopupEntradaPendente() {
+  if (popupEntradaTimer) {
+    clearTimeout(popupEntradaTimer)
+    popupEntradaTimer = null
+  }
+}
+
+/** Página aberta em nova janela (editável). */
+const POPUP_ENTRADA_URL = '/boas-vindas.html'
+
+function tentarAbrirPopupEntrada() {
+  try {
+    if (localStorage.getItem('peniel_popup_entrada_ok') === '1') return
+    if (sessionStorage.getItem('peniel_popup_entrada_sessao') === '1') return
+    const el = document.getElementById('modal-entrada')
+    if (!el) return
+    cancelarPopupEntradaPendente()
+    popupEntradaTimer = setTimeout(() => {
+      popupEntradaTimer = null
+      if (document.getElementById('modal-troca-senha')?.classList.contains('aberto')) return
+
+      const absUrl = new URL(POPUP_ENTRADA_URL, window.location.href).href
+      const win = window.open(
+        absUrl,
+        'peniel_boas_vindas',
+        'width=440,height=540,left=80,top=80,scrollbars=yes,resizable=yes'
+      )
+
+      if (win && !win.closed) {
+        try {
+          win.focus()
+        } catch (e) {}
+        sessionStorage.setItem('peniel_popup_entrada_sessao', '1')
+        const aviso = document.getElementById('modal-entrada-aviso-bloqueio')
+        if (aviso) aviso.style.display = 'none'
+        return
+      }
+
+      const aviso = document.getElementById('modal-entrada-aviso-bloqueio')
+      if (aviso) aviso.style.display = 'block'
+      el.classList.add('aberto')
+      sessionStorage.setItem('peniel_popup_entrada_sessao', '1')
+    }, 480)
+  } catch (e) {}
+}
+
+function fecharPopupEntrada() {
+  const el = document.getElementById('modal-entrada')
+  if (document.getElementById('entrada-nao-mostrar')?.checked) {
+    localStorage.setItem('peniel_popup_entrada_ok', '1')
+  }
+  el?.classList.remove('aberto')
+}
+
+function mostrarLogin() {
+  document.getElementById('tela-login').style.display = 'flex'
+  document.getElementById('tela-app').style.display   = 'none'
+  mostrarPainelEntrar()
+  fecharModalEsqueciSenha()
+}
+
+function mostrarApp() {
+  document.getElementById('tela-login').style.display = 'none'
+  document.getElementById('tela-app').style.display   = 'block'
+
+  const primeiroNome = (usuario?.nome || 'Usuário').split(' ')[0]
+  document.getElementById('hdr-nome').textContent = primeiroNome
+  const roleEl = document.getElementById('hdr-role')
+  roleEl.textContent = rotuloPerfil(usuario?.role)
+  roleEl.className = `usuario-role role-${usuario?.role || 'membro'}`
+
+  const navCad = document.getElementById('nav-cadastro')
+  if (navCad) navCad.style.display = temPapelLiderancaNoApp() ? '' : 'none'
+
+  verificarSenhaObrigatoria()
+}
+
+function verificarSenhaObrigatoria() {
+  const modal = document.getElementById('modal-troca-senha')
+  if (!modal || !usuario) return
+  if (usuario.precisa_trocar_senha) modal.classList.add('aberto')
+  else modal.classList.remove('aberto')
+}
+
+async function handleTrocaSenhaObrigatoria(e) {
+  e.preventDefault()
+  const s1 = document.getElementById('troca-s1').value
+  const s2 = document.getElementById('troca-s2').value
+  const erro = document.getElementById('troca-erro')
+  const btn = document.getElementById('btn-troca-senha')
+  if (s1 !== s2) {
+    erro.textContent = 'As senhas não coincidem.'
+    erro.style.display = 'block'
+    return
+  }
+  btn.disabled = true
+  erro.style.display = 'none'
+  try {
+    const data = await api('POST', '/auth/trocar-senha-obrigatoria', {
+      senha_nova: s1,
+      senha_confirmacao: s2
+    })
+    usuario = { ...usuario, ...data.usuario, precisa_trocar_senha: false }
+    localStorage.setItem('peniel_usuario', JSON.stringify(usuario))
+    document.getElementById('modal-troca-senha').classList.remove('aberto')
+    document.getElementById('form-troca-senha').reset()
+    recarregarAposMudanca('Senha atualizada com sucesso.')
+  } catch (err) {
+    erro.textContent = err.erro || 'Não foi possível alterar a senha.'
+    erro.style.display = 'block'
+  } finally {
+    btn.disabled = false
+  }
+}
+
+function irEquipeParaVincular() {
+  navegar('equipe')
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVEGAÇÃO
+// ═══════════════════════════════════════════════════════════
+function navegar(pagina) {
+  document.querySelectorAll('.nav-link').forEach(el =>
+    el.classList.toggle('ativo', el.dataset.pagina === pagina)
+  )
+  document.querySelectorAll('.pagina').forEach(el => el.style.display = 'none')
+  document.getElementById(`pagina-${pagina}`).style.display = 'block'
+  document.getElementById('header-nav').classList.remove('aberto')
+
+  const loaders = {
+    dashboard:     carregarDashboard,
+    escalas:       carregarEscalas,
+    equipe:        carregarEquipe,
+    departamentos: carregarDepartamentos,
+    comunicacoes:  carregarComunicacoes,
+    cadastros:     carregarCadastros,
+    agente:        () => {}
+  }
+  loaders[pagina]?.()
+}
+
+function toggleMenu() {
+  document.getElementById('header-nav').classList.toggle('aberto')
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILITÁRIOS
+// ═══════════════════════════════════════════════════════════
+function nomeDepto(id) {
+  return deptoCache.find(d => d.id === id)?.nome || id
+}
+
+function iconeDepto(id) {
+  return deptoCache.find(d => d.id === id)?.icone || '🏛️'
+}
+
+function nomeEvento(id) {
+  if (!id) return '—'
+  const ev = eventoCache.find(x => x.id === id)
+  if (!ev) return '—'
+  const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+  const dia = ev.dia_semana != null && ev.dia_semana !== '' ? `${dias[ev.dia_semana]} ` : ''
+  const h = ev.hora_inicio ? ev.hora_inicio + (ev.hora_fim ? '–' + ev.hora_fim : '') : ''
+  return [ev.nome, dia && `(${dia}${h})`].filter(Boolean).join(' ')
+}
+
+function dataEscalaParaISO(dataStr) {
+  if (!dataStr) return ''
+  const parts = String(dataStr).split('/')
+  if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`
+  return dataStr
+}
+
+function dataBRparaInputDate(dataBR) {
+  return dataEscalaParaISO(dataBR)
+}
+
+/** Líder em pelo menos um departamento (mesmo com perfil global “membro” em dados antigos). */
+function eLiderEmAlgumDepartamentoNoCliente() {
+  if (!usuario) return false
+  return (usuario.departamentos || []).some((d) => d.role_depto === 'lider')
+}
+
+/** Menu Cadastros e páginas de gestão: admin, líder global ou líder de departamento. */
+function temPapelLiderancaNoApp() {
+  if (!usuario) return false
+  if (usuario.role === 'admin' || usuario.role === 'lider') return true
+  return eLiderEmAlgumDepartamentoNoCliente()
+}
+
+/** Pode criar escala: admin ou líder de algum departamento. */
+function podeCriarEscalaNoCliente() {
+  if (!usuario) return false
+  if (usuario.role === 'admin') return true
+  return eLiderEmAlgumDepartamentoNoCliente()
+}
+
+/** IDs dos departamentos em que o utilizador logado é líder */
+function departamentosOndeEditorELiderIds() {
+  if (!usuario) return []
+  return (usuario.departamentos || [])
+    .filter((d) => d.role_depto === 'lider')
+    .map((d) => d.id)
+}
+
+/** Perfil do modal Equipe: admin | lider | voluntario */
+function inferirPerfilEquipeDeUsuario(u) {
+  if (!u) return 'voluntario'
+  if (u.role === 'admin') return 'admin'
+  if (u.role === 'lider') return 'lider'
+  const deps = u.departamentos || []
+  if (deps.some((d) => d.role_depto === 'lider')) return 'lider'
+  return 'voluntario'
+}
+
+/** Alinhado à API: admin ou líder do departamento da escala. */
+function podeGerirEscalaNoCliente(departamentoId) {
+  if (!usuario) return false
+  if (usuario.role === 'admin') return true
+  if (!departamentoId) return false
+  const deps = usuario.departamentos
+  if (!Array.isArray(deps) || deps.length === 0) return false
+  return deps.some((d) => d.id === departamentoId && d.role_depto === 'lider')
+}
+
+function escalaEhMinha(e) {
+  if (!usuario?.id || !e) return false
+  const vols = Array.isArray(e.voluntarios) ? e.voluntarios : []
+  return vols.some((v) => v.usuario_id === usuario.id)
+}
+
+function formatarDataHoraTroca(iso) {
+  if (!iso) return ''
+  try {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return iso
+    return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+  } catch {
+    return iso
+  }
+}
+
+function htmlHistoricoTrocas(trocas) {
+  const lista = Array.isArray(trocas) ? trocas : []
+  if (!lista.length) return ''
+  const linhas = lista.map((t) => {
+    const obs = t.observacao ? ` · ${esc(t.observacao)}` : ''
+    const por = t.registrado_por_nome ? ` · registrado por ${esc(t.registrado_por_nome)}` : ''
+    return `<div class="historico-troca-linha">
+      <span class="historico-quem"><strong>${esc(t.usuario_anterior_nome)}</strong> → <strong>${esc(t.usuario_novo_nome)}</strong></span>
+      <span class="historico-troca-meta">${esc(formatarDataHoraTroca(t.registrado_em))}${por}${obs}</span>
+    </div>`
+  }).join('')
+  return `<details class="historico-trocas">
+    <summary>Histórico de trocas (${lista.length})</summary>
+    ${linhas}
+  </details>`
+}
+
+async function abrirModalTrocaEscala(escalaId) {
+  const err = document.getElementById('troca-escala-erro')
+  const modal = document.getElementById('modal-troca-escala')
+  const selSai = document.getElementById('troca-usuario-sai')
+  const selEntra = document.getElementById('troca-usuario-entra')
+  const hid = document.getElementById('troca-escala-id')
+  if (!modal || !selSai || !selEntra || !hid) return
+  err.style.display = 'none'
+  hid.value = escalaId
+  selSai.innerHTML = '<option value="">Carregando…</option>'
+  selEntra.innerHTML = '<option value="">Carregando…</option>'
+  modal.classList.add('aberto')
+
+  try {
+    const lista =
+      usuario?.role === 'admin'
+        ? await api('GET', '/escala/listar')
+        : await api('GET', `/escala/minhas/${usuario?.id}`)
+    const e = (Array.isArray(lista) ? lista : []).find((x) => x.id === escalaId)
+    if (!e) {
+      selSai.innerHTML = ''
+      selEntra.innerHTML = ''
+      err.textContent = 'Escala não encontrada.'
+      err.style.display = 'block'
+      return
+    }
+    const podeGerir = podeGerirEscalaNoCliente(e.departamento_id)
+    const podeSolicitar = usuario?.role === 'membro' && escalaEhMinha(e)
+    const formTroca = document.getElementById('form-troca-escala')
+    const tituloEl = document.getElementById('troca-modal-titulo')
+    const ajudaEl = document.getElementById('troca-escala-ajuda')
+    const btnTroca = document.getElementById('btn-confirmar-troca')
+    if (!podeGerir && !podeSolicitar) {
+      selSai.innerHTML = ''
+      selEntra.innerHTML = ''
+      err.textContent = 'Sem permissão para trocar nesta escala.'
+      err.style.display = 'block'
+      return
+    }
+    if (formTroca) formTroca.dataset.modo = podeGerir ? 'direta' : 'solicitacao'
+    if (tituloEl) tituloEl.textContent = podeGerir ? 'Trocar integrante' : 'Solicitar troca'
+    if (ajudaEl) {
+      ajudaEl.innerHTML = podeGerir
+        ? 'Como <strong style="color:var(--texto)">líder ou admin</strong>, a troca é aplicada na hora e fica registrada no histórico da escala. Quem assume pode ser de qualquer departamento (com a sua aprovação já implícita ao confirmar).'
+        : 'Como <strong style="color:var(--texto)">voluntário</strong>, o pedido vai para a <strong style="color:var(--texto)">liderança</strong> (menu <strong>Comunicações</strong>) — só após aprovação é que a escala muda. Só pode pedir troca em que <strong>você</strong> é o integrante que sai.'
+    }
+    if (btnTroca) btnTroca.textContent = podeGerir ? 'Aplicar troca' : 'Enviar solicitação'
+    const vols = e.voluntarios || []
+    if (!vols.length) {
+      selSai.innerHTML = ''
+      selEntra.innerHTML = ''
+      err.textContent = 'Não há integrantes na escala para trocar. Adicione alguém antes.'
+      err.style.display = 'block'
+      return
+    }
+    selSai.innerHTML =
+      '<option value="">Quem sai…</option>' +
+      vols.map((v) => `<option value="${v.usuario_id}">${esc(v.nome)}</option>`).join('')
+
+    const membros = podeGerir
+      ? (await api('GET', `/departamento/${e.departamento_id}`)).membros || []
+      : await api('GET', '/usuario/listar-publico')
+    const idsNaEscala = new Set(vols.map((v) => v.usuario_id))
+    const candidatos = membros.filter((m) => !idsNaEscala.has(m.id))
+    selEntra.innerHTML =
+      '<option value="">Quem assume…</option>' +
+      candidatos.map((m) => `<option value="${m.id}">${esc(m.nome)}</option>`).join('')
+    if (!candidatos.length) {
+      err.textContent = podeGerir
+        ? 'Não há outro membro do departamento disponível para assumir (todos já estão na escala).'
+        : 'Não há outra pessoa disponível na lista para assumir (ou todos já estão nesta escala).'
+      err.style.display = 'block'
+    }
+    document.getElementById('troca-obs').value = ''
+  } catch (ex) {
+    err.textContent = ex.erro || 'Não foi possível carregar dados da escala.'
+    err.style.display = 'block'
+  }
+}
+
+function fecharModalTrocaEscala() {
+  const modal = document.getElementById('modal-troca-escala')
+  if (modal) modal.classList.remove('aberto')
+}
+
+async function confirmarTrocaEscala(ev) {
+  ev.preventDefault()
+  const err = document.getElementById('troca-escala-erro')
+  const btn = document.getElementById('btn-confirmar-troca')
+  const escalaId = document.getElementById('troca-escala-id').value
+  const usuario_sai = document.getElementById('troca-usuario-sai').value
+  const usuario_entra = document.getElementById('troca-usuario-entra').value
+  const observacao = document.getElementById('troca-obs').value.trim()
+  err.style.display = 'none'
+  btn.disabled = true
+  try {
+    const modo = document.getElementById('form-troca-escala')?.dataset?.modo
+    const endpoint =
+      modo === 'solicitacao'
+        ? `/escala/${escalaId}/solicitar-troca`
+        : `/escala/${escalaId}/trocar-voluntario`
+    await api('POST', endpoint, {
+      usuario_sai,
+      usuario_entra,
+      observacao
+    })
+    fecharModalTrocaEscala()
+    recarregarAposMudanca(
+      modo === 'solicitacao'
+        ? 'Solicitação enviada para aprovação da liderança.'
+        : 'Troca registrada. O histórico foi salvo.'
+    )
+  } catch (ex) {
+    err.textContent = ex.erro || 'Não foi possível registrar a troca.'
+    err.style.display = 'block'
+  } finally {
+    btn.disabled = false
+  }
+}
+
+async function excluirEscala(escalaId) {
+  if (!escalaId) return
+  if (!confirm('Tem certeza que deseja excluir esta escala? Esta ação remove integrantes e histórico de trocas.')) return
+  try {
+    await api('DELETE', `/escala/${escalaId}`)
+    recarregarAposMudanca('Escala excluída.')
+  } catch (e) {
+    toast(e.erro || 'Não foi possível excluir a escala.', 'err')
+  }
+}
+
+function excluirEscalaNoModal() {
+  const id = document.getElementById('edit-escala-id')?.value
+  if (!id) return
+  excluirEscala(id)
+}
+
+async function toggleMembrosDepartamento(deptoId, btn) {
+  const box = document.getElementById(`depto-membros-box-${deptoId}`)
+  if (!box) return
+  if (box.dataset.carregado !== '1') {
+    box.innerHTML = '<p class="carregando" style="padding:0.5rem;font-size:0.8rem">Carregando…</p>'
+    box.hidden = false
+    try {
+      const det = await api('GET', `/departamento/${deptoId}`)
+      const membros = det.membros || []
+      box.dataset.carregado = '1'
+      box.innerHTML = membros.length
+        ? `<ul class="lista-membros-depto">${membros.map(m =>
+            `<li><strong>${esc(m.nome)}</strong><span class="lista-membros-meta">${esc(m.role_depto || 'membro')}</span></li>`
+          ).join('')}</ul>`
+        : '<p class="muted" style="font-size:0.8rem">Nenhum membro neste departamento.</p>'
+    } catch {
+      box.innerHTML = '<p class="erro-msg" style="display:block;font-size:0.8rem">Erro ao carregar membros.</p>'
+    }
+    btn.textContent = 'Ocultar membros'
+    return
+  }
+  box.hidden = !box.hidden
+  btn.textContent = box.hidden ? 'Mostrar membros' : 'Ocultar membros'
+}
+
+function rotuloPerfil(role) {
+  const mapa = { admin: 'Administrador', lider: 'Líder', membro: 'Membro' }
+  return mapa[role] || role || '—'
+}
+
+function formatarDataAviso(iso) {
+  if (!iso) return '—'
+  try {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return iso
+    return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+  } catch {
+    return iso
+  }
+}
+
+/** Texto do período de exibição (alinhado ao backend `avisoPeriodo.js`). */
+function formatarPeriodoAviso(a) {
+  if (!a) return ''
+  const di = (a.data_inicio || '').trim()
+  const df = (a.data_fim || '').trim()
+  const hi = (a.hora_inicio || '').trim()
+  const hf = (a.hora_fim || '').trim()
+  if (!di && !df) return ''
+  function fmtDate(d) {
+    const p = String(d).trim().split('-')
+    if (p.length !== 3) return d
+    const [y, m, day] = p.map(Number)
+    if (!y || Number.isNaN(y)) return d
+    return `${String(day).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`
+  }
+  const start = di ? `${fmtDate(di)}${hi ? ` ${hi}` : ''}` : ''
+  const end = df ? `${fmtDate(df)}${hf ? ` ${hf}` : ''}` : ''
+  if (start && end) return `De ${start} até ${end}`
+  if (start) return `A partir de ${start}`
+  if (end) return `Até ${end}`
+  return ''
+}
+
+function parseLocalMsAvisoCliente(dateYYYYMMDD, timeHHmm, fimDoDia) {
+  if (!dateYYYYMMDD || !String(dateYYYYMMDD).trim()) return null
+  const ymd = String(dateYYYYMMDD).trim().split('-').map(Number)
+  if (ymd.length !== 3 || ymd.some((n) => Number.isNaN(n))) return null
+  const [y, mo, d] = ymd
+  let hh = 0
+  let mm = 0
+  let ss = 0
+  let ms = 0
+  if (timeHHmm && String(timeHHmm).trim()) {
+    const p = String(timeHHmm).trim().split(':')
+    hh = Number(p[0]) || 0
+    mm = Number(p[1]) || 0
+  } else if (fimDoDia) {
+    hh = 23
+    mm = 59
+    ss = 59
+    ms = 999
+  }
+  return new Date(y, mo - 1, d, hh, mm, ss, ms).getTime()
+}
+
+/** Mesma regra que o servidor para filtrar avisos fora do período (dash lista só ativos). */
+function avisoDentroDoPeriodoAtivoCliente(a, agoraMs = Date.now()) {
+  const ini = parseLocalMsAvisoCliente(a.data_inicio, a.hora_inicio, false)
+  const fim = parseLocalMsAvisoCliente(a.data_fim, a.hora_fim, true)
+  if (ini != null && agoraMs < ini) return false
+  if (fim != null && agoraMs > fim) return false
+  return true
+}
+
+function podeExcluirAvisoNoCliente(a) {
+  if (!usuario || !a) return false
+  if (usuario.role === 'admin') return true
+  if (a.autor_id && a.autor_id === usuario.id) return true
+  if (!a.departamento_id) return false
+  const deps = Array.isArray(usuario.departamentos) ? usuario.departamentos : []
+  return deps.some((d) => d.id === a.departamento_id && d.role_depto === 'lider')
+}
+
+function montarTextoConviteWhatsApp({ nome, email, senha, url, mensagem }) {
+  const linhas = [
+    `Olá, ${nome}!`,
+    '',
+    'Foi criada a tua conta no sistema Peniel Mídia.',
+    `Link: ${url}`,
+    `E-mail de acesso: ${email}`,
+    `Senha provisória: ${senha}`,
+    '',
+    'No primeiro acesso vais definir uma nova senha.',
+    ''
+  ]
+  if (mensagem && String(mensagem).trim()) {
+    linhas.push('Mensagem:', String(mensagem).trim(), '')
+  }
+  linhas.push('Shalom, equipe de mídia')
+  return linhas.join('\n')
+}
+
+/** Mensagens pastorais por departamento — dados atualizados vêm de deptoCache após GET /departamento/listar */
+function renderMensagensPastoraisPainel(meusDeps, cache) {
+  const c = Array.isArray(cache) ? cache : []
+  const m = Array.isArray(meusDeps) ? meusDeps : []
+  const blocos = []
+  for (const ud of m) {
+    const dep = c.find((x) => x.id === ud.id)
+    const msg = (dep?.mensagem_pastoral || '').trim()
+    if (!msg) continue
+    const cor = dep?.cor || '#D4161B'
+    const ic = dep?.icone || ud.icone || '🏛️'
+    const nom = dep?.nome || ud.nome || 'Departamento'
+    blocos.push(`<div class="card" style="margin-bottom:0.85rem;padding:1rem 1.15rem;text-align:left;border-left:4px solid ${esc(cor)}">
+      <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--texto-mutado);margin-bottom:0.4rem">Palavra pastoral · ${esc(ic)} ${esc(nom)}</div>
+      <div style="font-size:0.9rem;color:var(--texto);white-space:pre-wrap;line-height:1.55">${esc(msg)}</div>
+    </div>`)
+  }
+  if (!blocos.length) return ''
+  return `<p class="secao-label">✝️ Palavra pastoral da liderança</p>
+      <div style="margin-bottom:1.25rem">${blocos.join('')}</div>`
+}
+
+function renderBlocoAvisosHtml(avisos, max = 6) {
+  const lista = (Array.isArray(avisos) ? avisos : []).slice(0, max)
+  if (!lista.length) {
+    return `<p class="muted" style="font-size:0.85rem;line-height:1.5">Ainda não há avisos. A liderança publica em <strong onclick="navegar('comunicacoes')" style="cursor:pointer;color:var(--acento)">Comunicações</strong>.</p>`
+  }
+  return lista
+    .map((a) => {
+      const quem = a.departamento_nome ? esc(a.departamento_nome) : 'Geral (todos)'
+      const tit = (a.titulo || '').trim()
+      const autor = a.autor_nome ? ` · ${esc(a.autor_nome)}` : ''
+      const periodoTxt = formatarPeriodoAviso(a)
+      return `<div class="aviso-painel-linha">
+        <div class="aviso-card-meta">${formatarDataAviso(a.criado_em)} · ${quem}${autor}</div>
+        ${periodoTxt ? `<div style="font-size:0.78rem;color:var(--texto-mutado);margin-bottom:0.2rem">${esc(periodoTxt)}</div>` : ''}
+        ${tit ? `<div style="font-weight:600;margin-bottom:0.25rem;color:var(--texto)">${esc(tit)}</div>` : ''}
+        <div style="font-size:0.84rem;color:var(--texto-mutado);white-space:pre-wrap;line-height:1.45">${esc(a.corpo)}</div>
+      </div>`
+    })
+    .join('')
+}
+
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+}
+
+function toggleSenha(inputId, mostrar) {
+  const el = document.getElementById(inputId)
+  if (!el) return
+  el.type = mostrar ? 'text' : 'password'
+}
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
+async function carregarDashboard() {
+  const el = document.getElementById('dashboard-conteudo')
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+
+  try {
+    const [deptos, escalas, evs, avisosPainel] = await Promise.all([
+      api('GET', '/departamento/listar').catch(() => []),
+      usuario?.role === 'admin'
+        ? api('GET', '/escala/listar').catch(() => [])
+        : usuario?.id
+          ? api('GET', `/escala/minhas/${usuario.id}`).catch(() => [])
+          : Promise.resolve([]),
+      api('GET', '/evento/listar').catch(() => []),
+      api('GET', '/aviso/listar').catch(() => [])
+    ])
+
+    deptoCache = Array.isArray(deptos) ? deptos : []
+    eventoCache = Array.isArray(evs) ? evs : []
+    const todasEscalas = Array.isArray(escalas) ? escalas : []
+    const avisosPainelLista = Array.isArray(avisosPainel) ? avisosPainel : []
+
+    const somaVinculosPorDepto = deptoCache.reduce((acc, d) => acc + (d.total_membros || 0), 0)
+
+    let avisoSemDepartamentoHtml = ''
+    let totalVoluntariosComEquipe = somaVinculosPorDepto
+    if (usuario?.role === 'admin') {
+      try {
+        const listaUsers = await api('GET', '/usuario/listar')
+        const todos = Array.isArray(listaUsers) ? listaUsers : []
+        const semDepto = todos.filter((u) => !(u.departamentos || []).length)
+        const comDepto = todos.filter((u) => (u.departamentos || []).length)
+        totalVoluntariosComEquipe = comDepto.length
+        if (semDepto.length) {
+          const amostra = semDepto
+            .slice(0, 4)
+            .map((u) => esc(u.nome))
+            .join(', ')
+          const resto = semDepto.length > 4 ? ` (+${semDepto.length - 4})` : ''
+          avisoSemDepartamentoHtml = `
+      <div class="card" style="margin-bottom:1.25rem;border-color:rgba(212,22,27,0.45);background:rgba(212,22,27,0.06)">
+        <div class="card-body" style="padding:1rem 1.15rem">
+          <strong style="color:var(--texto)">Utilizadores sem departamento</strong>
+          <p class="muted" style="font-size:0.84rem;margin:0.45rem 0 0.65rem;line-height:1.5">
+            ${semDepto.length} conta(s) existem no sistema mas <strong style="color:var(--texto)">não estão vinculadas</strong> a nenhuma equipe — por isso os cartões mostram <strong>0 membros</strong>.
+            Isto pode acontecer com contas antigas ou se o vínculo foi removido — use <strong>Equipe</strong> ou um novo convite em <strong>Cadastros</strong>.
+          </p>
+          <p style="font-size:0.82rem;color:var(--texto-mutado);margin:0 0 0.75rem">${amostra}${resto}</p>
+          <button type="button" class="btn btn-primario btn-sm" onclick="irEquipeParaVincular()">Abrir Equipe e vincular</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="navegar('cadastros')">Ir a Cadastros (convidar)</button>
+        </div>
+      </div>`
+        }
+      } catch (_) {
+        totalVoluntariosComEquipe = somaVinculosPorDepto
+      }
+    }
+
+    // Proximas escalas (data no futuro ou hoje)
+    const hoje = new Date().toISOString().split('T')[0]
+    const proximas = todasEscalas
+      .filter(e => {
+        if (!e.data) return false
+        const iso = dataEscalaParaISO(e.data)
+        return iso >= hoje
+      })
+      .sort((a, b) => dataEscalaParaISO(a.data).localeCompare(dataEscalaParaISO(b.data)))
+      .slice(0, 8)
+
+    const meusDepartamentos = Array.isArray(usuario?.departamentos) ? usuario.departamentos : []
+    const meusVinculosCount = meusDepartamentos.length
+    const meusDepartamentosHtml = meusDepartamentos.length
+      ? `<div class="card" style="margin-bottom:1.5rem;padding:1rem 1.15rem;text-align:left">
+          <div style="font-size:0.82rem;color:var(--texto-mutado);margin-bottom:0.55rem">Departamentos em que estou lotada</div>
+          ${meusDepartamentos
+            .map(
+              (d) =>
+                `<span class="badge badge-info" style="margin:2px 4px 2px 0">${esc(d.icone || '🏛️')} ${esc(d.nome)} · ${esc(d.role_depto === 'lider' ? 'líder' : 'membro')}</span>`
+            )
+            .join('')}
+        </div>`
+      : ''
+
+    const depsParaPastoral =
+      usuario?.role === 'admin'
+        ? deptoCache.map((d) => ({ id: d.id, nome: d.nome, icone: d.icone, role_depto: 'membro' }))
+        : meusDepartamentos
+    const pastoralPainelHtml = renderMensagensPastoraisPainel(depsParaPastoral, deptoCache)
+
+    el.innerHTML = `
+      <h2 class="pagina-titulo">🏠 Painel</h2>
+      ${avisoSemDepartamentoHtml}
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icone">👥</div>
+          <div class="stat-label">${usuario?.role === 'admin' ? 'Nas equipes' : 'Meus vínculos'}</div>
+          <div class="stat-valor">${usuario?.role === 'admin' ? totalVoluntariosComEquipe : meusVinculosCount}<span class="stat-unidade">${usuario?.role === 'admin' ? 'pessoas' : 'departamentos'}</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icone">🏛️</div>
+          <div class="stat-label">Departamentos</div>
+          <div class="stat-valor">${deptoCache.length}<span class="stat-unidade">ativos</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icone">📅</div>
+          <div class="stat-label">Total de Escalas</div>
+          <div class="stat-valor">${todasEscalas.length}<span class="stat-unidade">escalas</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icone">🔥</div>
+          <div class="stat-label">Próximos cultos</div>
+          <div class="stat-valor">${proximas.length}<span class="stat-unidade">escalas</span></div>
+        </div>
+      </div>
+
+      ${meusDepartamentosHtml}
+
+      ${pastoralPainelHtml}
+
+      <p class="secao-label">📢 Avisos da equipe</p>
+      <div class="card" style="margin-bottom:1.5rem;padding:1rem 1.25rem;text-align:left">
+        ${renderBlocoAvisosHtml(avisosPainelLista)}
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:0.65rem" onclick="navegar('comunicacoes')">Abrir Comunicações</button>
+      </div>
+
+      <p class="secao-label">📋 Próximas escalas</p>
+      ${renderPainelProximasEscalas(proximas)}
+
+      <p class="secao-label">🏛️ Departamentos</p>
+      <div class="cards-grid">
+        ${deptoCache.map(d => renderCardDeptoPainel(d)).join('')}
+      </div>
+    `
+  } catch(err) {
+    el.innerHTML = `<p class="carregando" style="color:var(--erro)">Erro ao carregar. Tente novamente.</p>`
+    console.error(err)
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ESCALAS
+// ═══════════════════════════════════════════════════════════
+async function carregarEscalas() {
+  const el  = document.getElementById('escalas-conteudo')
+  const btn = document.getElementById('btn-nova-escala')
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+
+  if (btn) btn.style.display = podeCriarEscalaNoCliente() ? 'inline-flex' : 'none'
+
+  try {
+    if (!deptoCache.length) {
+      const d = await api('GET', '/departamento/listar')
+      deptoCache = Array.isArray(d) ? d : []
+    }
+    try {
+      eventoCache = await api('GET', '/evento/listar')
+    } catch {
+      eventoCache = []
+    }
+
+    const escalas = usuario?.role === 'admin'
+      ? await api('GET', '/escala/listar')
+      : await api('GET', `/escala/minhas/${usuario?.id}`)
+
+    const lista = Array.isArray(escalas) ? escalas : []
+
+    if (!lista.length) {
+      el.innerHTML = '<div class="vazio">Nenhuma escala cadastrada ainda.<br><small>Clique em "+ Nova Escala" para começar.</small></div>'
+      return
+    }
+
+    const ordenada = [...lista].sort((a, b) =>
+      dataEscalaParaISO(a.data).localeCompare(dataEscalaParaISO(b.data))
+    )
+    el.innerHTML = renderTabelaEscalas(ordenada)
+  } catch(err) {
+    el.innerHTML = `<p class="carregando" style="color:var(--erro)">Erro ao carregar escalas.</p>`
+    console.error(err)
+  }
+}
+
+function renderPainelProximasEscalas(escalas) {
+  if (!escalas?.length) {
+    return '<div class="tabela-vazia">Nenhuma escala para exibir.</div>'
+  }
+  return `
+    <div class="dash-escalas">
+      ${escalas.map(e => {
+        const ehMinha = escalaEhMinha(e)
+        const vols = e.voluntarios || []
+        const chips = vols.length
+          ? vols.map(v =>
+              `<span class="chip-vol">${esc(v.nome)}${v.funcao ? ` · ${esc(v.funcao)}` : ''}</span>`
+            ).join('')
+          : '<span class="dash-escala-sem-vol">Ninguém designado ainda — o líder ou o admin inclui os integrantes ao criar ou editar esta escala.</span>'
+        const hist = htmlHistoricoTrocas(e.trocas)
+        const botoes = []
+        if (podeGerirEscalaNoCliente(e.departamento_id)) {
+          botoes.push(
+            `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalEditarEscala('${e.id}')">Editar escala</button>`
+          )
+          botoes.push(
+            `<button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirEscala('${e.id}')">Excluir escala</button>`
+          )
+        }
+        if (podeGerirEscalaNoCliente(e.departamento_id) && vols.length) {
+          botoes.push(
+            `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalTrocaEscala('${e.id}')">Trocar integrante</button>`
+          )
+        } else if (usuario?.role === 'membro' && ehMinha && vols.length) {
+          botoes.push(
+            `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalTrocaEscala('${e.id}')">Solicitar troca</button>`
+          )
+        }
+        const acoes = botoes.length
+          ? `<div class="dash-escala-acoes">${botoes.join('')}</div>`
+          : ''
+        return `
+          <article class="dash-escala-card" style="${ehMinha ? 'border:1px solid rgba(201,74,82,0.55);box-shadow:0 0 0 2px rgba(201,74,82,0.12) inset' : ''}">
+            <div class="dash-escala-top">
+              <span class="dash-escala-data">${esc(e.data)}</span>
+              <span class="dash-escala-depto">${iconeDepto(e.departamento_id)} ${esc(nomeDepto(e.departamento_id))}</span>
+            </div>
+            ${ehMinha ? '<div style="margin-bottom:0.45rem"><span class="badge badge-vermelho">Minha escala</span></div>' : ''}
+            <div class="dash-escala-evento">${esc(nomeEvento(e.evento_id))}</div>
+            <div class="dash-escala-vols">
+              <span class="dash-escala-vols-label">Integrantes</span>
+              <div class="dash-escala-chips">${chips}</div>
+            </div>
+            ${hist}
+            ${acoes}
+          </article>`
+      }).join('')}
+    </div>`
+}
+
+function renderCardDeptoPainel(d) {
+  const cor = d.cor || '#D4161B'
+  const hexTransp = cor + '22'
+  const hexBorda  = cor + '55'
+  return `
+    <div class="card card-depto-painel">
+      <div class="card-header">
+        <div class="card-icone" style="background:${hexTransp};border:1px solid ${hexBorda}">
+          <span style="color:${cor}">${d.icone || '🏛️'}</span>
+        </div>
+        <div>
+          <div class="card-titulo" style="color:${cor}">${esc(d.nome)}</div>
+          <div class="card-subtitulo">${esc(d.descricao || '')}</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="badge badge-info">${d.total_membros || 0} membros</span>
+      </div>
+      ${!(d.total_membros || 0)
+        ? `<p class="muted" style="font-size:0.72rem;margin:0.4rem 0 0;line-height:1.4">Ninguém vinculado ainda. <strong style="color:var(--texto)">Equipe</strong> → <em>Editar</em> no membro, ou <strong>Cadastros</strong> → Convidar.</p>`
+        : ''}
+      <button type="button" class="btn btn-ghost btn-sm" style="width:100%;margin-top:0.5rem"
+        onclick="toggleMembrosDepartamento('${d.id}', this)">Mostrar membros</button>
+      <div id="depto-membros-box-${d.id}" class="depto-membros-box" hidden></div>
+    </div>`
+}
+
+function renderTabelaEscalas(escalas) {
+  if (!escalas?.length) {
+    return '<div class="tabela-vazia">Nenhuma escala para exibir.</div>'
+  }
+  return `
+    <div class="tabela-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Evento</th>
+            <th>Departamento</th>
+            <th>Integrantes</th>
+            <th>Trocas</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${escalas.map(e => {
+            const ehMinha = escalaEhMinha(e)
+            const vols = e.voluntarios || []
+            const volTxt = vols.length ? vols.map(v => esc(v.nome)).join(', ') : '—'
+            const hist = htmlHistoricoTrocas(e.trocas)
+            const histCell = hist || '<span style="color:var(--texto-mutado);font-size:0.8rem">—</span>'
+            const botoes = []
+            if (podeGerirEscalaNoCliente(e.departamento_id)) {
+              botoes.push(
+                `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalEditarEscala('${e.id}')">Editar</button>`
+              )
+              botoes.push(
+                `<button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirEscala('${e.id}')">Excluir</button>`
+              )
+            }
+            if (podeGerirEscalaNoCliente(e.departamento_id) && vols.length) {
+              botoes.push(
+                `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalTrocaEscala('${e.id}')">Trocar</button>`
+              )
+            } else if (usuario?.role === 'membro' && ehMinha && vols.length) {
+              botoes.push(
+                `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalTrocaEscala('${e.id}')">Solicitar troca</button>`
+              )
+            }
+            const acao = botoes.length ? botoes.join(' ') : '—'
+            return `
+            <tr style="${ehMinha ? 'background:rgba(201,74,82,0.08)' : ''}">
+              <td><strong>${esc(e.data)}</strong>${ehMinha ? ' <span class="badge badge-vermelho" style="margin-left:0.35rem">Minha</span>' : ''}</td>
+              <td style="color:var(--texto-mutado);font-size:0.82rem">${esc(nomeEvento(e.evento_id))}</td>
+              <td>
+                <span style="margin-right:0.4rem">${iconeDepto(e.departamento_id)}</span>
+                ${esc(nomeDepto(e.departamento_id))}
+              </td>
+              <td style="font-size:0.82rem;color:var(--texto-mutado);max-width:14rem">${volTxt}</td>
+              <td style="font-size:0.78rem;min-width:8rem;vertical-align:top">${histCell}</td>
+              <td style="white-space:nowrap">${acao}</td>
+            </tr>`
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+// ─── Modal Nova Escala ──────────────────────────────────────
+async function onEscalaDeptoChange() {
+  const id = document.getElementById('esc-depto')?.value
+  const wrap = document.getElementById('esc-membros-wrap')
+  const list = document.getElementById('esc-membros-list')
+  if (!wrap || !list) return
+  if (!id) {
+    wrap.style.display = 'none'
+    list.innerHTML = ''
+    return
+  }
+  wrap.style.display = ''
+  list.innerHTML = '<p class="carregando" style="padding:0.5rem;font-size:0.8rem">Carregando membros…</p>'
+  try {
+    const det = await api('GET', `/departamento/${id}`)
+    const membros = det.membros || []
+    list.innerHTML = membros.length
+      ? membros.map(m => `
+          <label class="esc-membro-linha">
+            <input type="checkbox" class="esc-membro-cb" value="${esc(m.id)}"/>
+            <span>${esc(m.nome)}</span>
+          </label>
+        `).join('')
+      : '<span class="muted" style="font-size:0.8rem">Sem membros neste departamento.</span>'
+  } catch {
+    list.innerHTML = '<span class="muted" style="font-size:0.8rem">Não foi possível carregar membros.</span>'
+  }
+}
+
+async function abrirModalEscala() {
+  const select = document.getElementById('esc-depto')
+  const erroEl = document.getElementById('esc-erro')
+
+  erroEl.style.display = 'none'
+  select.innerHTML = '<option value="">Carregando…</option>'
+  const wrapM = document.getElementById('esc-membros-wrap')
+  const listM = document.getElementById('esc-membros-list')
+  if (wrapM) wrapM.style.display = 'none'
+  if (listM) listM.innerHTML = ''
+
+  try {
+    if (!deptoCache.length) {
+      const d = await api('GET', '/departamento/listar')
+      deptoCache = Array.isArray(d) ? d : []
+    }
+    select.innerHTML = '<option value="">Selecione o departamento…</option>' +
+      deptoCache.map(d => `<option value="${d.id}">${d.icone || ''} ${esc(d.nome)}</option>`).join('')
+
+    const selEv = document.getElementById('esc-evento')
+    let evs = []
+    try {
+      evs = await api('GET', '/evento/listar')
+    } catch {
+      evs = []
+    }
+    eventoCache = Array.isArray(evs) ? evs : []
+    selEv.innerHTML = '<option value="">— Nenhum —</option>' +
+      eventoCache.filter(x => x.ativo !== false).map(x => `<option value="${x.id}">${esc(x.nome)}</option>`).join('')
+  } catch {
+    select.innerHTML = '<option value="">Erro ao carregar departamentos</option>'
+  }
+
+  // Mínimo = hoje
+  document.getElementById('esc-data').min   = new Date().toISOString().split('T')[0]
+  document.getElementById('esc-data').value = ''
+  document.getElementById('modal-escala').classList.add('aberto')
+}
+
+function fecharModalEscala() {
+  document.getElementById('modal-escala').classList.remove('aberto')
+}
+
+async function criarEscala(e) {
+  e.preventDefault()
+  const dataISO = document.getElementById('esc-data').value
+  const deptoId = document.getElementById('esc-depto').value
+  const eventoId = document.getElementById('esc-evento').value
+  const btn     = document.getElementById('btn-criar-esc')
+  const erroEl  = document.getElementById('esc-erro')
+
+  if (!dataISO || !deptoId) return
+
+  // Converter YYYY-MM-DD → DD/MM/YYYY para a API
+  const [y, m, d] = dataISO.split('-')
+  const dataBR = `${d}/${m}/${y}`
+
+  btn.disabled = true
+  btn.textContent = 'Criando…'
+  erroEl.style.display = 'none'
+
+  try {
+    const cbs = [...document.querySelectorAll('.esc-membro-cb:checked')]
+    const voluntarios = cbs.map(cb => ({ usuario_id: cb.value, funcao: '' }))
+    const body = { data: dataBR, departamento_id: deptoId, voluntarios }
+    if (eventoId) body.evento_id = eventoId
+    await api('POST', '/escala/criar', body)
+    fecharModalEscala()
+    recarregarAposMudanca('Escala criada com sucesso.')
+  } catch(err) {
+    erroEl.textContent  = err.erro || 'Erro ao criar escala.'
+    erroEl.style.display = 'block'
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'Criar Escala'
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// CADASTROS (admin/líder)
+// ═══════════════════════════════════════════════════════════
+async function carregarCadastros() {
+  const el = document.getElementById('cadastros-conteudo')
+  if (!temPapelLiderancaNoApp()) {
+    el.innerHTML = '<p class="vazio">Acesso restrito a administradores e líderes.</p>'
+    return
+  }
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+  try {
+    const deptos = await api('GET', '/departamento/listar?todos=1')
+    const listaD = Array.isArray(deptos) ? deptos : []
+    const listaDAtivos = listaD.filter((d) => d.ativo !== false)
+    const evs = await api('GET', '/evento/listar?todos=1').catch(() => [])
+    const listaE = Array.isArray(evs) ? evs : []
+    const dias = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado']
+    const optDeptos = listaDAtivos.map(d => `<option value="${d.id}">${esc(d.icone || '')} ${esc(d.nome)}</option>`).join('')
+    const optDiaSemana = `<option value="">— Sem dia fixo —</option>` +
+      dias.map((nome, i) => `<option value="${i}">${nome}</option>`).join('')
+
+    const tabelaDeptosGerir = listaD.length
+      ? `<div class="tabela-wrapper" style="margin-bottom:1.5rem"><table><thead><tr><th>Departamento</th><th>Membros</th><th>Status</th><th></th></tr></thead><tbody>` +
+        listaD.map(d => `
+          <tr>
+            <td><span style="margin-right:0.35rem">${d.icone || ''}</span><strong>${esc(d.nome)}</strong></td>
+            <td>${d.total_membros ?? 0}</td>
+            <td>${d.ativo !== false ? '<span class="badge badge-sucesso">Ativo</span>' : '<span class="badge badge-vermelho">Inativo</span>'}</td>
+            <td style="white-space:nowrap">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalEditarDepartamento('${d.id}')">Editar</button>
+              <button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="desativarDepartamentoGerir('${d.id}')">Excluir</button>
+            </td>
+          </tr>
+        `).join('') + '</tbody></table></div>'
+      : '<p class="vazio">Nenhum departamento.</p>'
+
+    const tabelaEventos = listaE.length
+      ? `<div class="tabela-wrapper"><table><thead><tr><th>Evento</th><th>Dia</th><th>Horário</th><th>Ativo</th><th></th></tr></thead><tbody>` +
+        listaE.map(ev => `
+          <tr>
+            <td><strong>${esc(ev.nome)}</strong></td>
+            <td>${ev.dia_semana != null && ev.dia_semana !== '' ? esc(dias[ev.dia_semana]) : '—'}</td>
+            <td>${esc([ev.hora_inicio, ev.hora_fim].filter(Boolean).join(' – ') || '—')}</td>
+            <td>${ev.ativo ? '✓' : '—'}</td>
+            <td style="white-space:nowrap">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalEditarEvento('${ev.id}')">Editar</button>
+              <button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="desativarEventoCadastro('${ev.id}')">Excluir</button>
+            </td>
+          </tr>
+        `).join('') + '</tbody></table></div>'
+      : '<p class="vazio">Nenhum tipo de evento cadastrado.</p>'
+
+    el.innerHTML = `
+      <div class="card" style="margin-bottom:1.5rem;padding:1.25rem;text-align:left">
+        <h3 style="font-family:var(--fonte-display);font-size:1rem;font-weight:600;margin-bottom:0.75rem;letter-spacing:-0.02em">Onde alterar cada cadastro</h3>
+        <ul style="margin:0;padding-left:1.2rem;font-size:0.84rem;color:var(--texto-mutado);line-height:1.65">
+          <li><strong style="color:var(--texto)">Membros</strong> (nome, e-mail, celular, senha, ativo): menu <strong>Equipe</strong> → <em>Editar</em> (admin/líder). No modal, o campo <strong>Perfil e permissões</strong> aplica voluntário, líder ou administrador (admin): ao guardar, o sistema alinha o <strong>papel global</strong> e, nos departamentos vinculados, o papel na equipe (admin em todos; líder só nos departamentos que lidera). Também pode ajustar cada departamento na lista abaixo.</li>
+          <li><strong style="color:var(--texto)">Departamentos</strong> (nome, ícone, cor, <strong>palavra pastoral</strong> ao ministério, ativo): esta página → <em>Editar</em>, ou só visualizar em <strong>Departamentos</strong>. Também pode <em>Excluir</em>.</li>
+          <li><strong style="color:var(--texto)">Escalas</strong> (data, tipo de culto, observação): menu <strong>Escalas</strong> ou cartões no painel → <em>Editar</em> / <em>Excluir</em> (admin ou líder do departamento). Para substituir pessoa: <em>Trocar</em> (histórico de trocas).</li>
+          <li><strong style="color:var(--texto)">Tipos de culto / evento</strong>: tabela no fim desta página → <em>Editar</em> ou <em>Excluir</em>.</li>
+          <li><strong style="color:var(--texto)">Novo voluntário</strong>: <em>Convidar</em> abaixo — escolha o <strong>perfil</strong> (voluntário, líder do departamento ou administrador) para já gravar permissões e vínculo; e-mail com SMTP ou cópia para WhatsApp. <strong>Comunicações</strong> para avisos no app.</li>
+        </ul>
+      </div>
+
+      <p class="secao-label">🏛️ Departamentos cadastrados</p>
+      <p class="muted" style="font-size:0.8rem;margin:-0.5rem 0 1rem">Altere nome/aparência ou exclua quando necessário.</p>
+      ${tabelaDeptosGerir}
+
+      <p class="secao-label">📧 Convidar voluntário</p>
+      <div class="card" style="margin-bottom:1.5rem">
+        <form id="form-convidar" onsubmit="handleConvidarAdmin(event)" class="card-body" style="padding:1.25rem">
+          <div class="form-grupo"><label>Nome completo</label><input id="conv-nome" required placeholder="Nome do voluntário"/></div>
+          <div class="form-grupo"><label>E-mail</label><input id="conv-email" type="email" required placeholder="email@exemplo.com"/></div>
+          <div class="form-grupo"><label>Celular</label><input id="conv-celular" type="tel" placeholder="(11) 99999-9999"/></div>
+          <div class="form-grupo"><label>Departamento</label><select id="conv-depto" required><option value="">Selecione…</option>${optDeptos}</select></div>
+          <div class="form-grupo"><label>Perfil e permissões</label>
+            <select id="conv-perfil" aria-describedby="conv-perfil-ajuda">
+              <option value="voluntario">Voluntário — visualizar escalas, comunicações e solicitar trocas</option>
+              <option value="lider">Líder deste departamento — cadastros, escalas, aprovar trocas e convites aqui</option>
+              ${usuario?.role === 'admin' ? '<option value="admin">Administrador global — acesso total ao sistema</option>' : ''}
+            </select>
+            <p id="conv-perfil-ajuda" class="muted" style="font-size:0.78rem;margin:0.35rem 0 0;line-height:1.45">
+              O perfil define o acesso assim que a pessoa entra: vínculo ao departamento acima e permissões correspondentes.
+            </p>
+          </div>
+          <div class="form-grupo"><label>Mensagem no convite (opcional)</label>
+            <textarea id="conv-mensagem" rows="5" placeholder="Aparece no e-mail e no texto para WhatsApp — ex.: horário da reunião ou boas-vindas."></textarea></div>
+          <div class="form-grupo"><label style="text-transform:none;letter-spacing:0">
+            <input type="checkbox" id="conv-enviar-email" checked style="width:auto;margin-right:0.5rem"/>
+            Enviar e-mail com senha provisória (configure SMTP no .env; sem SMTP o texto completo é copiado para colar no WhatsApp)
+          </label></div>
+          <div class="form-grupo"><label style="text-transform:none;letter-spacing:0">
+            <input type="checkbox" id="conv-enviar-whatsapp" checked style="width:auto;margin-right:0.5rem"/>
+            Enviar WhatsApp automático para o celular informado (Baileys, PyWhatKit, Z-API ou Twilio no servidor)
+          </label></div>
+          <p id="convidar-erro" class="erro-msg"></p>
+          <button type="submit" class="btn btn-primario" id="btn-convidar">Cadastrar e vincular</button>
+        </form>
+      </div>
+
+      <p class="secao-label">🏛️ Novo departamento</p>
+      <div class="card" style="margin-bottom:1.5rem">
+        <form id="form-novo-depto" onsubmit="handleNovoDepto(event)" style="padding:1.25rem">
+          <div class="form-grupo"><label>Nome</label><input id="depto-nome" required placeholder="Ex.: Som"/></div>
+          <div class="form-grupo"><label>Descrição</label><input id="depto-desc" placeholder="Opcional"/></div>
+          <div class="form-grupo"><label>Ícone (emoji)</label><input id="depto-icone" placeholder="🎵" maxlength="4"/></div>
+          <div class="form-grupo"><label>Cor (hex)</label><input id="depto-cor" placeholder="#D4161B"/></div>
+          <p id="depto-erro" class="erro-msg"></p>
+          <button type="submit" class="btn btn-primario">Criar departamento</button>
+        </form>
+      </div>
+
+      <p class="secao-label">📆 Tipos de culto / evento</p>
+      <p class="muted" style="font-size:0.8rem;color:var(--texto-mutado);margin:-0.5rem 0 1rem">
+        Cadastre cada recorrência (ex.: Culto domingo 09h, Celebração quarta 19h30). Depois, ao criar uma escala, você pode vincular o tipo ao plantão da equipe.
+      </p>
+      <div class="card" style="margin-bottom:1.5rem">
+        <form id="form-novo-evento" onsubmit="handleNovoEvento(event)" style="padding:1.25rem">
+          <div class="form-grupo"><label>Nome do evento</label><input id="ev-nome" required placeholder="Ex.: Culto dominical manhã"/></div>
+          <div class="form-grupo"><label>Dia da semana</label><select id="ev-dia">${optDiaSemana}</select></div>
+          <div class="form-grupo"><label>Início</label><input id="ev-ini" type="time" placeholder="09:00"/></div>
+          <div class="form-grupo"><label>Fim</label><input id="ev-fim" type="time"/></div>
+          <div class="form-grupo"><label>Observações</label><input id="ev-desc" placeholder="Opcional"/></div>
+          <p id="evento-erro" class="erro-msg"></p>
+          <button type="submit" class="btn btn-primario">Salvar tipo de evento</button>
+        </form>
+      </div>
+      ${tabelaEventos}
+    `
+  } catch (err) {
+    el.innerHTML = `<p class="carregando" style="color:var(--erro)">Erro ao carregar cadastros.</p>`
+    console.error(err)
+  }
+}
+
+async function handleConvidarAdmin(e) {
+  e.preventDefault()
+  const nome = document.getElementById('conv-nome').value.trim()
+  const email = document.getElementById('conv-email').value.trim()
+  const celular = document.getElementById('conv-celular').value.trim()
+  const departamento_id = document.getElementById('conv-depto').value
+  const perfil_convite = document.getElementById('conv-perfil')?.value || 'voluntario'
+  const enviar_email = document.getElementById('conv-enviar-email').checked
+  const enviar_whatsapp = document.getElementById('conv-enviar-whatsapp')?.checked === true
+  const mensagem_convite = document.getElementById('conv-mensagem')?.value?.trim() || ''
+  const erro = document.getElementById('convidar-erro')
+  const btn = document.getElementById('btn-convidar')
+  btn.disabled = true
+  erro.style.display = 'none'
+  try {
+    const data = await api('POST', '/auth/convidar', {
+      nome,
+      email,
+      celular,
+      departamento_id,
+      perfil_convite,
+      enviar_email,
+      enviar_whatsapp,
+      mensagem_convite
+    })
+    const baseUrl = window.location.origin || ''
+    if (!data.email?.enviado && data.senha_provisoria) {
+      const texto = montarTextoConviteWhatsApp({
+        nome,
+        email,
+        senha: data.senha_provisoria,
+        url: baseUrl,
+        mensagem: mensagem_convite
+      })
+      try {
+        await navigator.clipboard.writeText(texto)
+        toast('Texto do convite copiado — cole no WhatsApp ou Telegram.', 'ok')
+      } catch {
+        toast('Não foi possível copiar automaticamente; a senha aparece na mensagem após recarregar.', 'err')
+      }
+    }
+    let msg = 'Voluntário cadastrado e vinculado.'
+    if (data.email?.enviado) msg += ' E-mail enviado.'
+    if (data.whatsapp?.enviado) msg += ' WhatsApp enviado.'
+    else if (enviar_whatsapp && data.whatsapp?.motivo === 'sem_celular') msg += ' WhatsApp não enviado (sem celular).'
+    else if (enviar_whatsapp && data.whatsapp?.motivo === 'whatsapp_desligado') msg += ' WhatsApp não enviado (provider indisponível).'
+    else if (data.senha_provisoria) msg += ' Senha provisória enviada por cópia (área de transferência) ou veja o toast.'
+    recarregarAposMudanca(msg)
+  } catch (err) {
+    erro.textContent = err.erro || 'Falha ao convidar.'
+    erro.style.display = 'block'
+  } finally {
+    btn.disabled = false
+  }
+}
+
+async function handleNovoDepto(e) {
+  e.preventDefault()
+  const nome = document.getElementById('depto-nome').value.trim()
+  const descricao = document.getElementById('depto-desc').value.trim()
+  const icone = document.getElementById('depto-icone').value.trim()
+  const cor = document.getElementById('depto-cor').value.trim()
+  const erro = document.getElementById('depto-erro')
+  erro.style.display = 'none'
+  try {
+    await api('POST', '/departamento/criar', { nome, descricao, icone, cor })
+    recarregarAposMudanca('Departamento criado.')
+  } catch (err) {
+    erro.textContent = err.erro || 'Erro ao criar departamento.'
+    erro.style.display = 'block'
+  }
+}
+
+async function handleNovoEvento(e) {
+  e.preventDefault()
+  const nome = document.getElementById('ev-nome').value.trim()
+  const diaRaw = document.getElementById('ev-dia').value
+  const hora_inicio = document.getElementById('ev-ini').value
+  const hora_fim = document.getElementById('ev-fim').value
+  const descricao = document.getElementById('ev-desc').value.trim()
+  const dia_semana = diaRaw === '' ? null : Number(diaRaw)
+  const erro = document.getElementById('evento-erro')
+  erro.style.display = 'none'
+  try {
+    await api('POST', '/evento/criar', {
+      nome,
+      dia_semana,
+      hora_inicio,
+      hora_fim,
+      descricao
+    })
+    recarregarAposMudanca('Tipo de evento salvo.')
+  } catch (err) {
+    erro.textContent = err.erro || 'Erro ao salvar evento.'
+    erro.style.display = 'block'
+  }
+}
+
+async function desativarEventoCadastro(id) {
+  if (!confirm('Tem certeza que deseja excluir este tipo de evento?')) return
+  try {
+    await api('DELETE', `/evento/${id}`)
+    recarregarAposMudanca('Evento excluído.')
+  } catch (e) {
+    toast(e.erro || 'Erro', 'err')
+  }
+}
+
+function excluirEventoNoModal() {
+  const id = document.getElementById('edit-evento-id')?.value
+  if (!id) return
+  desativarEventoCadastro(id)
+}
+
+// ═══════════════════════════════════════════════════════════
+// EDITAR CADASTROS (modais)
+// ═══════════════════════════════════════════════════════════
+function fecharModalEditDepto() {
+  document.getElementById('modal-edit-depto')?.classList.remove('aberto')
+}
+async function abrirModalEditarDepartamento(id) {
+  try {
+    const lista = await api('GET', '/departamento/listar?todos=1')
+    const d = (Array.isArray(lista) ? lista : []).find((x) => x.id === id)
+    if (!d) {
+      toast('Departamento não encontrado.', 'err')
+      return
+    }
+    document.getElementById('edit-depto-id').value = d.id
+    document.getElementById('edit-depto-nome').value = d.nome || ''
+    document.getElementById('edit-depto-desc').value = d.descricao || ''
+    const pastoralEl = document.getElementById('edit-depto-pastoral')
+    if (pastoralEl) pastoralEl.value = d.mensagem_pastoral || ''
+    document.getElementById('edit-depto-icone').value = d.icone || ''
+    document.getElementById('edit-depto-cor').value = d.cor || ''
+    document.getElementById('edit-depto-ativo').checked = d.ativo !== false
+    document.getElementById('edit-depto-erro').style.display = 'none'
+    document.getElementById('modal-edit-depto').classList.add('aberto')
+  } catch (e) {
+    toast(e.erro || 'Erro ao carregar departamento.', 'err')
+  }
+}
+async function salvarEditDepartamento(ev) {
+  ev.preventDefault()
+  const id = document.getElementById('edit-depto-id').value
+  const err = document.getElementById('edit-depto-erro')
+  err.style.display = 'none'
+  try {
+    await api('PUT', `/departamento/${id}`, {
+      nome: document.getElementById('edit-depto-nome').value.trim(),
+      descricao: document.getElementById('edit-depto-desc').value.trim(),
+      mensagem_pastoral: document.getElementById('edit-depto-pastoral')?.value?.trim() ?? '',
+      icone: document.getElementById('edit-depto-icone').value.trim(),
+      cor: document.getElementById('edit-depto-cor').value.trim(),
+      ativo: document.getElementById('edit-depto-ativo').checked
+    })
+    fecharModalEditDepto()
+    recarregarAposMudanca('Departamento atualizado.')
+  } catch (e) {
+    err.textContent = e.erro || 'Não foi possível salvar.'
+    err.style.display = 'block'
+  }
+}
+async function desativarDepartamentoGerir(id) {
+  if (!confirm('Tem certeza que deseja excluir este departamento? As escalas e vínculos deste departamento também serão removidos.')) return
+  try {
+    await api('DELETE', `/departamento/${id}`)
+    recarregarAposMudanca('Departamento excluído.')
+  } catch (e) {
+    toast(e.erro || 'Erro', 'err')
+  }
+}
+
+function excluirDepartamentoNoModal() {
+  const id = document.getElementById('edit-depto-id')?.value
+  if (!id) return
+  desativarDepartamentoGerir(id)
+}
+
+function fecharModalEditUsuario() {
+  document.getElementById('modal-edit-usuario')?.classList.remove('aberto')
+}
+
+function renderEditUsuarioDepartamentosList(u) {
+  const listEl = document.getElementById('edit-usuario-deptos-list')
+  if (!listEl) return
+  const deps = u.departamentos || []
+  if (!deps.length) {
+    listEl.innerHTML =
+      '<p class="muted" style="font-size:0.82rem;margin:0;line-height:1.45">Nenhum departamento vinculado. Use <strong style="color:var(--texto)">Vincular a outro departamento</strong> abaixo.</p>'
+    return
+  }
+  listEl.innerHTML = deps
+    .map((d) => {
+      const rid = esc(d.id)
+      const papel = d.role_depto === 'lider' ? 'lider' : 'membro'
+      return `<div class="edit-usuario-depto-linha">
+        <span style="flex:1;min-width:10rem;line-height:1.35">
+          <span style="margin-right:0.35rem" aria-hidden="true">${esc(d.icone || '🏛️')}</span>
+          <strong>${esc(d.nome)}</strong>
+          ${d.ativo === false ? ' <span class="muted" style="font-size:0.75rem">(inativo)</span>' : ''}
+        </span>
+        <select class="select-inline" data-depto="${rid}" data-was="${papel}" onchange="salvarPapelDeptoEditUsuario(this)"
+          title="Papel apenas neste departamento">
+          <option value="membro" ${papel === 'membro' ? 'selected' : ''}>Membro</option>
+          <option value="lider" ${papel === 'lider' ? 'selected' : ''}>Líder</option>
+        </select>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="desvincularDeptoEditUsuario('${rid}')">Remover</button>
+      </div>`
+    })
+    .join('')
+}
+
+async function preencherSelectAddDeptoEditUsuario(u) {
+  const sel = document.getElementById('edit-usuario-add-depto')
+  if (!sel) return
+  const linked = new Set((u.departamentos || []).map((d) => d.id))
+  let deptos = []
+  try {
+    deptos = await api('GET', '/departamento/listar')
+    if (Array.isArray(deptos) && deptos.length) deptoCache = deptos
+  } catch {
+    deptos = Array.isArray(deptoCache) ? deptoCache : []
+  }
+  const livres = (Array.isArray(deptos) ? deptos : []).filter((d) => d.ativo !== false && !linked.has(d.id))
+  sel.innerHTML =
+    '<option value="">Selecione…</option>' +
+    livres.map((d) => `<option value="${esc(d.id)}">${esc(d.icone || '')} ${esc(d.nome)}</option>`).join('')
+}
+
+async function salvarPapelDeptoEditUsuario(selectEl) {
+  const uid = document.getElementById('edit-usuario-id').value
+  const deptId = selectEl.getAttribute('data-depto')
+  const anterior = selectEl.getAttribute('data-was') || 'membro'
+  const novo = selectEl.value
+  if (novo === anterior) return
+  try {
+    await api('POST', '/usuario/vincular', {
+      usuario_id: uid,
+      departamento_id: deptId,
+      role_depto: novo
+    })
+    selectEl.setAttribute('data-was', novo)
+    toast('Papel no departamento atualizado.', 'ok')
+    if (document.getElementById('pagina-equipe')?.style.display !== 'none') carregarEquipe()
+  } catch (e) {
+    selectEl.value = anterior
+    toast(e.erro || 'Não foi possível alterar o papel.', 'err')
+  }
+}
+
+async function desvincularDeptoEditUsuario(deptId) {
+  const uid = document.getElementById('edit-usuario-id').value
+  if (!confirm('Tem certeza que deseja remover este membro deste departamento?')) return
+  try {
+    await api('DELETE', `/usuario/${uid}/desvincular`, { departamento_id: deptId })
+    const u = await api('GET', `/usuario/${uid}`)
+    renderEditUsuarioDepartamentosList(u)
+    await preencherSelectAddDeptoEditUsuario(u)
+    toast('Vínculo removido.', 'ok')
+    if (document.getElementById('pagina-equipe')?.style.display !== 'none') carregarEquipe()
+  } catch (e) {
+    toast(e.erro || 'Erro ao remover vínculo.', 'err')
+  }
+}
+
+async function vincularDeptoEditUsuario() {
+  const uid = document.getElementById('edit-usuario-id').value
+  const deptId = document.getElementById('edit-usuario-add-depto').value
+  const role = document.getElementById('edit-usuario-add-role').value
+  if (!deptId) {
+    toast('Selecione um departamento.', 'err')
+    return
+  }
+  try {
+    await api('POST', '/usuario/vincular', {
+      usuario_id: uid,
+      departamento_id: deptId,
+      role_depto: role
+    })
+    const u = await api('GET', `/usuario/${uid}`)
+    renderEditUsuarioDepartamentosList(u)
+    await preencherSelectAddDeptoEditUsuario(u)
+    document.getElementById('edit-usuario-add-role').value = 'membro'
+    toast('Departamento vinculado.', 'ok')
+    if (document.getElementById('pagina-equipe')?.style.display !== 'none') carregarEquipe()
+  } catch (e) {
+    toast(e.erro || 'Não foi possível vincular.', 'err')
+  }
+}
+
+async function abrirModalEditarUsuario(id) {
+  if (!temPapelLiderancaNoApp()) return
+  try {
+    const u = await api('GET', `/usuario/${id}`)
+    document.getElementById('edit-usuario-id').value = u.id
+    document.getElementById('edit-usuario-nome').value = u.nome || ''
+    document.getElementById('edit-usuario-email').value = u.email || ''
+    document.getElementById('edit-usuario-celular').value = u.celular || ''
+    document.getElementById('edit-usuario-senha').value = ''
+    document.getElementById('edit-usuario-ativo').checked = u.ativo !== false
+    document.getElementById('edit-usuario-erro').style.display = 'none'
+
+    const wrapPerfil = document.getElementById('edit-usuario-perfil-wrap')
+    const optAdmin = document.getElementById('edit-usuario-perfil-opt-admin')
+    const ajudaPerfil = document.getElementById('edit-usuario-perfil-ajuda')
+    const selPerfil = document.getElementById('edit-usuario-perfil')
+    if (wrapPerfil) {
+      const bloqueado =
+        u.role === 'admin' && usuario?.role !== 'admin'
+      wrapPerfil.style.display = bloqueado ? 'none' : ''
+    }
+    if (optAdmin) optAdmin.style.display = usuario?.role === 'admin' ? '' : 'none'
+    if (ajudaPerfil) {
+      ajudaPerfil.textContent =
+        usuario?.role === 'admin'
+          ? 'Ao guardar, o perfil global é atualizado e o mesmo papel (membro ou líder) é aplicado em todos os departamentos já vinculados a esta pessoa.'
+          : 'Ao guardar, o papel escolhido aplica-se só nos departamentos em que você é líder. Os outros vínculos não mudam.'
+    }
+    if (selPerfil) {
+      let v = inferirPerfilEquipeDeUsuario(u)
+      if (v === 'admin' && usuario?.role !== 'admin') v = 'voluntario'
+      selPerfil.value = v
+    }
+
+    renderEditUsuarioDepartamentosList(u)
+    await preencherSelectAddDeptoEditUsuario(u)
+    document.getElementById('modal-edit-usuario').classList.add('aberto')
+  } catch (e) {
+    toast(e.erro || 'Erro ao carregar usuário.', 'err')
+  }
+}
+async function salvarEditUsuario(ev) {
+  ev.preventDefault()
+  const id = document.getElementById('edit-usuario-id').value
+  const err = document.getElementById('edit-usuario-erro')
+  err.style.display = 'none'
+  const body = {
+    nome: document.getElementById('edit-usuario-nome').value.trim(),
+    email: document.getElementById('edit-usuario-email').value.trim(),
+    celular: document.getElementById('edit-usuario-celular').value.trim(),
+    ativo: document.getElementById('edit-usuario-ativo').checked
+  }
+  const senha = document.getElementById('edit-usuario-senha').value
+  if (senha) body.senha = senha
+
+  const wrapPerfil = document.getElementById('edit-usuario-perfil-wrap')
+  const perfil =
+    wrapPerfil && wrapPerfil.style.display !== 'none'
+      ? document.getElementById('edit-usuario-perfil')?.value || 'voluntario'
+      : null
+
+  try {
+    if (perfil && usuario?.role === 'admin') {
+      if (perfil === 'admin') body.role = 'admin'
+      else if (perfil === 'lider') body.role = 'lider'
+      else body.role = 'membro'
+    }
+
+    await api('PUT', `/usuario/${id}`, body)
+
+    if (perfil) {
+      const uFresh = await api('GET', `/usuario/${id}`)
+      const deps = uFresh.departamentos || []
+      let roleDeptoAlvo = 'membro'
+      if (usuario?.role === 'admin') {
+        if (perfil === 'lider') roleDeptoAlvo = 'lider'
+        else roleDeptoAlvo = 'membro'
+      } else {
+        roleDeptoAlvo = perfil === 'lider' ? 'lider' : 'membro'
+      }
+
+      if (usuario?.role === 'admin') {
+        for (const d of deps) {
+          await api('POST', '/usuario/vincular', {
+            usuario_id: id,
+            departamento_id: d.id,
+            role_depto: roleDeptoAlvo
+          })
+        }
+      } else {
+        const idsLiderados = departamentosOndeEditorELiderIds()
+        for (const d of deps) {
+          if (idsLiderados.includes(d.id)) {
+            await api('POST', '/usuario/vincular', {
+              usuario_id: id,
+              departamento_id: d.id,
+              role_depto: roleDeptoAlvo
+            })
+          }
+        }
+      }
+    }
+
+    fecharModalEditUsuario()
+    recarregarAposMudanca('Membro atualizado.')
+  } catch (e) {
+    err.textContent = e.erro || 'Não foi possível salvar.'
+    err.style.display = 'block'
+  }
+}
+
+async function excluirUsuarioEditUsuario() {
+  const id = document.getElementById('edit-usuario-id').value
+  if (!id) return
+  if (!confirm('Tem certeza que deseja excluir este membro? Esta ação apaga o cadastro e não pode ser desfeita.')) return
+  try {
+    await api('DELETE', `/usuario/${id}`)
+    fecharModalEditUsuario()
+    recarregarAposMudanca('Cadastro excluído com sucesso.')
+  } catch (e) {
+    const err = document.getElementById('edit-usuario-erro')
+    err.textContent = e.erro || 'Não foi possível excluir.'
+    err.style.display = 'block'
+  }
+}
+
+async function inativarUsuarioEditUsuario() {
+  const id = document.getElementById('edit-usuario-id').value
+  if (!id) return
+  if (!confirm('Deixar este membro inativo? O cadastro será mantido e poderá ser reativado depois.')) return
+  try {
+    await api('PUT', `/usuario/${id}`, { ativo: false })
+    fecharModalEditUsuario()
+    recarregarAposMudanca('Membro inativado.')
+  } catch (e) {
+    const err = document.getElementById('edit-usuario-erro')
+    err.textContent = e.erro || 'Não foi possível inativar.'
+    err.style.display = 'block'
+  }
+}
+
+function fecharModalEditEscala() {
+  document.getElementById('modal-edit-escala')?.classList.remove('aberto')
+}
+async function abrirModalEditarEscala(escalaId) {
+  try {
+    const lista =
+      usuario?.role === 'admin'
+        ? await api('GET', '/escala/listar')
+        : await api('GET', `/escala/minhas/${usuario?.id}`)
+    const e = (Array.isArray(lista) ? lista : []).find((x) => x.id === escalaId)
+    if (!e) {
+      toast('Escala não encontrada.', 'err')
+      return
+    }
+    if (!podeGerirEscalaNoCliente(e.departamento_id)) {
+      toast('Sem permissão para alterar esta escala.', 'err')
+      return
+    }
+    document.getElementById('edit-escala-id').value = e.id
+    document.getElementById('edit-escala-data').value = dataBRparaInputDate(e.data)
+    document.getElementById('edit-escala-obs').value = e.observacao || ''
+    const selEv = document.getElementById('edit-escala-evento')
+    let evs = []
+    try {
+      evs = await api('GET', '/evento/listar')
+    } catch {
+      evs = []
+    }
+    selEv.innerHTML =
+      '<option value="">— Nenhum —</option>' +
+      (Array.isArray(evs) ? evs : [])
+        .filter((x) => x.ativo !== false)
+        .map((x) => `<option value="${x.id}">${esc(x.nome)}</option>`)
+        .join('')
+    selEv.value = e.evento_id || ''
+    document.getElementById('edit-escala-erro').style.display = 'none'
+    document.getElementById('modal-edit-escala').classList.add('aberto')
+  } catch (err) {
+    toast(err.erro || 'Erro ao carregar escala.', 'err')
+  }
+}
+async function salvarEditEscala(ev) {
+  ev.preventDefault()
+  const id = document.getElementById('edit-escala-id').value
+  const err = document.getElementById('edit-escala-erro')
+  err.style.display = 'none'
+  const dataISO = document.getElementById('edit-escala-data').value
+  const [y, m, d] = dataISO.split('-')
+  const dataBR = `${d}/${m}/${y}`
+  const eventoId = document.getElementById('edit-escala-evento').value
+  const observacao = document.getElementById('edit-escala-obs').value.trim()
+  try {
+    await api('PUT', `/escala/${id}`, {
+      data: dataBR,
+      evento_id: eventoId || null,
+      observacao
+    })
+    fecharModalEditEscala()
+    recarregarAposMudanca('Escala atualizada.')
+  } catch (e) {
+    err.textContent = e.erro || 'Não foi possível salvar.'
+    err.style.display = 'block'
+  }
+}
+
+function fecharModalEditEvento() {
+  document.getElementById('modal-edit-evento')?.classList.remove('aberto')
+}
+async function abrirModalEditarEvento(id) {
+  const diasN = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+  try {
+    const lista = await api('GET', '/evento/listar?todos=1')
+    const ev = (Array.isArray(lista) ? lista : []).find((x) => x.id === id)
+    if (!ev) {
+      toast('Evento não encontrado.', 'err')
+      return
+    }
+    document.getElementById('edit-evento-id').value = ev.id
+    document.getElementById('edit-evento-nome').value = ev.nome || ''
+    const selDia = document.getElementById('edit-evento-dia')
+    selDia.innerHTML =
+      `<option value="">— Sem dia fixo —</option>` +
+      diasN.map((nome, i) => `<option value="${i}">${nome}</option>`).join('')
+    selDia.value =
+      ev.dia_semana != null && ev.dia_semana !== '' ? String(ev.dia_semana) : ''
+    document.getElementById('edit-evento-ini').value = ev.hora_inicio || ''
+    document.getElementById('edit-evento-fim').value = ev.hora_fim || ''
+    document.getElementById('edit-evento-desc').value = ev.descricao || ''
+    document.getElementById('edit-evento-ativo').checked = ev.ativo !== false
+    document.getElementById('edit-evento-erro').style.display = 'none'
+    document.getElementById('modal-edit-evento').classList.add('aberto')
+  } catch (e) {
+    toast(e.erro || 'Erro ao carregar evento.', 'err')
+  }
+}
+async function salvarEditEvento(ev) {
+  ev.preventDefault()
+  const id = document.getElementById('edit-evento-id').value
+  const err = document.getElementById('edit-evento-erro')
+  err.style.display = 'none'
+  const diaRaw = document.getElementById('edit-evento-dia').value
+  const dia_semana = diaRaw === '' ? null : Number(diaRaw)
+  try {
+    await api('PUT', `/evento/${id}`, {
+      nome: document.getElementById('edit-evento-nome').value.trim(),
+      dia_semana,
+      hora_inicio: document.getElementById('edit-evento-ini').value,
+      hora_fim: document.getElementById('edit-evento-fim').value,
+      descricao: document.getElementById('edit-evento-desc').value.trim(),
+      ativo: document.getElementById('edit-evento-ativo').checked
+    })
+    fecharModalEditEvento()
+    recarregarAposMudanca('Tipo de evento atualizado.')
+  } catch (e) {
+    err.textContent = e.erro || 'Não foi possível salvar.'
+    err.style.display = 'block'
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// EQUIPE
+// ═══════════════════════════════════════════════════════════
+function setFiltroEquipeStatus(valor) {
+  filtroEquipeStatus = valor || 'ativos'
+  carregarEquipe()
+}
+
+async function carregarEquipe() {
+  const el = document.getElementById('equipe-conteudo')
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+
+  try {
+    const lista = await api('GET', '/usuario/listar')
+    const usuariosBase = Array.isArray(lista) ? lista : []
+
+    const usuarios =
+      filtroEquipeStatus === 'todos'
+        ? usuariosBase
+        : usuariosBase.filter((u) =>
+            filtroEquipeStatus === 'ativos' ? u.ativo !== false : u.ativo === false
+          )
+
+    if (!usuariosBase.length) {
+      el.innerHTML = '<div class="vazio">Nenhum voluntário cadastrado.</div>'
+      return
+    }
+
+    const celulaPerfil = (u) => {
+      if (usuario?.role === 'admin') {
+        const id = esc(u.id)
+        const r = u.role || 'membro'
+        return `
+          <select class="select-inline" data-atual="${r}" onchange="salvarRoleEquipe(this, '${id}')"
+            title="Perfil global do sistema (admin vê tudo; líder/membro conforme regras da API)">
+            <option value="membro" ${r === 'membro' ? 'selected' : ''}>Membro</option>
+            <option value="lider" ${r === 'lider' ? 'selected' : ''}>Líder</option>
+            <option value="admin" ${r === 'admin' ? 'selected' : ''}>Administrador</option>
+          </select>`
+      }
+      return `
+        <span class="badge ${u.role === 'admin' ? 'badge-vermelho' : u.role === 'lider' ? 'badge-dourado' : 'badge-info'}">
+          ${esc(rotuloPerfil(u.role))}
+        </span>`
+    }
+
+    const thAcoes =
+      temPapelLiderancaNoApp()
+        ? '<th style="width:1%;white-space:nowrap">Ações</th>'
+        : ''
+
+    const filtrosAdmin =
+      usuario?.role === 'admin'
+        ? `<div class="card" style="margin-bottom:1rem;padding:0.85rem 1rem">
+            <label style="font-size:0.74rem;color:var(--texto-mutado);margin-right:0.5rem">Exibir:</label>
+            <select class="select-inline" onchange="setFiltroEquipeStatus(this.value)" style="min-width:11rem">
+              <option value="ativos" ${filtroEquipeStatus === 'ativos' ? 'selected' : ''}>Somente ativos</option>
+              <option value="inativos" ${filtroEquipeStatus === 'inativos' ? 'selected' : ''}>Somente inativos</option>
+              <option value="todos" ${filtroEquipeStatus === 'todos' ? 'selected' : ''}>Todos</option>
+            </select>
+            <span class="muted" style="font-size:0.78rem;margin-left:0.5rem">${usuarios.length} de ${usuariosBase.length}</span>
+          </div>`
+        : ''
+
+    const vazioFiltro =
+      !usuarios.length
+        ? `<div class="vazio" style="margin-top:0.5rem">Nenhum membro no filtro selecionado.</div>`
+        : ''
+
+    el.innerHTML = `
+      ${filtrosAdmin}
+      <div class="tabela-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Celular</th>
+              <th>Perfil ${usuario?.role === 'admin' ? '<span style="font-weight:400;color:var(--texto-mutado);font-size:0.75rem">(admin altera)</span>' : ''}</th>
+              <th>Departamentos</th>
+              ${thAcoes}
+            </tr>
+          </thead>
+          <tbody>
+            ${usuarios.map(u => `
+              <tr>
+                <td><strong>${esc(u.nome)}</strong></td>
+                <td style="color:var(--texto-mutado)">${esc(u.email)}</td>
+                <td style="color:var(--texto-mutado)">${esc(u.celular || '—')}</td>
+                <td>${celulaPerfil(u)}</td>
+                <td>
+                  ${(u.departamentos || []).length
+                    ? u.departamentos.map(d =>
+                        `<span class="badge badge-info" style="margin:1px 2px">${esc(d.nome)}</span>`
+                      ).join('')
+                    : '<span style="color:var(--texto-mutado)">—</span>'
+                  }
+                </td>
+                ${
+                  temPapelLiderancaNoApp()
+                    ? `<td><button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalEditarUsuario('${esc(u.id)}')">Editar</button></td>`
+                    : ''
+                }
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${vazioFiltro}
+    `
+  } catch(err) {
+    el.innerHTML = `<p class="carregando" style="color:var(--erro)">Erro ao carregar equipe.</p>`
+    console.error(err)
+  }
+}
+
+async function salvarRoleEquipe(selectEl, userId) {
+  const novo = selectEl.value
+  const anterior = selectEl.getAttribute('data-atual') || ''
+  if (novo === anterior) return
+  try {
+    await api('PUT', `/usuario/${userId}`, { role: novo })
+    recarregarAposMudanca('Perfil atualizado.')
+  } catch (err) {
+    selectEl.value = anterior
+    toast(err.erro || 'Não foi possível alterar o perfil.', 'err')
+  }
+}
+
+async function sincronizarUsuarioServidor() {
+  if (!token) return
+  try {
+    const data = await api('GET', '/auth/me')
+    if (data.usuario) {
+      usuario = {
+        ...usuario,
+        ...data.usuario,
+        departamentos: data.departamentos || usuario?.departamentos || []
+      }
+      localStorage.setItem('peniel_usuario', JSON.stringify(usuario))
+      if (document.getElementById('tela-app')?.style.display !== 'none') mostrarApp()
+    }
+  } catch (e) {
+    if (e.erro === 'Token inválido ou expirado' || e.erro === 'Usuário inválido ou inativo') logout()
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// DEPARTAMENTOS
+// ═══════════════════════════════════════════════════════════
+async function carregarDepartamentos() {
+  const el = document.getElementById('departamentos-conteudo')
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+
+  try {
+    const deptos = await api('GET', '/departamento/listar')
+    deptoCache = Array.isArray(deptos) ? deptos : []
+
+    if (!deptoCache.length) {
+      el.innerHTML = '<div class="vazio">Nenhum departamento encontrado.</div>'
+      return
+    }
+
+    el.innerHTML = `<div class="cards-grid">${deptoCache.map(d => renderCardDepto(d, true)).join('')}</div>`
+  } catch(err) {
+    el.innerHTML = `<p class="carregando" style="color:var(--erro)">Erro ao carregar departamentos.</p>`
+    console.error(err)
+  }
+}
+
+function renderCardDepto(d, detalhado = false) {
+  const cor = d.cor || '#D4161B'
+  const hexTransp = cor + '22'
+  const hexBorda  = cor + '55'
+
+  const rodape = detalhado
+    ? `<div class="card-body" style="margin-bottom:0.75rem">
+         ${d.lider
+           ? `<div>👑 <strong style="color:var(--dourado)">${esc(d.lider.nome)}</strong><span style="color:var(--texto-mutado);font-size:0.75rem"> — líder</span></div>`
+           : '<div style="color:var(--texto-mutado);font-size:0.8rem">Sem líder definido</div>'
+         }
+       </div>
+       <div class="card-footer">
+         <span class="badge badge-info">${d.total_membros || 0} ${(d.total_membros || 0) === 1 ? 'membro' : 'membros'}</span>
+         <span class="badge ${d.ativo !== false ? 'badge-sucesso' : 'badge-vermelho'}">${d.ativo !== false ? 'ativo' : 'inativo'}</span>
+       </div>
+       ${!(d.total_membros || 0)
+         ? `<p class="muted" style="font-size:0.75rem;margin:0.5rem 0 0;line-height:1.45">Sem vínculos: use <strong style="color:var(--texto)">Equipe → Editar</strong> ou <strong>Cadastros → Convidar</strong>.</p>`
+         : ''}
+    `
+    : `<div class="card-footer">
+         <span class="badge badge-info">${d.total_membros || 0} membros</span>
+       </div>`
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icone" style="background:${hexTransp};border:1px solid ${hexBorda}">
+          <span style="color:${cor}">${d.icone || '🏛️'}</span>
+        </div>
+        <div>
+          <div class="card-titulo" style="color:${cor}">${esc(d.nome)}</div>
+          <div class="card-subtitulo">${esc(d.descricao || '')}</div>
+        </div>
+      </div>
+      ${rodape}
+    </div>
+  `
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMUNICAÇÕES (avisos no app)
+// ═══════════════════════════════════════════════════════════
+function htmlCardAvisoComunicacao(a) {
+  const periodoTxt = formatarPeriodoAviso(a)
+  const st = a?.envio_status
+  const statusEnvioHtml = st ? montarResumoStatusEnvioAviso(st) : ''
+  return `
+      <div class="aviso-card">
+        <div class="aviso-card-meta">${formatarDataAviso(a.criado_em)} · ${a.departamento_nome ? esc(a.departamento_nome) : 'Geral (todos)'}${a.autor_nome ? ` · ${esc(a.autor_nome)}` : ''}</div>
+        ${periodoTxt ? `<div style="font-size:0.78rem;color:var(--texto-mutado);margin-bottom:0.25rem">${esc(periodoTxt)}</div>` : ''}
+        ${(a.titulo || '').trim() ? `<div style="font-weight:600;margin-bottom:0.35rem;color:var(--texto)">${esc(a.titulo)}</div>` : ''}
+        <div style="font-size:0.9rem;white-space:pre-wrap;line-height:1.5;color:var(--texto-mutado)">${esc(a.corpo)}</div>
+        ${statusEnvioHtml}
+        ${
+          podeExcluirAvisoNoCliente(a)
+            ? `<div style="margin-top:0.65rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalReenviarComunicado('${esc(a.id)}')">Reenviar mensagem</button>
+                <button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirComunicado('${esc(a.id)}')">Excluir comunicado</button>
+              </div>`
+            : ''
+        }
+      </div>`
+}
+
+function htmlStatusWhatsAppPainel(st) {
+  if (!st) return ''
+  const conectado = st.conectado === true
+  const badge = conectado
+    ? '<span class="badge badge-sucesso">WhatsApp conectado</span>'
+    : '<span class="badge badge-alerta">WhatsApp desconectado</span>'
+  const providerStatusComQr = ['wwebjs', 'whatsapp-web.js'].includes(
+    String(st.provider || '').toLowerCase()
+  )
+  const detalhe = conectado
+    ? 'Pronto para envio automático.'
+    : providerStatusComQr
+      ? 'Abra o terminal e escaneie o QR para conectar.'
+      : 'Verifique as credenciais do provider no .env.'
+  const pairing = st.pairing_code
+    ? `<div style="margin-top:0.35rem;color:var(--texto)">Código de pareamento: <strong style="color:var(--dourado)">${esc(st.pairing_code)}</strong></div>`
+    : ''
+  const erro = st.ultimo_erro ? `<div style="margin-top:0.35rem;color:var(--erro)">${esc(st.ultimo_erro)}</div>` : ''
+  return `
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-body" style="padding:0.9rem 1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap">
+          <div style="font-size:0.82rem;color:var(--texto-mutado)">Canal WhatsApp (${esc((st.provider || 'none').toUpperCase())})</div>
+          <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap">
+            ${badge}
+            <button type="button" class="btn btn-ghost btn-sm" onclick="atualizarStatusWhatsAppNoPainel()">Atualizar status</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="reconectarWhatsAppNoPainel()">Reconectar WhatsApp</button>
+          </div>
+        </div>
+        <div style="font-size:0.82rem;color:var(--texto-mutado);margin-top:0.35rem">${detalhe}</div>
+        ${pairing}
+        ${erro}
+      </div>
+    </div>
+  `
+}
+
+async function atualizarStatusWhatsAppNoPainel() {
+  const alvo = document.getElementById('whatsapp-status-slot')
+  if (!alvo) return
+  alvo.innerHTML = '<p class="muted" style="font-size:0.8rem">Verificando WhatsApp...</p>'
+  try {
+    const st = await api('GET', '/aviso/whatsapp-status')
+    alvo.innerHTML = htmlStatusWhatsAppPainel(st)
+  } catch (e) {
+    alvo.innerHTML = '<p class="muted" style="font-size:0.8rem;color:var(--erro)">Não foi possível consultar o status do WhatsApp.</p>'
+  }
+}
+
+async function reconectarWhatsAppNoPainel() {
+  const alvo = document.getElementById('whatsapp-status-slot')
+  if (alvo) {
+    alvo.innerHTML = '<p class="muted" style="font-size:0.8rem">Reconectando WhatsApp...</p>'
+  }
+  try {
+    await api('POST', '/aviso/whatsapp-reconnect', {})
+    toast('Reconexão iniciada. Escaneie o QR/código no terminal.', 'ok')
+  } catch (e) {
+    toast(e.erro || 'Não foi possível reconectar o WhatsApp.', 'err')
+  }
+  atualizarStatusWhatsAppNoPainel()
+}
+
+function montarResumoStatusEnvioAviso(st) {
+  const email = st?.email || {}
+  const zap = st?.whatsapp || {}
+  const situacao = st?.situacao === 'processando'
+    ? '<span class="badge badge-alerta">Envio em andamento</span>'
+    : '<span class="badge badge-sucesso">Envio concluído</span>'
+  const linhas = []
+  if (email.solicitado) {
+    linhas.push(
+      `E-mail: ${Number(email.enviados || 0)}/${Number(email.total || 0)} enviados` +
+      `${Number(email.falhas || 0) ? ` · ${Number(email.falhas)} falhas` : ''}`
+    )
+  }
+  if (zap.solicitado) {
+    const manuais = Number(zap.manuais_adicionados || 0)
+    linhas.push(
+      `WhatsApp: ${Number(zap.enviados || 0)}/${Number(zap.total || 0)} enviados` +
+      `${Number(zap.falhas || 0) ? ` · ${Number(zap.falhas)} falhas` : ''}` +
+      `${Number(zap.sem_celular || 0) ? ` · ${Number(zap.sem_celular)} sem celular` : ''}` +
+      `${manuais ? ` · ${manuais} manuais` : ''}` +
+      `${Number(zap.nao_enviados_provider || 0) ? ` · ${Number(zap.nao_enviados_provider)} não enviados (provider)` : ''}`
+    )
+  }
+  if (!linhas.length) return ''
+  return `
+    <div style="margin-top:0.7rem;padding:0.65rem 0.75rem;border:1px solid var(--borda);border-radius:8px;background:rgba(255,255,255,0.02)">
+      <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.35rem">${situacao}</div>
+      <div style="font-size:0.8rem;color:var(--texto-mutado);line-height:1.5">${linhas.map((x) => esc(x)).join('<br/>')}</div>
+    </div>
+  `
+}
+
+function montarResumoToastEnvio(st) {
+  if (!st) return 'Mensagem enviada.'
+  const email = st.email || {}
+  const zap = st.whatsapp || {}
+  const partes = ['Mensagem enviada.']
+  if (email.solicitado) {
+    partes.push(`E-mail ${Number(email.enviados || 0)}/${Number(email.total || 0)}.`)
+  }
+  if (zap.solicitado) {
+    const semCel = Number(zap.sem_celular || 0)
+    const manuais = Number(zap.manuais_adicionados || 0)
+    partes.push(`WhatsApp ${Number(zap.enviados || 0)}/${Number(zap.total || 0)}.`)
+    if (manuais) partes.push(`${manuais} manuais.`)
+    if (semCel) partes.push(`${semCel} sem celular.`)
+    if (Number(zap.nao_enviados_provider || 0)) partes.push('Provider WhatsApp indisponível.')
+  }
+  if (st.situacao === 'processando') partes.push('Processando envios...')
+  return partes.join(' ')
+}
+
+async function carregarComunicacoes() {
+  const el = document.getElementById('comunicacoes-conteudo')
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+
+  try {
+    if (!deptoCache.length) {
+      try {
+        const d = await api('GET', '/departamento/listar')
+        deptoCache = Array.isArray(d) ? d : []
+      } catch {
+        deptoCache = []
+      }
+    }
+
+    const pode = temPapelLiderancaNoApp()
+    let list = []
+    let encerrados = []
+    if (pode) {
+      const full = await api('GET', '/aviso/listar?incluir_encerrados=1')
+      const arr = Array.isArray(full) ? full : []
+      list = arr.filter(avisoDentroDoPeriodoAtivoCliente)
+      encerrados = arr.filter((x) => !avisoDentroDoPeriodoAtivoCliente(x))
+    } else {
+      const avisos = await api('GET', '/aviso/listar')
+      list = Array.isArray(avisos) ? avisos : []
+    }
+    const trocasPendentes = pode ? await api('GET', '/escala/trocas/pendentes') : []
+
+    let formPublicar = ''
+    if (pode) {
+      if (usuario?.role === 'admin') {
+        const opts =
+          '<option value="">Todos (aviso geral)</option>' +
+          deptoCache
+            .filter((d) => d.ativo !== false)
+            .map(
+              (d) =>
+                `<option value="${esc(d.id)}">${esc(d.icone || '')} ${esc(d.nome)}</option>`
+            )
+            .join('')
+        formPublicar = `
+        <div class="card" style="margin-bottom:1.5rem">
+          <div class="card-body" style="padding:1.25rem">
+            <h3 style="font-size:0.95rem;margin:0 0 1rem;font-family:var(--fonte-display)">Novo aviso</h3>
+            <form id="form-novo-aviso" onsubmit="publicarAvisoAdmin(event)">
+              <div class="form-grupo"><label>Título (opcional)</label><input id="aviso-titulo" placeholder="Ex.: Reunião de equipe"/></div>
+              <div class="form-grupo"><label>Mensagem</label><textarea id="aviso-corpo" required rows="6" placeholder="O que a equipe precisa saber…"></textarea></div>
+              <div class="form-grupo">
+                <label>Período no painel (opcional)</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 0.75rem;margin-top:0.35rem">
+                  <div><span style="font-size:0.78rem;color:var(--texto-mutado)">Data início</span><input type="date" id="aviso-data-inicio" style="width:100%;margin-top:0.2rem"/></div>
+                  <div><span style="font-size:0.78rem;color:var(--texto-mutado)">Hora início</span><input type="time" id="aviso-hora-inicio" style="width:100%;margin-top:0.2rem"/></div>
+                  <div><span style="font-size:0.78rem;color:var(--texto-mutado)">Data fim</span><input type="date" id="aviso-data-fim" style="width:100%;margin-top:0.2rem"/></div>
+                  <div><span style="font-size:0.78rem;color:var(--texto-mutado)">Hora fim</span><input type="time" id="aviso-hora-fim" style="width:100%;margin-top:0.2rem"/></div>
+                </div>
+                <p class="muted" style="font-size:0.75rem;margin-top:0.45rem;line-height:1.45">Fora deste intervalo o aviso deixa de aparecer no painel e no dash; continua guardado no histórico.</p>
+              </div>
+              <div class="form-grupo">
+                <label>Destino do comunicado</label>
+                <div style="display:flex;flex-direction:column;gap:0.45rem;margin-top:0.35rem">
+                  <label style="text-transform:none;letter-spacing:0;font-weight:400">
+                    <input type="radio" name="aviso-destino-admin" id="aviso-destino-geral" value="geral" checked style="width:auto;margin-right:0.45rem"/>
+                    Enviar geral (todos)
+                  </label>
+                  <label style="text-transform:none;letter-spacing:0;font-weight:400">
+                    <input type="radio" name="aviso-destino-admin" id="aviso-destino-deptos" value="deptos" style="width:auto;margin-right:0.45rem"/>
+                    Enviar para departamentos específicos
+                  </label>
+                </div>
+                <select id="aviso-deptos-multi" multiple size="5" style="margin-top:0.55rem;display:none">
+                  ${deptoCache
+                    .filter((d) => d.ativo !== false)
+                    .map(
+                      (d) =>
+                        `<option value="${esc(d.id)}">${esc(d.icone || '')} ${esc(d.nome)}</option>`
+                    )
+                    .join('')}
+                </select>
+              </div>
+              <p class="muted" style="font-size:0.78rem;line-height:1.45;margin:-0.35rem 0 0.25rem"><strong>Geral:</strong> etiqueta “toda a equipe”. <strong>Departamentos específicos:</strong> publica um comunicado para cada departamento selecionado; <em>no app todos continuam a ver o histórico.</em></p>
+              <div class="form-grupo" style="display:flex;align-items:flex-start;gap:0.55rem;margin-top:0.25rem">
+                <input type="checkbox" id="aviso-notificar-email" checked style="margin-top:0.2rem"/>
+                <label for="aviso-notificar-email" style="margin:0;font-weight:normal;font-size:0.88rem;line-height:1.45">Enviar notificação por e-mail aos membros (usa SMTP do servidor; desmarque para publicar só no app).</label>
+              </div>
+              <div class="form-grupo" style="display:flex;align-items:flex-start;gap:0.55rem;margin-top:0.35rem">
+                <input type="checkbox" id="aviso-notificar-zap" style="margin-top:0.2rem"/>
+                <label for="aviso-notificar-zap" style="margin:0;font-weight:normal;font-size:0.88rem;line-height:1.45">Também enviar <strong>WhatsApp</strong> (Baileys, PyWhatKit local, Z-API ou Twilio; cada membro precisa ter <strong>celular</strong> no cadastro).</label>
+              </div>
+              <div class="form-grupo">
+                <label>Celular manual (opcional)</label>
+                <input id="aviso-celular-manual" placeholder="Ex.: +5511999999999 (podes separar por vírgula)"/>
+                <p class="muted" style="font-size:0.74rem;line-height:1.4;margin-top:0.35rem">Usa este campo para enviar também para números fora do cadastro da equipe.</p>
+              </div>
+              <p id="aviso-pub-erro" class="erro-msg"></p>
+              <button type="submit" class="btn btn-primario" id="btn-publicar-aviso">Enviar mensagem</button>
+            </form>
+          </div>
+        </div>`
+      } else {
+        const depsLider = (usuario.departamentos || []).filter((x) => x.role_depto === 'lider')
+        const optsLider = depsLider
+          .map(
+            (d) =>
+              `<option value="${esc(d.id)}">${esc(d.icone || '')} ${esc(d.nome)}</option>`
+          )
+          .join('')
+        if (!optsLider) {
+          formPublicar =
+            '<p class="muted" style="font-size:0.85rem;margin-bottom:1rem">Só podes publicar se fores <strong>líder</strong> de um departamento (pede ao administrador para te definir como líder nesse departamento).</p>'
+        } else {
+          formPublicar = `
+        <div class="card" style="margin-bottom:1.5rem">
+          <div class="card-body" style="padding:1.25rem">
+            <h3 style="font-size:0.95rem;margin:0 0 1rem;font-family:var(--fonte-display)">Aviso ao departamento</h3>
+            <form id="form-novo-aviso" onsubmit="publicarAvisoLider(event)">
+              <div class="form-grupo"><label>Título (opcional)</label><input id="aviso-titulo" placeholder="Ex.: Plantão sábado"/></div>
+              <div class="form-grupo"><label>Mensagem</label><textarea id="aviso-corpo" required rows="6"></textarea></div>
+              <div class="form-grupo">
+                <label>Período no painel (opcional)</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 0.75rem;margin-top:0.35rem">
+                  <div><span style="font-size:0.78rem;color:var(--texto-mutado)">Data início</span><input type="date" id="aviso-data-inicio" style="width:100%;margin-top:0.2rem"/></div>
+                  <div><span style="font-size:0.78rem;color:var(--texto-mutado)">Hora início</span><input type="time" id="aviso-hora-inicio" style="width:100%;margin-top:0.2rem"/></div>
+                  <div><span style="font-size:0.78rem;color:var(--texto-mutado)">Data fim</span><input type="date" id="aviso-data-fim" style="width:100%;margin-top:0.2rem"/></div>
+                  <div><span style="font-size:0.78rem;color:var(--texto-mutado)">Hora fim</span><input type="time" id="aviso-hora-fim" style="width:100%;margin-top:0.2rem"/></div>
+                </div>
+                <p class="muted" style="font-size:0.75rem;margin-top:0.45rem;line-height:1.45">Fora deste intervalo o aviso deixa de aparecer no painel e no dash; continua guardado no histórico.</p>
+              </div>
+              <div class="form-grupo"><label>Departamento</label><select id="aviso-depto-lider" required>${optsLider}</select></div>
+              <p class="muted" style="font-size:0.78rem;line-height:1.45;margin:-0.35rem 0 0.25rem">Etiqueta e notificações para <strong>esta</strong> equipa; no app o comunicado aparece para toda a gente com login.</p>
+              <div class="form-grupo" style="display:flex;align-items:flex-start;gap:0.55rem;margin-top:0.25rem">
+                <input type="checkbox" id="aviso-notificar-email" checked style="margin-top:0.2rem"/>
+                <label for="aviso-notificar-email" style="margin:0;font-weight:normal;font-size:0.88rem;line-height:1.45">Enviar notificação por e-mail aos membros (usa SMTP do servidor; desmarque para publicar só no app).</label>
+              </div>
+              <div class="form-grupo" style="display:flex;align-items:flex-start;gap:0.55rem;margin-top:0.35rem">
+                <input type="checkbox" id="aviso-notificar-zap" style="margin-top:0.2rem"/>
+                <label for="aviso-notificar-zap" style="margin:0;font-weight:normal;font-size:0.88rem;line-height:1.45">Também enviar <strong>WhatsApp</strong> (Baileys, PyWhatKit local, Z-API ou Twilio; cada membro precisa ter <strong>celular</strong> no cadastro).</label>
+              </div>
+              <div class="form-grupo">
+                <label>Celular manual (opcional)</label>
+                <input id="aviso-celular-manual" placeholder="Ex.: +5511999999999 (podes separar por vírgula)"/>
+                <p class="muted" style="font-size:0.74rem;line-height:1.4;margin-top:0.35rem">Usa este campo para enviar também para números fora do cadastro da equipe.</p>
+              </div>
+              <p id="aviso-pub-erro" class="erro-msg"></p>
+              <button type="submit" class="btn btn-primario" id="btn-publicar-aviso">Enviar mensagem</button>
+            </form>
+          </div>
+        </div>`
+        }
+      }
+    }
+
+    const listaHtml = list.length
+      ? list.map((a) => htmlCardAvisoComunicacao(a)).join('')
+      : '<p class="vazio">Nenhum aviso em vigor.</p>'
+
+    const encerradosHtml =
+      pode && encerrados.length
+        ? `<p class="secao-label" style="margin-top:1.25rem">Encerrados (arquivo)</p>` +
+          encerrados
+            .map(
+              (a) =>
+                `<div style="opacity:0.88">${htmlCardAvisoComunicacao(a)}</div>`
+            )
+            .join('')
+        : ''
+
+    const trocasHtml = pode
+      ? `
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-body" style="padding:1rem">
+          <h3 style="font-size:0.95rem;margin:0 0 0.75rem;font-family:var(--fonte-display)">Solicitações de troca pendentes</h3>
+          ${
+            (Array.isArray(trocasPendentes) ? trocasPendentes : []).length
+              ? trocasPendentes.map((t) => `
+                <div class="aviso-card" style="margin-bottom:0.65rem">
+                  <div class="aviso-card-meta">${esc(formatarDataAviso(t.criado_em))} · ${esc(t.departamento_nome || 'Departamento')}</div>
+                  <div style="font-size:0.88rem;color:var(--texto)">
+                    <strong>${esc(t.solicitante_nome || 'Membro')}</strong> solicitou troca:
+                    <strong>${esc(t.sai_nome || '—')}</strong> → <strong>${esc(t.entra_nome || '—')}</strong>
+                  </div>
+                  ${t.observacao ? `<div style="font-size:0.82rem;color:var(--texto-mutado);margin-top:0.25rem">${esc(t.observacao)}</div>` : ''}
+                  <div style="display:flex;gap:0.5rem;margin-top:0.6rem">
+                    <button type="button" class="btn btn-primario btn-sm" onclick="aprovarSolicitacaoTroca('${esc(t.id)}')">Aprovar</button>
+                    <button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="rejeitarSolicitacaoTroca('${esc(t.id)}')">Rejeitar</button>
+                  </div>
+                </div>
+              `).join('')
+              : '<p class="muted" style="font-size:0.85rem">Sem solicitações pendentes.</p>'
+          }
+        </div>
+      </div>`
+      : ''
+
+    const tituloListaSecao = pode ? 'Em vigor' : 'Comunicados'
+    el.innerHTML =
+      formPublicar +
+      trocasHtml +
+      `<p class="secao-label" style="margin-top:0.5rem">${tituloListaSecao}</p>` +
+      listaHtml +
+      encerradosHtml
+    if ((Array.isArray(list) ? list : []).some((a) => a?.envio_status?.situacao === 'processando')) {
+      setTimeout(() => {
+        if (document.getElementById('pagina-comunicacoes')?.style.display !== 'none') carregarComunicacoes()
+      }, 5000)
+    }
+    if (pode) {
+      const form = document.getElementById('form-novo-aviso')
+      if (form) {
+        const slot = document.createElement('div')
+        slot.id = 'whatsapp-status-slot'
+        form.prepend(slot)
+        atualizarStatusWhatsAppNoPainel()
+      }
+    }
+    const rGeral = document.getElementById('aviso-destino-geral')
+    const rDeptos = document.getElementById('aviso-destino-deptos')
+    const multi = document.getElementById('aviso-deptos-multi')
+    if (rGeral && rDeptos && multi) {
+      const atualizar = () => {
+        multi.style.display = rDeptos.checked ? 'block' : 'none'
+      }
+      rGeral.addEventListener('change', atualizar)
+      rDeptos.addEventListener('change', atualizar)
+      atualizar()
+    }
+  } catch (err) {
+    el.innerHTML = `<p class="carregando" style="color:var(--erro)">Erro ao carregar comunicações.</p>`
+    console.error(err)
+  }
+}
+
+async function aprovarSolicitacaoTroca(id) {
+  if (!id) return
+  try {
+    await api('POST', `/escala/trocas/${id}/aprovar`, {})
+    toast('Solicitação aprovada e troca aplicada.', 'ok')
+    carregarComunicacoes()
+    if (document.getElementById('pagina-escalas')?.style.display !== 'none') carregarEscalas()
+    if (document.getElementById('pagina-dashboard')?.style.display !== 'none') carregarDashboard()
+  } catch (ex) {
+    toast(ex.erro || 'Não foi possível aprovar a troca.', 'err')
+  }
+}
+
+async function rejeitarSolicitacaoTroca(id) {
+  if (!id) return
+  try {
+    await api('POST', `/escala/trocas/${id}/rejeitar`, {})
+    toast('Solicitação rejeitada.', 'ok')
+    carregarComunicacoes()
+  } catch (ex) {
+    toast(ex.erro || 'Não foi possível rejeitar a troca.', 'err')
+  }
+}
+
+async function excluirComunicado(avisoId) {
+  if (!avisoId) return
+  if (!confirm('Tem certeza que deseja excluir este comunicado?')) return
+  try {
+    await api('DELETE', `/aviso/${avisoId}`)
+    toast('Comunicado excluído.', 'ok')
+    carregarComunicacoes()
+    if (document.getElementById('pagina-dashboard')?.style.display !== 'none') carregarDashboard()
+  } catch (ex) {
+    toast(ex.erro || 'Não foi possível excluir o comunicado.', 'err')
+  }
+}
+
+async function reenviarComunicado(avisoId) {
+  if (!avisoId) return
+  const reenviarEmail = document.getElementById('reenviar-email')?.checked !== false
+  const reenviarWhatsapp = document.getElementById('reenviar-whatsapp')?.checked === true
+  try {
+    const r = await api('POST', `/aviso/${avisoId}/reenviar`, {
+      reenviar_email: reenviarEmail,
+      reenviar_whatsapp: reenviarWhatsapp
+    })
+    toast(montarResumoToastEnvio(r?.envio_status) || 'Mensagem reenviada.', 'ok')
+    carregarComunicacoes()
+    setTimeout(() => {
+      if (document.getElementById('pagina-comunicacoes')?.style.display !== 'none') carregarComunicacoes()
+    }, 8000)
+  } catch (ex) {
+    toast(ex.erro || 'Não foi possível reenviar a mensagem.', 'err')
+  }
+}
+
+let avisoReenvioSelecionado = ''
+function abrirModalReenviarComunicado(avisoId) {
+  avisoReenvioSelecionado = avisoId || ''
+  const modal = document.getElementById('modal-reenviar-comunicado')
+  if (!modal) return
+  const cEmail = document.getElementById('reenviar-email')
+  const cZap = document.getElementById('reenviar-whatsapp')
+  if (cEmail) cEmail.checked = true
+  if (cZap) cZap.checked = true
+  modal.classList.add('aberto')
+}
+function fecharModalReenviarComunicado() {
+  avisoReenvioSelecionado = ''
+  document.getElementById('modal-reenviar-comunicado')?.classList.remove('aberto')
+}
+async function confirmarReenviarComunicado() {
+  const id = avisoReenvioSelecionado
+  const cEmail = document.getElementById('reenviar-email')?.checked !== false
+  const cZap = document.getElementById('reenviar-whatsapp')?.checked === true
+  if (!id) return
+  if (!cEmail && !cZap) {
+    toast('Selecione pelo menos um canal.', 'err')
+    return
+  }
+  fecharModalReenviarComunicado()
+  await reenviarComunicado(id)
+}
+
+async function publicarAvisoAdmin(ev) {
+  ev.preventDefault()
+  const err = document.getElementById('aviso-pub-erro')
+  err.style.display = 'none'
+  try {
+    const destinoDeptos = document.getElementById('aviso-destino-deptos')?.checked === true
+    const basePayload = {
+      titulo: document.getElementById('aviso-titulo').value.trim(),
+      corpo: document.getElementById('aviso-corpo').value.trim(),
+      data_inicio: (document.getElementById('aviso-data-inicio')?.value || '').trim(),
+      hora_inicio: (document.getElementById('aviso-hora-inicio')?.value || '').trim(),
+      data_fim: (document.getElementById('aviso-data-fim')?.value || '').trim(),
+      hora_fim: (document.getElementById('aviso-hora-fim')?.value || '').trim(),
+      celular_manual: (document.getElementById('aviso-celular-manual')?.value || '').trim(),
+      notificar_email: document.getElementById('aviso-notificar-email')?.checked !== false,
+      notificar_whatsapp: document.getElementById('aviso-notificar-zap')?.checked === true
+    }
+
+    let criados = []
+    if (destinoDeptos) {
+      const selecionados = [...(document.getElementById('aviso-deptos-multi')?.selectedOptions || [])]
+        .map((o) => o.value)
+        .filter(Boolean)
+      if (!selecionados.length) {
+        err.textContent = 'Selecione pelo menos um departamento ou marque envio geral.'
+        err.style.display = 'block'
+        return
+      }
+      criados = await Promise.all(
+        selecionados.map((departamento_id) =>
+          api('POST', '/aviso/criar', { ...basePayload, departamento_id })
+        )
+      )
+      toast(`Mensagem enviada para ${criados.length} departamento(s).`, 'ok')
+    } else {
+      const criado = await api('POST', '/aviso/criar', {
+        ...basePayload,
+        departamento_id: null
+      })
+      criados = [criado]
+      toast(montarResumoToastEnvio(criado?.envio_status), 'ok')
+    }
+    carregarComunicacoes()
+    setTimeout(() => {
+      if (document.getElementById('pagina-comunicacoes')?.style.display !== 'none') carregarComunicacoes()
+    }, 8000)
+    if (document.getElementById('pagina-dashboard')?.style.display !== 'none') carregarDashboard()
+  } catch (ex) {
+    err.textContent = ex.erro || 'Não foi possível enviar a mensagem.'
+    err.style.display = 'block'
+  }
+}
+
+async function publicarAvisoLider(ev) {
+  ev.preventDefault()
+  const err = document.getElementById('aviso-pub-erro')
+  err.style.display = 'none'
+  try {
+    const criado = await api('POST', '/aviso/criar', {
+      titulo: document.getElementById('aviso-titulo').value.trim(),
+      corpo: document.getElementById('aviso-corpo').value.trim(),
+      departamento_id: document.getElementById('aviso-depto-lider').value,
+      data_inicio: (document.getElementById('aviso-data-inicio')?.value || '').trim(),
+      hora_inicio: (document.getElementById('aviso-hora-inicio')?.value || '').trim(),
+      data_fim: (document.getElementById('aviso-data-fim')?.value || '').trim(),
+      hora_fim: (document.getElementById('aviso-hora-fim')?.value || '').trim(),
+      celular_manual: (document.getElementById('aviso-celular-manual')?.value || '').trim(),
+      notificar_email: document.getElementById('aviso-notificar-email')?.checked !== false,
+      notificar_whatsapp: document.getElementById('aviso-notificar-zap')?.checked === true
+    })
+    toast(montarResumoToastEnvio(criado?.envio_status), 'ok')
+    carregarComunicacoes()
+    setTimeout(() => {
+      if (document.getElementById('pagina-comunicacoes')?.style.display !== 'none') carregarComunicacoes()
+    }, 8000)
+    if (document.getElementById('pagina-dashboard')?.style.display !== 'none') carregarDashboard()
+  } catch (ex) {
+    err.textContent = ex.erro || 'Não foi possível enviar a mensagem.'
+    err.style.display = 'block'
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// CHAT — PASTOR DA MÍDIA
+// ═══════════════════════════════════════════════════════════
+let chatBloqueado = false
+
+async function enviarMensagem() {
+  if (chatBloqueado) return
+
+  const input = document.getElementById('chat-input')
+  const msgsEl = document.getElementById('chat-msgs')
+  const btn = document.getElementById('btn-enviar')
+  const texto = input.value.trim()
+  if (!texto) return
+
+  // Adicionar mensagem do usuário
+  const msgUser = document.createElement('div')
+  msgUser.className = 'msg msg-usuario'
+  msgUser.textContent = texto
+  msgsEl.appendChild(msgUser)
+
+  input.value = ''
+  chatBloqueado = true
+  input.disabled = true
+  btn.disabled = true
+  btn.textContent = '…'
+
+  // Indicador de digitação
+  const typing = document.createElement('div')
+  typing.className = 'msg-typing'
+  typing.innerHTML = '<span></span><span></span><span></span>'
+  msgsEl.appendChild(typing)
+  msgsEl.scrollTop = msgsEl.scrollHeight
+
+  try {
+    const data = await api('POST', '/agente/perguntar', { pergunta: texto })
+
+    typing.remove()
+
+    const msgAgente = document.createElement('div')
+    msgAgente.className = 'msg msg-agente'
+    msgAgente.textContent = data.resposta || 'Sem resposta.'
+    msgsEl.appendChild(msgAgente)
+  } catch(err) {
+    typing.remove()
+
+    const msgErr = document.createElement('div')
+    msgErr.className = 'msg msg-agente'
+    msgErr.style.borderLeftColor = 'var(--erro)'
+    const errMsg =
+      err?.erro ||
+      'Não foi possível conectar ao Pastor da Mídia. Verifique a ANTHROPIC_API_KEY no arquivo .env ou tente de novo em instantes.'
+    msgErr.textContent = errMsg
+    msgsEl.appendChild(msgErr)
+  } finally {
+    chatBloqueado = false
+    input.disabled = false
+    btn.disabled = false
+    btn.textContent = 'Enviar 🔥'
+    input.focus()
+    msgsEl.scrollTop = msgsEl.scrollHeight
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// INICIALIZAÇÃO
+// ═══════════════════════════════════════════════════════════
+if (token && usuario) {
+  mostrarApp()
+  navegar('dashboard')
+  verificarSenhaObrigatoria()
+  sincronizarUsuarioServidor()
+  tentarAbrirPopupEntrada()
+} else {
+  mostrarLogin()
+  tentarAbrirPopupEntrada()
+}
+exibirToastPendenteAposReload()
+</script>
+</body>
+</html>
