@@ -132,6 +132,30 @@ router.get('/trocas/pendentes', autenticar, (req, res) => {
   res.json(rows)
 })
 
+// GET /escala/trocas/listar — visível para todos; aprovação só liderança/admin
+router.get('/trocas/listar', autenticar, (req, res) => {
+  const rows = sql.all(
+    `SELECT ts.*, d.nome as departamento_nome, us.nome as solicitante_nome, ua.nome as sai_nome, ue.nome as entra_nome
+     FROM troca_solicitacoes ts
+     LEFT JOIN departamentos d ON d.id = ts.departamento_id
+     LEFT JOIN usuarios us ON us.id = ts.solicitante_id
+     LEFT JOIN usuarios ua ON ua.id = ts.usuario_sai
+     LEFT JOIN usuarios ue ON ue.id = ts.usuario_entra
+     WHERE ts.status = 'pendente'
+     ORDER BY ts.criado_em DESC`
+  )
+  const lista = rows.map((r) => ({
+    ...r,
+    pode_aprovar:
+      req.usuario.role === 'admin' || !!sql.get(
+        `SELECT 1 FROM usuario_departamento WHERE usuario_id = ? AND departamento_id = ? AND role_depto = 'lider'`,
+        req.usuario.id,
+        r.departamento_id
+      )
+  }))
+  res.json(lista)
+})
+
 // POST /escala/trocas/:id/aprovar — admin ou líder do departamento da solicitação
 router.post('/trocas/:id/aprovar', autenticar, (req, res) => {
   const row = sql.get(`SELECT * FROM troca_solicitacoes WHERE id = ?`, req.params.id)
@@ -179,6 +203,38 @@ router.post('/trocas/:id/rejeitar', autenticar, (req, res) => {
   res.json({ ok: true })
 })
 
+// DELETE /escala/trocas/:id — remove solicitação pendente (admin ou líder do departamento)
+router.delete('/trocas/:id', autenticar, (req, res) => {
+  const row = sql.get(`SELECT * FROM troca_solicitacoes WHERE id = ?`, req.params.id)
+  if (!row) return res.status(404).json({ erro: 'Solicitação não encontrada' })
+  if (row.status !== 'pendente') {
+    return res.status(400).json({ erro: 'Só é possível excluir solicitação pendente' })
+  }
+  if (req.usuario.role !== 'admin' && !podeGerirEscalaDepartamento(req, row.departamento_id)) {
+    return res.status(403).json({ erro: 'Sem permissão para excluir esta solicitação' })
+  }
+  sql.run(`DELETE FROM troca_solicitacoes WHERE id = ?`, row.id)
+  res.json({ ok: true })
+})
+
+// DELETE /escala/trocas/historico/:id — remove item do histórico de trocas (admin ou líder do setor)
+router.delete('/trocas/historico/:id', autenticar, (req, res) => {
+  const row = sql.get(
+    `SELECT et.id, et.escala_id, e.departamento_id
+     FROM escala_trocas et
+     JOIN escalas e ON e.id = et.escala_id
+     WHERE et.id = ?`,
+    req.params.id
+  )
+  if (!row) return res.status(404).json({ erro: 'Troca de histórico não encontrada' })
+  if (req.usuario.role !== 'admin' && !podeGerirEscalaDepartamento(req, row.departamento_id)) {
+    return res.status(403).json({ erro: 'Sem permissão para excluir este histórico de troca' })
+  }
+  sql.run(`DELETE FROM escala_trocas WHERE id = ?`, row.id)
+  syncEscalasParaMemoria()
+  res.json({ ok: true })
+})
+
 // GET /escala/minhas/:usuario_id
 router.get('/minhas/:usuario_id', autenticar, (req, res) => {
   const { usuario_id } = req.params
@@ -214,7 +270,12 @@ router.get('/listar', autenticar, (req, res) => {
   res.json(buscarEscalasComVoluntarios())
 })
 
-// PUT /escala/:escalaId — data (DD/MM/AAAA), evento_id, observacao; admin ou líder do dept
+// GET /escala/visao-geral — qualquer usuário autenticado vê o quadro completo
+router.get('/visao-geral', autenticar, (req, res) => {
+  res.json(buscarEscalasComVoluntarios())
+})
+
+// PUT /escala/:escalaId — data (DD/MM/AAAA), evento_id, observacao e voluntarios; admin ou líder do dept
 router.put('/:escalaId', autenticar, (req, res) => {
   const escalaRow = sql.get(`SELECT id, departamento_id FROM escalas WHERE id = ?`, req.params.escalaId)
   if (!escalaRow) return res.status(404).json({ erro: 'Escala não encontrada' })
@@ -223,12 +284,19 @@ router.put('/:escalaId', autenticar, (req, res) => {
       erro: 'Apenas administrador ou líder do departamento pode alterar esta escala'
     })
   }
-  const { data, evento_id, observacao } = req.body
-  if (data === undefined && evento_id === undefined && observacao === undefined) {
-    return res.status(400).json({ erro: 'Informe ao menos um campo: data, evento_id ou observacao' })
+  const { data, evento_id, observacao, voluntarios } = req.body
+  if (
+    data === undefined &&
+    evento_id === undefined &&
+    observacao === undefined &&
+    voluntarios === undefined
+  ) {
+    return res
+      .status(400)
+      .json({ erro: 'Informe ao menos um campo: data, evento_id, observacao ou voluntarios' })
   }
   try {
-    atualizarEscalaNoBanco(req.params.escalaId, { data, evento_id, observacao })
+    atualizarEscalaNoBanco(req.params.escalaId, { data, evento_id, observacao, voluntarios })
     syncEscalasParaMemoria()
     res.json(escalaPorId(req.params.escalaId))
   } catch (e) {
@@ -254,34 +322,10 @@ router.delete('/:escalaId', autenticar, (req, res) => {
 
 // POST /escala/:escalaId/trocar-voluntario — admin ou líder do dept; registra histórico A → B
 router.post('/:escalaId/trocar-voluntario', autenticar, (req, res) => {
-  const { usuario_sai, usuario_entra, observacao } = req.body
-  const escalaId = req.params.escalaId
-  if (!usuario_sai || !usuario_entra)
-    return res.status(400).json({ erro: 'usuario_sai e usuario_entra são obrigatórios' })
-
-  const escalaRow = sql.get(`SELECT id, departamento_id FROM escalas WHERE id = ?`, escalaId)
-  if (!escalaRow) return res.status(404).json({ erro: 'Escala não encontrada' })
-
-  if (!podeGerirEscalaDepartamento(req, escalaRow.departamento_id)) {
-    return res.status(403).json({
-      erro: 'Apenas administrador ou líder do departamento pode registrar trocas nesta escala'
-    })
-  }
-
-  try {
-    trocarVoluntarioNaEscala({
-      escalaId,
-      usuarioSai: usuario_sai,
-      usuarioEntra: usuario_entra,
-      registradoPor: req.usuario.id,
-      observacao: observacao || ''
-    })
-    syncEscalasParaMemoria()
-    res.json({ ok: true, escala: escalaPorId(escalaId) })
-  } catch (e) {
-    const status = e.code === 'NOT_FOUND' ? 404 : 400
-    res.status(status).json({ erro: e.message || 'Não foi possível registrar a troca' })
-  }
+  return res.status(410).json({
+    erro:
+      'Troca direta desativada. Use /solicitar-troca para registrar solicitação pendente e aguardar aprovação da liderança.'
+  })
 })
 
 module.exports = router

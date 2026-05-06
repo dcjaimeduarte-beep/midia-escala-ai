@@ -4,6 +4,7 @@ const db = require('../models/db')
 const eventBus = require('../events/eventBus')
 const { criarEscalaNoBanco, buscarEscalasComVoluntarios } = require('../services/escalasDb')
 const { syncEscalasParaMemoria } = require('../db/bootstrap')
+const { resolverEspecialista } = require('./especialistas')
 
 const client = new Anthropic()
 
@@ -260,7 +261,16 @@ function executarFerramenta(nome, input) {
   }
 }
 
-async function pastorDaMidia(pergunta) {
+async function pastorDaMidia(pergunta, especialistaId = 'pastor') {
+  const especialista = resolverEspecialista(especialistaId)
+  const systemPrompt = `${SYSTEM_PROMPT}
+
+## Especialista ativo
+${especialista.nome}
+Foco: ${especialista.foco}
+
+Diretriz adicional:
+${especialista.prompt_extra}`
   const messages = [{ role: 'user', content: pergunta }]
 
   let response = await client.messages.create({
@@ -269,7 +279,7 @@ async function pastorDaMidia(pergunta) {
     system: [
       {
         type: 'text',
-        text: SYSTEM_PROMPT,
+        text: systemPrompt,
         cache_control: { type: 'ephemeral' } // system prompt cache — reused across calls
       }
     ],
@@ -301,7 +311,7 @@ async function pastorDaMidia(pergunta) {
       system: [
         {
           type: 'text',
-          text: SYSTEM_PROMPT,
+          text: systemPrompt,
           cache_control: { type: 'ephemeral' }
         }
       ],

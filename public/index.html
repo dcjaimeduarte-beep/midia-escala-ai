@@ -1171,7 +1171,7 @@
       </div>
       <p class="muted" style="font-size:0.82rem;line-height:1.5;margin:-0.35rem 0 1rem;max-width:44rem;color:var(--texto-mutado)">
         <strong style="color:var(--texto)">Quem entra na escala</strong> é definido pelo <strong>líder</strong> ou <strong>administrador</strong> ao criar ou editar a escala (não é automático ao cadastrar-se).
-        <strong>Troca:</strong> o líder pode trocar na hora; o voluntário pode <em>solicitar</em> troca — a liderança aprova em <strong>Comunicações</strong>.
+        <strong>Troca:</strong> toda troca vira <em>solicitação pendente</em>; a liderança/admin analisa e aprova/rejeita.
       </p>
       <div id="escalas-conteudo"><p class="carregando">Carregando…</p></div>
     </div>
@@ -1229,6 +1229,7 @@
             placeholder="Ex: Crie uma escala para câmera no domingo 25/05/2026"
             onkeydown="if(event.key==='Enter' && !event.shiftKey) enviarMensagem()"
           />
+          <button class="btn btn-ghost" id="btn-validar-fluxo" onclick="validarFluxoAgora()">Validar fluxo agora</button>
           <button class="btn btn-primario" id="btn-enviar" onclick="enviarMensagem()">Enviar 🔥</button>
         </div>
       </div>
@@ -1286,7 +1287,7 @@
 <div id="modal-escala" class="modal-overlay">
   <div class="modal">
     <h3 class="modal-titulo">📅 Nova Escala</h3>
-    <form id="form-escala" onsubmit="criarEscala(event)">
+    <form id="form-escala" onsubmit="return false">
       <div class="form-grupo">
         <label>Data do Culto</label>
         <input id="esc-data" type="date" required/>
@@ -1313,7 +1314,7 @@
       <p id="esc-erro" class="erro-msg"></p>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" onclick="fecharModalEscala()">Cancelar</button>
-        <button type="submit" class="btn btn-primario" id="btn-criar-esc">Criar Escala</button>
+        <button type="button" class="btn btn-primario" id="btn-criar-esc" onclick="criarEscala()">Criar Escala</button>
       </div>
     </form>
   </div>
@@ -1436,12 +1437,30 @@
 <div id="modal-edit-escala" class="modal-overlay" onclick="if(event.target===this)fecharModalEditEscala()">
   <div class="modal" onclick="event.stopPropagation()">
     <h3 class="modal-titulo">Editar escala</h3>
-    <p class="muted" style="font-size:0.78rem;margin:-0.5rem 0 1rem">Data, tipo de culto e observação. Integrantes: use <strong>Trocar</strong> na lista.</p>
+    <p class="muted" style="font-size:0.78rem;margin:-0.5rem 0 1rem">Atualize data/evento e, se precisar, adicione novos departamentos já escolhendo quais integrantes entram em cada nova escala.</p>
     <form id="form-edit-escala" onsubmit="salvarEditEscala(event)">
       <input type="hidden" id="edit-escala-id"/>
+      <input type="hidden" id="edit-escala-depto-base"/>
       <div class="form-grupo"><label>Data do culto</label><input id="edit-escala-data" type="date" required/></div>
       <div class="form-grupo"><label>Tipo de culto / evento</label><select id="edit-escala-evento"><option value="">— Nenhum —</option></select></div>
       <div class="form-grupo"><label>Observação</label><input id="edit-escala-obs" placeholder="Opcional"/></div>
+      <div class="form-grupo" id="edit-escala-membros-base-wrap" style="display:none">
+        <label>Integrantes deste setor</label>
+        <p class="muted" style="font-size:0.75rem;color:var(--texto-mutado);margin:0 0 0.25rem">
+          Marque quem deve ficar nesta escala para o setor atual.
+        </p>
+        <div id="edit-escala-membros-base-list" class="esc-membros-checkboxes"></div>
+      </div>
+      <div class="form-grupo">
+        <label>+ Adicionar equipe (departamento) nesta mesma data</label>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+          <select id="edit-escala-add-depto" style="min-width:220px;flex:1 1 220px">
+            <option value="">Selecione…</option>
+          </select>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="adicionarDepartamentoExtraEdicao()">Adicionar equipe</button>
+        </div>
+      </div>
+      <div id="edit-escala-deptos-extra" class="form-grupo" style="display:none"></div>
       <p id="edit-escala-erro" class="erro-msg"></p>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" style="margin-right:auto;color:var(--erro)" onclick="excluirEscalaNoModal()">Excluir</button>
@@ -1543,6 +1562,29 @@
   </div>
 </div>
 
+<!-- APROVAR TROCA (LIDER/ADMIN) -->
+<div id="modal-aprovar-troca" class="modal-overlay" onclick="if(event.target===this)fecharModalAprovarTroca()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo">Aprovar solicitação de troca</h3>
+    <input type="hidden" id="aprovar-troca-id-atual"/>
+    <div class="form-grupo">
+      <label>Solicitação pendente</label>
+      <select id="aprovar-troca-select" onchange="atualizarDetalhesModalAprovarTroca()"></select>
+    </div>
+    <div class="form-grupo"><label>Solicitante</label><input id="aprovar-troca-solicitante" readonly/></div>
+    <div class="form-grupo"><label>Quem sai</label><input id="aprovar-troca-sai" readonly/></div>
+    <div class="form-grupo"><label>Quem entra</label><input id="aprovar-troca-entra" readonly/></div>
+    <div class="form-grupo"><label>Observação</label><input id="aprovar-troca-obs" readonly/></div>
+    <p id="aprovar-troca-erro" class="erro-msg"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="fecharModalAprovarTroca()">Cancelar</button>
+      <button type="button" class="btn btn-ghost" style="color:var(--erro)" onclick="excluirDoModalAprovarTroca()">Excluir</button>
+      <button type="button" class="btn btn-ghost" style="color:var(--erro)" onclick="rejeitarDoModalAprovarTroca()">Rejeitar</button>
+      <button type="button" class="btn btn-primario" onclick="aprovarDoModalAprovarTroca()">Aprovar</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOASTS -->
 <div class="toast-area" id="toast-area"></div>
 
@@ -1557,6 +1599,7 @@ let eventoCache = []  // tipos de culto/evento
 let filtroEquipeStatus = 'ativos'
 let loginEscolhaPendente = null
 let popupEntradaTimer = null
+let trocasPendentesCache = []
 
 try {
   usuario = JSON.parse(localStorage.getItem('peniel_usuario') || 'null')
@@ -1656,6 +1699,7 @@ async function handleLogin(e) {
     localStorage.setItem('peniel_usuario', JSON.stringify(usuario))
     mostrarApp()
     navegar('dashboard')
+    notificarAlertasAposLogin()
     tentarAbrirPopupEntrada()
   } catch(err) {
     if (err.codigo === 'ESCOLHER_USUARIO' && Array.isArray(err.candidatos) && err.candidatos.length) {
@@ -1711,6 +1755,7 @@ async function confirmarEscolhaContaLogin() {
     fecharModalEscolherConta()
     mostrarApp()
     navegar('dashboard')
+    notificarAlertasAposLogin()
     tentarAbrirPopupEntrada()
   } catch (e) {
     if (err) {
@@ -2071,15 +2116,33 @@ function htmlHistoricoTrocas(trocas) {
   const linhas = lista.map((t) => {
     const obs = t.observacao ? ` · ${esc(t.observacao)}` : ''
     const por = t.registrado_por_nome ? ` · registrado por ${esc(t.registrado_por_nome)}` : ''
+    const podeExcluirHistorico = !!usuario && temPapelLiderancaNoApp()
+    const botaoExcluir = podeExcluirHistorico
+      ? `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:0.35rem;color:var(--erro)" onclick="excluirHistoricoTroca('${esc(t.id)}')">Excluir troca</button>`
+      : ''
     return `<div class="historico-troca-linha">
       <span class="historico-quem"><strong>${esc(t.usuario_anterior_nome)}</strong> → <strong>${esc(t.usuario_novo_nome)}</strong></span>
       <span class="historico-troca-meta">${esc(formatarDataHoraTroca(t.registrado_em))}${por}${obs}</span>
+      ${botaoExcluir}
     </div>`
   }).join('')
   return `<details class="historico-trocas">
     <summary>Histórico de trocas (${lista.length})</summary>
     ${linhas}
   </details>`
+}
+
+async function excluirHistoricoTroca(trocaId) {
+  if (!trocaId) return
+  if (!confirm('Excluir este registro do histórico de troca?')) return
+  try {
+    await api('DELETE', `/escala/trocas/historico/${trocaId}`)
+    toast('Histórico de troca excluído.', 'ok')
+    if (document.getElementById('pagina-escalas')?.style.display !== 'none') carregarEscalas()
+    if (document.getElementById('pagina-dashboard')?.style.display !== 'none') carregarDashboard()
+  } catch (e) {
+    toast(e.erro || 'Não foi possível excluir o histórico de troca.', 'err')
+  }
 }
 
 async function abrirModalTrocaEscala(escalaId) {
@@ -2096,10 +2159,7 @@ async function abrirModalTrocaEscala(escalaId) {
   modal.classList.add('aberto')
 
   try {
-    const lista =
-      usuario?.role === 'admin'
-        ? await api('GET', '/escala/listar')
-        : await api('GET', `/escala/minhas/${usuario?.id}`)
+    const lista = await api('GET', endpointEscalasVisiveis())
     const e = (Array.isArray(lista) ? lista : []).find((x) => x.id === escalaId)
     if (!e) {
       selSai.innerHTML = ''
@@ -2109,7 +2169,7 @@ async function abrirModalTrocaEscala(escalaId) {
       return
     }
     const podeGerir = podeGerirEscalaNoCliente(e.departamento_id)
-    const podeSolicitar = usuario?.role === 'membro' && escalaEhMinha(e)
+    const podeSolicitar = escalaEhMinha(e)
     const formTroca = document.getElementById('form-troca-escala')
     const tituloEl = document.getElementById('troca-modal-titulo')
     const ajudaEl = document.getElementById('troca-escala-ajuda')
@@ -2121,14 +2181,13 @@ async function abrirModalTrocaEscala(escalaId) {
       err.style.display = 'block'
       return
     }
-    if (formTroca) formTroca.dataset.modo = podeGerir ? 'direta' : 'solicitacao'
-    if (tituloEl) tituloEl.textContent = podeGerir ? 'Trocar integrante' : 'Solicitar troca'
+    if (formTroca) formTroca.dataset.modo = 'solicitacao'
+    if (tituloEl) tituloEl.textContent = 'Solicitar troca'
     if (ajudaEl) {
-      ajudaEl.innerHTML = podeGerir
-        ? 'Como <strong style="color:var(--texto)">líder ou admin</strong>, a troca é aplicada na hora e fica registrada no histórico da escala. Quem assume pode ser de qualquer departamento (com a sua aprovação já implícita ao confirmar).'
-        : 'Como <strong style="color:var(--texto)">voluntário</strong>, o pedido vai para a <strong style="color:var(--texto)">liderança</strong> (menu <strong>Comunicações</strong>) — só após aprovação é que a escala muda. Só pode pedir troca em que <strong>você</strong> é o integrante que sai.'
+      ajudaEl.innerHTML =
+        'Toda troca é registrada como <strong style="color:var(--texto)">solicitação pendente</strong>. A liderança avalia e aprova/rejeita depois.'
     }
-    if (btnTroca) btnTroca.textContent = podeGerir ? 'Aplicar troca' : 'Enviar solicitação'
+    if (btnTroca) btnTroca.textContent = 'Enviar solicitação'
     const vols = e.voluntarios || []
     if (!vols.length) {
       selSai.innerHTML = ''
@@ -2179,10 +2238,7 @@ async function confirmarTrocaEscala(ev) {
   btn.disabled = true
   try {
     const modo = document.getElementById('form-troca-escala')?.dataset?.modo
-    const endpoint =
-      modo === 'solicitacao'
-        ? `/escala/${escalaId}/solicitar-troca`
-        : `/escala/${escalaId}/trocar-voluntario`
+    const endpoint = `/escala/${escalaId}/solicitar-troca`
     await api('POST', endpoint, {
       usuario_sai,
       usuario_entra,
@@ -2397,6 +2453,96 @@ function toggleSenha(inputId, mostrar) {
   el.type = mostrar ? 'text' : 'password'
 }
 
+function endpointEscalasVisiveis() {
+  return usuario?.role === 'admin' ? '/escala/listar' : '/escala/visao-geral'
+}
+
+function abrirComunicacoesEmTrocas() {
+  sessionStorage.setItem('peniel_foco_trocas', '1')
+  navegar('comunicacoes')
+}
+
+function pendenciasPorEscala(escalaId) {
+  return (Array.isArray(trocasPendentesCache) ? trocasPendentesCache : []).filter(
+    (t) => t.escala_id === escalaId
+  )
+}
+
+function fecharModalAprovarTroca() {
+  document.getElementById('modal-aprovar-troca')?.classList.remove('aberto')
+}
+
+function atualizarDetalhesModalAprovarTroca() {
+  const id = document.getElementById('aprovar-troca-select')?.value
+  const row = (Array.isArray(trocasPendentesCache) ? trocasPendentesCache : []).find((t) => t.id === id)
+  document.getElementById('aprovar-troca-id-atual').value = row?.id || ''
+  document.getElementById('aprovar-troca-solicitante').value = row?.solicitante_nome || '—'
+  document.getElementById('aprovar-troca-sai').value = row?.sai_nome || '—'
+  document.getElementById('aprovar-troca-entra').value = row?.entra_nome || '—'
+  document.getElementById('aprovar-troca-obs').value = row?.observacao || ''
+}
+
+function abrirModalAprovarTrocaEscala(escalaId) {
+  if (!temPapelLiderancaNoApp()) {
+    toast('Apenas a liderança pode analisar solicitações de troca.', 'err')
+    return
+  }
+  const escala = (window.__escalasVisiveisCache || []).find((e) => e.id === escalaId)
+  if (escala && !podeGerirEscalaNoCliente(escala.departamento_id)) {
+    toast('Sem permissão para aprovar trocas deste setor.', 'err')
+    return
+  }
+  const pend = pendenciasPorEscala(escalaId).filter((t) => t.pode_aprovar === true)
+  if (!pend.length) {
+    toast('Sem solicitações pendentes para este setor.', 'ok')
+    return
+  }
+  const sel = document.getElementById('aprovar-troca-select')
+  const err = document.getElementById('aprovar-troca-erro')
+  if (!sel) return
+  sel.innerHTML = pend
+    .map(
+      (t) =>
+        `<option value="${esc(t.id)}">${esc(t.sai_nome || '—')} → ${esc(t.entra_nome || '—')} · ${esc(
+          t.solicitante_nome || 'membro'
+        )}</option>`
+    )
+    .join('')
+  if (err) err.style.display = 'none'
+  atualizarDetalhesModalAprovarTroca()
+  document.getElementById('modal-aprovar-troca')?.classList.add('aberto')
+}
+
+async function aprovarDoModalAprovarTroca() {
+  const id = document.getElementById('aprovar-troca-id-atual')?.value
+  if (!id) return
+  await aprovarSolicitacaoTroca(id)
+  fecharModalAprovarTroca()
+}
+
+async function rejeitarDoModalAprovarTroca() {
+  const id = document.getElementById('aprovar-troca-id-atual')?.value
+  if (!id) return
+  await rejeitarSolicitacaoTroca(id)
+  fecharModalAprovarTroca()
+}
+
+async function excluirDoModalAprovarTroca() {
+  const id = document.getElementById('aprovar-troca-id-atual')?.value
+  if (!id) return
+  if (!confirm('Excluir esta solicitação de troca? Esta ação remove a pendência do fluxo de aprovação.')) return
+  try {
+    await api('DELETE', `/escala/trocas/${id}`)
+    toast('Solicitação excluída.', 'ok')
+    fecharModalAprovarTroca()
+    carregarComunicacoes()
+    if (document.getElementById('pagina-escalas')?.style.display !== 'none') carregarEscalas()
+    if (document.getElementById('pagina-dashboard')?.style.display !== 'none') carregarDashboard()
+  } catch (e) {
+    toast(e.erro || 'Não foi possível excluir a solicitação.', 'err')
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════
@@ -2405,15 +2551,12 @@ async function carregarDashboard() {
   el.innerHTML = '<p class="carregando">Carregando…</p>'
 
   try {
-    const [deptos, escalas, evs, avisosPainel] = await Promise.all([
+    const [deptos, escalas, evs, avisosPainel, trocasPendentes] = await Promise.all([
       api('GET', '/departamento/listar').catch(() => []),
-      usuario?.role === 'admin'
-        ? api('GET', '/escala/listar').catch(() => [])
-        : usuario?.id
-          ? api('GET', `/escala/minhas/${usuario.id}`).catch(() => [])
-          : Promise.resolve([]),
+      usuario?.id ? api('GET', endpointEscalasVisiveis()).catch(() => []) : Promise.resolve([]),
       api('GET', '/evento/listar').catch(() => []),
-      api('GET', '/aviso/listar').catch(() => [])
+      api('GET', '/aviso/listar').catch(() => []),
+      api('GET', '/escala/trocas/listar').catch(() => [])
     ])
 
     deptoCache = Array.isArray(deptos) ? deptos : []
@@ -2467,6 +2610,11 @@ async function carregarDashboard() {
       })
       .sort((a, b) => dataEscalaParaISO(a.data).localeCompare(dataEscalaParaISO(b.data)))
       .slice(0, 8)
+    const cultosComEscala = agruparEscalasPorEvento(todasEscalas)
+    const proximosCultosComEscala = agruparEscalasPorEvento(proximas)
+    const proximasEmQueEstou = proximas.filter((e) => escalaEhMinha(e))
+    const trocasPendentesLista = Array.isArray(trocasPendentes) ? trocasPendentes : []
+    trocasPendentesCache = trocasPendentesLista
 
     const meusDepartamentos = Array.isArray(usuario?.departamentos) ? usuario.departamentos : []
     const meusVinculosCount = meusDepartamentos.length
@@ -2487,10 +2635,36 @@ async function carregarDashboard() {
         ? deptoCache.map((d) => ({ id: d.id, nome: d.nome, icone: d.icone, role_depto: 'membro' }))
         : meusDepartamentos
     const pastoralPainelHtml = renderMensagensPastoraisPainel(depsParaPastoral, deptoCache)
+    const alertaEscalasHtml = `
+      <div class="card" style="margin-bottom:1.25rem;border-color:rgba(212,160,23,0.4);background:rgba(212,160,23,0.06)">
+        <div class="card-body" style="padding:1rem 1.15rem">
+          <strong style="color:var(--texto)">🔔 Atenção com as escalas</strong>
+          <p class="muted" style="font-size:0.84rem;margin:0.45rem 0 0.65rem;line-height:1.5">
+            ${proximasEmQueEstou.length
+              ? `Você está escalada(o) em <strong style="color:var(--texto)">${proximasEmQueEstou.length}</strong> escala(s) próxima(s).`
+              : `Há <strong style="color:var(--texto)">${proximas.length}</strong> escala(s) próxima(s) vinculadas aos seus departamentos.`}
+          </p>
+          <button type="button" class="btn btn-primario btn-sm" onclick="navegar('escalas')">Abrir Escalas</button>
+        </div>
+      </div>`
+    const alertaTrocasHtml =
+      temPapelLiderancaNoApp() && trocasPendentesLista.length
+        ? `<div class="card" style="margin-bottom:1.25rem;border-color:rgba(201,74,82,0.45);background:rgba(201,74,82,0.08)">
+            <div class="card-body" style="padding:1rem 1.15rem">
+              <strong style="color:var(--texto)">🚨 Solicitações de troca pendentes</strong>
+              <p class="muted" style="font-size:0.84rem;margin:0.45rem 0 0.65rem;line-height:1.5">
+                Existem <strong style="color:var(--texto)">${trocasPendentesLista.length}</strong> solicitação(ões) aguardando aprovação.
+              </p>
+              <button type="button" class="btn btn-primario btn-sm" onclick="abrirComunicacoesEmTrocas()">Abrir Comunicações</button>
+            </div>
+          </div>`
+        : ''
 
     el.innerHTML = `
       <h2 class="pagina-titulo">🏠 Painel</h2>
       ${avisoSemDepartamentoHtml}
+      ${alertaEscalasHtml}
+      ${alertaTrocasHtml}
 
       <div class="stats-grid">
         <div class="stat-card">
@@ -2505,13 +2679,13 @@ async function carregarDashboard() {
         </div>
         <div class="stat-card">
           <div class="stat-icone">📅</div>
-          <div class="stat-label">Total de Escalas</div>
-          <div class="stat-valor">${todasEscalas.length}<span class="stat-unidade">escalas</span></div>
+          <div class="stat-label">Total de cultos com escala</div>
+          <div class="stat-valor">${cultosComEscala.length}<span class="stat-unidade">cultos</span></div>
         </div>
         <div class="stat-card">
           <div class="stat-icone">🔥</div>
           <div class="stat-label">Próximos cultos</div>
-          <div class="stat-valor">${proximas.length}<span class="stat-unidade">escalas</span></div>
+          <div class="stat-valor">${proximosCultosComEscala.length}<span class="stat-unidade">cultos</span></div>
         </div>
       </div>
 
@@ -2539,6 +2713,37 @@ async function carregarDashboard() {
   }
 }
 
+async function notificarAlertasAposLogin() {
+  if (!token || !usuario?.id) return
+  try {
+    const escalas = await api('GET', endpointEscalasVisiveis())
+    trocasPendentesCache = await api('GET', '/escala/trocas/listar').catch(() => [])
+    const lista = Array.isArray(escalas) ? escalas : []
+    const hoje = new Date().toISOString().split('T')[0]
+    const proximas = lista.filter((e) => e?.data && dataEscalaParaISO(e.data) >= hoje)
+    const minhas = proximas.filter((e) => escalaEhMinha(e))
+    if (minhas.length) {
+      toast(`🔔 Você está em ${minhas.length} escala(s) próxima(s).`, 'ok')
+    } else if (proximas.length) {
+      toast(`🔔 Há ${proximas.length} escala(s) próxima(s) nos seus departamentos.`, 'ok')
+    }
+    const trocasRecentes = proximas.reduce(
+      (acc, e) => acc + (Array.isArray(e?.trocas) ? e.trocas.length : 0),
+      0
+    )
+    if (trocasRecentes > 0) {
+      toast(`ℹ️ Há ${trocasRecentes} troca(s) registrada(s) nas próximas escalas.`, 'ok')
+    }
+    if (temPapelLiderancaNoApp()) {
+      const trocas = await api('GET', '/escala/trocas/pendentes').catch(() => [])
+      const pendentes = Array.isArray(trocas) ? trocas.length : 0
+      if (pendentes) {
+        toast(`🚨 ${pendentes} solicitação(ões) de troca pendente(s).`, 'err')
+      }
+    }
+  } catch (_) {}
+}
+
 // ═══════════════════════════════════════════════════════════
 // ESCALAS
 // ═══════════════════════════════════════════════════════════
@@ -2560,11 +2765,10 @@ async function carregarEscalas() {
       eventoCache = []
     }
 
-    const escalas = usuario?.role === 'admin'
-      ? await api('GET', '/escala/listar')
-      : await api('GET', `/escala/minhas/${usuario?.id}`)
+    const escalas = await api('GET', endpointEscalasVisiveis())
 
     const lista = Array.isArray(escalas) ? escalas : []
+    window.__escalasVisiveisCache = lista
 
     if (!lista.length) {
       el.innerHTML = '<div class="vazio">Nenhuma escala cadastrada ainda.<br><small>Clique em "+ Nova Escala" para começar.</small></div>'
@@ -2574,63 +2778,113 @@ async function carregarEscalas() {
     const ordenada = [...lista].sort((a, b) =>
       dataEscalaParaISO(a.data).localeCompare(dataEscalaParaISO(b.data))
     )
-    el.innerHTML = renderTabelaEscalas(ordenada)
+    el.innerHTML = renderPainelProximasEscalas(ordenada)
   } catch(err) {
     el.innerHTML = `<p class="carregando" style="color:var(--erro)">Erro ao carregar escalas.</p>`
     console.error(err)
   }
 }
 
+function agruparEscalasPorEvento(escalas) {
+  const mapa = new Map()
+  for (const e of escalas || []) {
+    const chave = `${e.data || ''}__${e.evento_id || ''}`
+    if (!mapa.has(chave)) {
+      mapa.set(chave, {
+        data: e.data,
+        evento_id: e.evento_id || null,
+        itens: []
+      })
+    }
+    mapa.get(chave).itens.push(e)
+  }
+  return [...mapa.values()].sort((a, b) =>
+    dataEscalaParaISO(a.data).localeCompare(dataEscalaParaISO(b.data))
+  )
+}
+
 function renderPainelProximasEscalas(escalas) {
   if (!escalas?.length) {
     return '<div class="tabela-vazia">Nenhuma escala para exibir.</div>'
   }
+  const grupos = agruparEscalasPorEvento(escalas)
   return `
     <div class="dash-escalas">
-      ${escalas.map(e => {
-        const ehMinha = escalaEhMinha(e)
-        const vols = e.voluntarios || []
-        const chips = vols.length
-          ? vols.map(v =>
-              `<span class="chip-vol">${esc(v.nome)}${v.funcao ? ` · ${esc(v.funcao)}` : ''}</span>`
-            ).join('')
-          : '<span class="dash-escala-sem-vol">Ninguém designado ainda — o líder ou o admin inclui os integrantes ao criar ou editar esta escala.</span>'
-        const hist = htmlHistoricoTrocas(e.trocas)
-        const botoes = []
-        if (podeGerirEscalaNoCliente(e.departamento_id)) {
-          botoes.push(
-            `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalEditarEscala('${e.id}')">Editar escala</button>`
-          )
-          botoes.push(
-            `<button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirEscala('${e.id}')">Excluir escala</button>`
-          )
-        }
-        if (podeGerirEscalaNoCliente(e.departamento_id) && vols.length) {
-          botoes.push(
-            `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalTrocaEscala('${e.id}')">Trocar integrante</button>`
-          )
-        } else if (usuario?.role === 'membro' && ehMinha && vols.length) {
-          botoes.push(
-            `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalTrocaEscala('${e.id}')">Solicitar troca</button>`
-          )
-        }
-        const acoes = botoes.length
-          ? `<div class="dash-escala-acoes">${botoes.join('')}</div>`
-          : ''
+      ${grupos.map((grupo) => {
+        const temMinhaEscala = grupo.itens.some((e) => escalaEhMinha(e))
         return `
-          <article class="dash-escala-card" style="${ehMinha ? 'border:1px solid rgba(201,74,82,0.55);box-shadow:0 0 0 2px rgba(201,74,82,0.12) inset' : ''}">
+          <article class="dash-escala-card" style="${temMinhaEscala ? 'border:1px solid rgba(201,74,82,0.55);box-shadow:0 0 0 2px rgba(201,74,82,0.12) inset' : ''}">
             <div class="dash-escala-top">
-              <span class="dash-escala-data">${esc(e.data)}</span>
-              <span class="dash-escala-depto">${iconeDepto(e.departamento_id)} ${esc(nomeDepto(e.departamento_id))}</span>
+              <span class="dash-escala-data">${esc(grupo.data)}</span>
+              <span class="dash-escala-depto">${grupo.itens.length} setor(es)</span>
             </div>
-            ${ehMinha ? '<div style="margin-bottom:0.45rem"><span class="badge badge-vermelho">Minha escala</span></div>' : ''}
-            <div class="dash-escala-evento">${esc(nomeEvento(e.evento_id))}</div>
-            <div class="dash-escala-vols">
-              <span class="dash-escala-vols-label">Integrantes</span>
-              <div class="dash-escala-chips">${chips}</div>
+            ${temMinhaEscala ? '<div style="margin-bottom:0.45rem"><span class="badge badge-vermelho">Tenho participação neste evento</span></div>' : ''}
+            <div class="dash-escala-evento">${esc(nomeEvento(grupo.evento_id))}</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0.6rem;margin-top:0.55rem">
+              ${grupo.itens
+                .map((e) => {
+                  const ehMinha = escalaEhMinha(e)
+                  const vols = e.voluntarios || []
+                  const nomeSetor = e.departamento_nome || nomeDepto(e.departamento_id)
+                  const iconeSetor = e.departamento_icone || iconeDepto(e.departamento_id)
+                  const chips = vols.length
+                    ? vols
+                        .map(
+                          (v) =>
+                            `<span class="chip-vol">${esc(v.nome)}${v.funcao ? ` · ${esc(v.funcao)}` : ''}</span>`
+                        )
+                        .join('')
+                    : '<span class="dash-escala-sem-vol">Ninguém designado ainda.</span>'
+                  const hist = htmlHistoricoTrocas(e.trocas)
+                  const pendencias = pendenciasPorEscala(e.id)
+                  const badgePendencia = pendencias.length
+                    ? podeGerirEscalaNoCliente(e.departamento_id)
+                      ? `<button type="button" class="btn btn-ghost btn-sm" style="font-size:0.72rem;padding:0.2rem 0.5rem;height:auto;line-height:1.2" onclick="abrirModalAprovarTrocaEscala('${e.id}')">🚨 ${pendencias.length} solicitação(ões) pendente(s)</button>`
+                      : `<span class="badge badge-alerta">${pendencias.length} solicitação(ões) pendente(s)</span>`
+                    : ''
+                  const botoes = []
+                  if (podeGerirEscalaNoCliente(e.departamento_id)) {
+                    botoes.push(
+                      `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalEditarEscala('${e.id}')">Editar escala</button>`
+                    )
+                    botoes.push(
+                      `<button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirEscala('${e.id}')">Excluir escala</button>`
+                    )
+                  }
+                  if (podeGerirEscalaNoCliente(e.departamento_id)) {
+                    botoes.push(
+                      `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalAprovarTrocaEscala('${e.id}')">Solicitações de troca${pendencias.length ? ` (${pendencias.length})` : ''}</button>`
+                    )
+                  } else if (ehMinha && vols.length) {
+                    botoes.push(
+                      `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalTrocaEscala('${e.id}')">Solicitar troca</button>`
+                    )
+                  }
+                  const acoes = botoes.length
+                    ? `<div class="dash-escala-acoes">${botoes.join('')}</div>`
+                    : ''
+                  return `
+                    <div style="border:1px solid var(--borda);border-radius:10px;padding:0.55rem 0.6rem;background:var(--fundo-soft)">
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:0.45rem;flex-wrap:wrap;margin-bottom:0.35rem">
+                        <div style="font-size:0.82rem;color:var(--texto)">
+                          <span style="margin-right:0.35rem">${esc(iconeSetor)}</span>
+                          <strong>${esc(nomeSetor)}</strong>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap">
+                          ${badgePendencia}
+                          ${ehMinha ? '<span class="badge badge-vermelho">Estou neste setor</span>' : ''}
+                        </div>
+                      </div>
+                      <div class="dash-escala-vols">
+                        <span class="dash-escala-vols-label">Integrantes</span>
+                        <div class="dash-escala-chips">${chips}</div>
+                      </div>
+                      ${hist}
+                      ${acoes}
+                    </div>`
+                })
+                .join('')}
             </div>
-            ${hist}
-            ${acoes}
           </article>`
       }).join('')}
     </div>`
@@ -2684,9 +2938,12 @@ function renderTabelaEscalas(escalas) {
           ${escalas.map(e => {
             const ehMinha = escalaEhMinha(e)
             const vols = e.voluntarios || []
+            const nomeSetor = e.departamento_nome || nomeDepto(e.departamento_id)
+            const iconeSetor = e.departamento_icone || iconeDepto(e.departamento_id)
             const volTxt = vols.length ? vols.map(v => esc(v.nome)).join(', ') : '—'
             const hist = htmlHistoricoTrocas(e.trocas)
             const histCell = hist || '<span style="color:var(--texto-mutado);font-size:0.8rem">—</span>'
+            const pendencias = pendenciasPorEscala(e.id)
             const botoes = []
             if (podeGerirEscalaNoCliente(e.departamento_id)) {
               botoes.push(
@@ -2696,11 +2953,11 @@ function renderTabelaEscalas(escalas) {
                 `<button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirEscala('${e.id}')">Excluir</button>`
               )
             }
-            if (podeGerirEscalaNoCliente(e.departamento_id) && vols.length) {
+            if (podeGerirEscalaNoCliente(e.departamento_id)) {
               botoes.push(
-                `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalTrocaEscala('${e.id}')">Trocar</button>`
+                `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalAprovarTrocaEscala('${e.id}')">Solicitações${pendencias.length ? ` (${pendencias.length})` : ''}</button>`
               )
-            } else if (usuario?.role === 'membro' && ehMinha && vols.length) {
+            } else if (ehMinha && vols.length) {
               botoes.push(
                 `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalTrocaEscala('${e.id}')">Solicitar troca</button>`
               )
@@ -2711,8 +2968,8 @@ function renderTabelaEscalas(escalas) {
               <td><strong>${esc(e.data)}</strong>${ehMinha ? ' <span class="badge badge-vermelho" style="margin-left:0.35rem">Minha</span>' : ''}</td>
               <td style="color:var(--texto-mutado);font-size:0.82rem">${esc(nomeEvento(e.evento_id))}</td>
               <td>
-                <span style="margin-right:0.4rem">${iconeDepto(e.departamento_id)}</span>
-                ${esc(nomeDepto(e.departamento_id))}
+                <span style="margin-right:0.4rem">${esc(iconeSetor)}</span>
+                ${esc(nomeSetor)}
               </td>
               <td style="font-size:0.82rem;color:var(--texto-mutado);max-width:14rem">${volTxt}</td>
               <td style="font-size:0.78rem;min-width:8rem;vertical-align:top">${histCell}</td>
@@ -2797,8 +3054,7 @@ function fecharModalEscala() {
   document.getElementById('modal-escala').classList.remove('aberto')
 }
 
-async function criarEscala(e) {
-  e.preventDefault()
+async function criarEscala() {
   const dataISO = document.getElementById('esc-data').value
   const deptoId = document.getElementById('esc-depto').value
   const eventoId = document.getElementById('esc-evento').value
@@ -3283,8 +3539,8 @@ async function abrirModalEditarUsuario(id) {
     if (ajudaPerfil) {
       ajudaPerfil.textContent =
         usuario?.role === 'admin'
-          ? 'Ao guardar, o perfil global é atualizado e o mesmo papel (membro ou líder) é aplicado em todos os departamentos já vinculados a esta pessoa.'
-          : 'Ao guardar, o papel escolhido aplica-se só nos departamentos em que você é líder. Os outros vínculos não mudam.'
+          ? 'O perfil global é separado do papel por departamento. Ajuste os departamentos na lista abaixo (membro/líder) conforme necessário.'
+          : 'O perfil global é separado do papel por departamento. Use a lista abaixo para definir o papel em cada departamento que você lidera.'
     }
     if (selPerfil) {
       let v = inferirPerfilEquipeDeUsuario(u)
@@ -3328,38 +3584,8 @@ async function salvarEditUsuario(ev) {
 
     await api('PUT', `/usuario/${id}`, body)
 
-    if (perfil) {
-      const uFresh = await api('GET', `/usuario/${id}`)
-      const deps = uFresh.departamentos || []
-      let roleDeptoAlvo = 'membro'
-      if (usuario?.role === 'admin') {
-        if (perfil === 'lider') roleDeptoAlvo = 'lider'
-        else roleDeptoAlvo = 'membro'
-      } else {
-        roleDeptoAlvo = perfil === 'lider' ? 'lider' : 'membro'
-      }
-
-      if (usuario?.role === 'admin') {
-        for (const d of deps) {
-          await api('POST', '/usuario/vincular', {
-            usuario_id: id,
-            departamento_id: d.id,
-            role_depto: roleDeptoAlvo
-          })
-        }
-      } else {
-        const idsLiderados = departamentosOndeEditorELiderIds()
-        for (const d of deps) {
-          if (idsLiderados.includes(d.id)) {
-            await api('POST', '/usuario/vincular', {
-              usuario_id: id,
-              departamento_id: d.id,
-              role_depto: roleDeptoAlvo
-            })
-          }
-        }
-      }
-    }
+    // Não sobrescreve papéis por departamento ao salvar perfil global.
+    // Os papéis de cada departamento são editados no bloco de departamentos.
 
     fecharModalEditUsuario()
     recarregarAposMudanca('Membro atualizado.')
@@ -3402,12 +3628,95 @@ async function inativarUsuarioEditUsuario() {
 function fecharModalEditEscala() {
   document.getElementById('modal-edit-escala')?.classList.remove('aberto')
 }
+let editEscalaDeptosExtras = []
+function renderizarDeptosExtrasEdicao() {
+  const wrap = document.getElementById('edit-escala-deptos-extra')
+  if (!wrap) return
+  if (!editEscalaDeptosExtras.length) {
+    wrap.style.display = 'none'
+    wrap.innerHTML = ''
+    return
+  }
+  wrap.style.display = ''
+  wrap.innerHTML = `
+    <label>Equipes adicionadas nesta edição</label>
+    <div style="display:grid;gap:0.65rem;margin-top:0.35rem">
+      ${editEscalaDeptosExtras
+        .map((item) => {
+          const membrosHtml = (item.membros || []).length
+            ? item.membros
+                .map(
+                  (m) => `
+            <label class="esc-membro-linha">
+              <input type="checkbox" class="edit-extra-membro-cb" data-depto="${esc(item.id)}" value="${esc(m.id)}"/>
+              <span>${esc(m.nome)}</span>
+            </label>`
+                )
+                .join('')
+            : '<span class="muted" style="font-size:0.8rem">Sem membros ativos neste departamento.</span>'
+          return `
+            <div style="border:1px solid var(--borda);border-radius:10px;padding:0.55rem 0.65rem;background:var(--fundo-soft)">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:0.45rem;flex-wrap:wrap">
+                <strong style="font-size:0.86rem">${esc(item.nome)}</strong>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="removerDepartamentoExtraEdicao('${esc(item.id)}')">Remover</button>
+              </div>
+              <div style="margin-top:0.4rem;font-size:0.76rem;color:var(--texto-mutado)">Pessoas desta equipe que entrarão na escala:</div>
+              <div style="margin-top:0.35rem;display:grid;gap:0.35rem">${membrosHtml}</div>
+            </div>`
+        })
+        .join('')}
+    </div>
+  `
+}
+function removerDepartamentoExtraEdicao(deptoId) {
+  editEscalaDeptosExtras = editEscalaDeptosExtras.filter((d) => d.id !== deptoId)
+  renderizarDeptosExtrasEdicao()
+}
+async function adicionarDepartamentoExtraEdicao() {
+  if (!temPapelLiderancaNoApp()) {
+    toast('Apenas administradores e líderes podem alterar escalas.', 'err')
+    return
+  }
+  const sel = document.getElementById('edit-escala-add-depto')
+  const err = document.getElementById('edit-escala-erro')
+  if (!sel) return
+  const deptoId = sel.value
+  if (!deptoId) return
+  const baseDeptoId = document.getElementById('edit-escala-depto-base')?.value
+  if (deptoId === baseDeptoId) {
+    if (err) {
+      err.textContent = 'Este departamento já é o principal desta escala.'
+      err.style.display = 'block'
+    }
+    return
+  }
+  if (editEscalaDeptosExtras.some((d) => d.id === deptoId)) {
+    if (err) {
+      err.textContent = 'Departamento já adicionado.'
+      err.style.display = 'block'
+    }
+    return
+  }
+  try {
+    const det = await api('GET', `/departamento/${deptoId}`)
+    editEscalaDeptosExtras.push({
+      id: deptoId,
+      nome: nomeDepto(deptoId),
+      membros: Array.isArray(det?.membros) ? det.membros : []
+    })
+    if (err) err.style.display = 'none'
+    sel.value = ''
+    renderizarDeptosExtrasEdicao()
+  } catch {
+    if (err) {
+      err.textContent = 'Não foi possível carregar os membros do departamento.'
+      err.style.display = 'block'
+    }
+  }
+}
 async function abrirModalEditarEscala(escalaId) {
   try {
-    const lista =
-      usuario?.role === 'admin'
-        ? await api('GET', '/escala/listar')
-        : await api('GET', `/escala/minhas/${usuario?.id}`)
+    const lista = await api('GET', endpointEscalasVisiveis())
     const e = (Array.isArray(lista) ? lista : []).find((x) => x.id === escalaId)
     if (!e) {
       toast('Escala não encontrada.', 'err')
@@ -3418,8 +3727,30 @@ async function abrirModalEditarEscala(escalaId) {
       return
     }
     document.getElementById('edit-escala-id').value = e.id
+    document.getElementById('edit-escala-depto-base').value = e.departamento_id || ''
     document.getElementById('edit-escala-data').value = dataBRparaInputDate(e.data)
     document.getElementById('edit-escala-obs').value = e.observacao || ''
+    const wrapBase = document.getElementById('edit-escala-membros-base-wrap')
+    const listBase = document.getElementById('edit-escala-membros-base-list')
+    if (wrapBase && listBase) {
+      wrapBase.style.display = ''
+      listBase.innerHTML =
+        '<p class="carregando" style="padding:0.5rem;font-size:0.8rem">Carregando integrantes…</p>'
+      const detBase = await api('GET', `/departamento/${e.departamento_id}`).catch(() => ({ membros: [] }))
+      const membrosBase = Array.isArray(detBase?.membros) ? detBase.membros : []
+      const jaEscalados = new Set((e.voluntarios || []).map((v) => String(v.usuario_id)))
+      listBase.innerHTML = membrosBase.length
+        ? membrosBase
+            .map(
+              (m) => `
+            <label class="esc-membro-linha">
+              <input type="checkbox" class="edit-base-membro-cb" value="${esc(m.id)}" ${jaEscalados.has(String(m.id)) ? 'checked' : ''}/>
+              <span>${esc(m.nome)}</span>
+            </label>`
+            )
+            .join('')
+        : '<span class="muted" style="font-size:0.8rem">Sem membros neste departamento.</span>'
+    }
     const selEv = document.getElementById('edit-escala-evento')
     let evs = []
     try {
@@ -3434,6 +3765,27 @@ async function abrirModalEditarEscala(escalaId) {
         .map((x) => `<option value="${x.id}">${esc(x.nome)}</option>`)
         .join('')
     selEv.value = e.evento_id || ''
+    const selDeptoExtra = document.getElementById('edit-escala-add-depto')
+    if (!deptoCache.length) {
+      const d = await api('GET', '/departamento/listar').catch(() => [])
+      deptoCache = Array.isArray(d) ? d : []
+    }
+    const permitidos =
+      usuario?.role === 'admin'
+        ? deptoCache
+        : deptoCache.filter((d) =>
+            (usuario?.departamentos || []).some(
+              (ud) => ud.id === d.id && ud.role_depto === 'lider'
+            )
+          )
+    selDeptoExtra.innerHTML =
+      '<option value="">Selecione…</option>' +
+      permitidos
+        .filter((d) => d.id !== e.departamento_id)
+        .map((d) => `<option value="${d.id}">${d.icone || ''} ${esc(d.nome)}</option>`)
+        .join('')
+    editEscalaDeptosExtras = []
+    renderizarDeptosExtrasEdicao()
     document.getElementById('edit-escala-erro').style.display = 'none'
     document.getElementById('modal-edit-escala').classList.add('aberto')
   } catch (err) {
@@ -3442,6 +3794,10 @@ async function abrirModalEditarEscala(escalaId) {
 }
 async function salvarEditEscala(ev) {
   ev.preventDefault()
+  if (!temPapelLiderancaNoApp()) {
+    toast('Apenas administradores e líderes podem alterar escalas.', 'err')
+    return
+  }
   const id = document.getElementById('edit-escala-id').value
   const err = document.getElementById('edit-escala-erro')
   err.style.display = 'none'
@@ -3450,14 +3806,32 @@ async function salvarEditEscala(ev) {
   const dataBR = `${d}/${m}/${y}`
   const eventoId = document.getElementById('edit-escala-evento').value
   const observacao = document.getElementById('edit-escala-obs').value.trim()
+  const baseSelecionados = [...document.querySelectorAll('.edit-base-membro-cb:checked')]
+  const voluntariosBase = baseSelecionados.map((cb) => ({ usuario_id: cb.value, funcao: '' }))
   try {
     await api('PUT', `/escala/${id}`, {
       data: dataBR,
       evento_id: eventoId || null,
-      observacao
+      observacao,
+      voluntarios: voluntariosBase
     })
+    for (const depto of editEscalaDeptosExtras) {
+      const selecionados = [...document.querySelectorAll(`.edit-extra-membro-cb[data-depto="${depto.id}"]:checked`)]
+      const voluntarios = selecionados.map((cb) => ({ usuario_id: cb.value, funcao: '' }))
+      await api('POST', '/escala/criar', {
+        data: dataBR,
+        departamento_id: depto.id,
+        evento_id: eventoId || null,
+        observacao,
+        voluntarios
+      })
+    }
     fecharModalEditEscala()
-    recarregarAposMudanca('Escala atualizada.')
+    recarregarAposMudanca(
+      editEscalaDeptosExtras.length
+        ? 'Escala atualizada e novos departamentos adicionados.'
+        : 'Escala atualizada.'
+    )
   } catch (e) {
     err.textContent = e.erro || 'Não foi possível salvar.'
     err.style.display = 'block'
@@ -3895,6 +4269,7 @@ async function carregarComunicacoes() {
       list = Array.isArray(avisos) ? avisos : []
     }
     const trocasPendentes = pode ? await api('GET', '/escala/trocas/pendentes') : []
+    trocasPendentesCache = Array.isArray(trocasPendentes) ? trocasPendentes : []
 
     let formPublicar = ''
     if (pode) {
@@ -4036,7 +4411,7 @@ async function carregarComunicacoes() {
 
     const trocasHtml = pode
       ? `
-      <div class="card" style="margin-bottom:1rem">
+      <div class="card" id="card-trocas-pendentes" style="margin-bottom:1rem">
         <div class="card-body" style="padding:1rem">
           <h3 style="font-size:0.95rem;margin:0 0 0.75rem;font-family:var(--fonte-display)">Solicitações de troca pendentes</h3>
           ${
@@ -4051,6 +4426,7 @@ async function carregarComunicacoes() {
                   ${t.observacao ? `<div style="font-size:0.82rem;color:var(--texto-mutado);margin-top:0.25rem">${esc(t.observacao)}</div>` : ''}
                   <div style="display:flex;gap:0.5rem;margin-top:0.6rem">
                     <button type="button" class="btn btn-primario btn-sm" onclick="aprovarSolicitacaoTroca('${esc(t.id)}')">Aprovar</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="excluirSolicitacaoTroca('${esc(t.id)}')">Excluir</button>
                     <button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="rejeitarSolicitacaoTroca('${esc(t.id)}')">Rejeitar</button>
                   </div>
                 </div>
@@ -4068,6 +4444,15 @@ async function carregarComunicacoes() {
       `<p class="secao-label" style="margin-top:0.5rem">${tituloListaSecao}</p>` +
       listaHtml +
       encerradosHtml
+    if (sessionStorage.getItem('peniel_foco_trocas') === '1') {
+      sessionStorage.removeItem('peniel_foco_trocas')
+      setTimeout(() => {
+        document.getElementById('card-trocas-pendentes')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        })
+      }, 120)
+    }
     if ((Array.isArray(list) ? list : []).some((a) => a?.envio_status?.situacao === 'processando')) {
       setTimeout(() => {
         if (document.getElementById('pagina-comunicacoes')?.style.display !== 'none') carregarComunicacoes()
@@ -4120,6 +4505,20 @@ async function rejeitarSolicitacaoTroca(id) {
     carregarComunicacoes()
   } catch (ex) {
     toast(ex.erro || 'Não foi possível rejeitar a troca.', 'err')
+  }
+}
+
+async function excluirSolicitacaoTroca(id) {
+  if (!id) return
+  if (!confirm('Excluir esta solicitação de troca?')) return
+  try {
+    await api('DELETE', `/escala/trocas/${id}`)
+    toast('Solicitação excluída.', 'ok')
+    carregarComunicacoes()
+    if (document.getElementById('pagina-escalas')?.style.display !== 'none') carregarEscalas()
+    if (document.getElementById('pagina-dashboard')?.style.display !== 'none') carregarDashboard()
+  } catch (ex) {
+    toast(ex.erro || 'Não foi possível excluir a solicitação.', 'err')
   }
 }
 
@@ -4324,6 +4723,71 @@ async function enviarMensagem() {
     btn.disabled = false
     btn.textContent = 'Enviar 🔥'
     input.focus()
+    msgsEl.scrollTop = msgsEl.scrollHeight
+  }
+}
+
+async function validarFluxoAgora() {
+  if (chatBloqueado) return
+  if (!temPapelLiderancaNoApp()) {
+    toast('Validação de fluxo disponível apenas para liderança/admin.', 'err')
+    return
+  }
+  const msgsEl = document.getElementById('chat-msgs')
+  const btnEnviar = document.getElementById('btn-enviar')
+  const btnValidar = document.getElementById('btn-validar-fluxo')
+  const input = document.getElementById('chat-input')
+
+  const msgUser = document.createElement('div')
+  msgUser.className = 'msg msg-usuario'
+  msgUser.textContent = '🔎 Validar fluxo de troca agora'
+  msgsEl.appendChild(msgUser)
+
+  chatBloqueado = true
+  input.disabled = true
+  btnEnviar.disabled = true
+  btnValidar.disabled = true
+  btnValidar.textContent = 'Validando…'
+
+  const typing = document.createElement('div')
+  typing.className = 'msg-typing'
+  typing.innerHTML = '<span></span><span></span><span></span>'
+  msgsEl.appendChild(typing)
+  msgsEl.scrollTop = msgsEl.scrollHeight
+
+  try {
+    const payload = {
+      mudanca:
+        'Fluxo de troca de escala: solicitação por qualquer integrante escalado, visível para todos, aprovação apenas liderança/admin em modal preenchido, com atualização global após aprovação.',
+      especialista: 'teste_fluxo',
+      checklist: [
+        'Escala já montada e visível no painel',
+        'Integrante escalado consegue solicitar troca por outro da mesma equipe',
+        'Solicitação pendente aparece para todos os usuários',
+        'Aprovação da solicitação só disponível para liderança/admin',
+        'Ao clicar para aprovar, modal abre já preenchido com solicitante, sai e entra',
+        'Ao aprovar, escala e telas relacionadas atualizam para todos'
+      ]
+    }
+    const data = await api('POST', '/agente/validar-mudanca', payload)
+    typing.remove()
+    const msgAgente = document.createElement('div')
+    msgAgente.className = 'msg msg-agente'
+    msgAgente.textContent = data.resposta || 'Sem resposta de validação.'
+    msgsEl.appendChild(msgAgente)
+  } catch (err) {
+    typing.remove()
+    const msgErr = document.createElement('div')
+    msgErr.className = 'msg msg-agente'
+    msgErr.style.borderLeftColor = 'var(--erro)'
+    msgErr.textContent = err?.erro || 'Não foi possível validar o fluxo agora.'
+    msgsEl.appendChild(msgErr)
+  } finally {
+    chatBloqueado = false
+    input.disabled = false
+    btnEnviar.disabled = false
+    btnValidar.disabled = false
+    btnValidar.textContent = 'Validar fluxo agora'
     msgsEl.scrollTop = msgsEl.scrollHeight
   }
 }

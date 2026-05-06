@@ -17,6 +17,59 @@ Agente baseado em **Claude Sonnet 4.6** para gestão da equipe de mídia da Peni
 
 ---
 
+## Especialistas disponíveis
+
+Você pode escolher o especialista no body da rota `POST /agente/perguntar`:
+
+```json
+{
+  "pergunta": "texto",
+  "especialista": "gestao"
+}
+```
+
+IDs suportados:
+
+| ID | Nome | Foco |
+|----|------|------|
+| `pastor` | Pastor da Mídia | Coordenação geral |
+| `gestao` | Especialista em Gestão | Prioridade, capacidade e execução |
+| `fluxo_equipe` | Especialista em Fluxo de Equipe | Papéis, aprovação e handoff |
+| `teste_fluxo` | Agente de Teste de Fluxo | QA funcional ponta a ponta com gate |
+| `teste_regressao` | Agente de Teste de Regressão | Proteção contra quebra de fluxos antigos |
+
+Também disponível em `GET /agente/especialistas`.
+
+---
+
+## Rota de validação de mudança (gate)
+
+`POST /agente/validar-mudanca`
+
+Body:
+
+```json
+{
+  "mudanca": "Descreva o que foi alterado",
+  "especialista": "teste_fluxo",
+  "checklist": [
+    "Membro solicita troca",
+    "Lider aprova no modal",
+    "Escala atualiza para todos"
+  ]
+}
+```
+
+Saída esperada:
+- `STATUS: APROVADO|REPROVADO`
+- `ASSERTIVIDADE: N%`
+- Lista de testes com `PASSOU/FALHOU`
+- Falhas críticas e ações bloqueantes (quando houver)
+
+Critério de aprovação: somente com 100% e zero falhas críticas.
+
+---
+
 ## Ferramentas (Tools)
 
 | Tool | Descrição | Parâmetros obrigatórios |

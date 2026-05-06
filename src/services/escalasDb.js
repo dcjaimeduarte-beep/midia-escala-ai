@@ -37,7 +37,12 @@ function mapTrocaRow(t) {
 }
 
 function buscarEscalasComVoluntarios() {
-  const rows = sql.all(`SELECT * FROM escalas ORDER BY criado_em DESC`)
+  const rows = sql.all(
+    `SELECT e.*, d.nome as departamento_nome, d.icone as departamento_icone
+     FROM escalas e
+     LEFT JOIN departamentos d ON d.id = e.departamento_id
+     ORDER BY e.criado_em DESC`
+  )
   const volRows = sql.all(
     `
     SELECT ev.escala_id, ev.usuario_id, ev.funcao, u.nome as usuario_nome
@@ -50,6 +55,8 @@ function buscarEscalasComVoluntarios() {
     id: e.id,
     data: e.data,
     departamento_id: e.departamento_id,
+    departamento_nome: e.departamento_nome || '',
+    departamento_icone: e.departamento_icone || '',
     evento_id: e.evento_id || null,
     observacao: e.observacao || '',
     criado_por: e.criado_por,
@@ -221,8 +228,8 @@ function criarEscalaNoBanco(opts) {
   return id
 }
 
-function atualizarEscalaNoBanco(escalaId, { data, evento_id, observacao }) {
-  const e = sql.get(`SELECT id FROM escalas WHERE id = ?`, escalaId)
+function atualizarEscalaNoBanco(escalaId, { data, evento_id, observacao, voluntarios }) {
+  const e = sql.get(`SELECT id, departamento_id FROM escalas WHERE id = ?`, escalaId)
   if (!e) {
     const err = new Error('Escala não encontrada')
     err.code = 'NOT_FOUND'
@@ -233,6 +240,10 @@ function atualizarEscalaNoBanco(escalaId, { data, evento_id, observacao }) {
     sql.run(`UPDATE escalas SET evento_id = ? WHERE id = ?`, evento_id || null, escalaId)
   if (observacao !== undefined)
     sql.run(`UPDATE escalas SET observacao = ? WHERE id = ?`, observacao, escalaId)
+  if (voluntarios !== undefined) {
+    sql.run(`DELETE FROM escala_voluntarios WHERE escala_id = ?`, escalaId)
+    inserirVoluntariosNaEscala(escalaId, e.departamento_id, voluntarios)
+  }
 }
 
 module.exports = {
