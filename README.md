@@ -129,3 +129,4 @@ Tokens completos: [src/theme/brand.js](src/theme/brand.js)
 | [docs/TAREFAS.md](docs/TAREFAS.md) | Backlog completo — concluído, em andamento, pendente |
 | [docs/ROTAS.md](docs/ROTAS.md) | Todos os endpoints com exemplos |
 | [docs/AGENTE.md](docs/AGENTE.md) | Tools, eventos e exemplos do Pastor da Mídia |
+| [docs/DEPLOY_LOCAWEB.md](docs/DEPLOY_LOCAWEB.md) | Publicação em produção na Locaweb |
