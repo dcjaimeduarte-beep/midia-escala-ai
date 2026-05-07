@@ -1,5 +1,54 @@
+async function _enviarViaResend({ para, assunto, texto }) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: process.env.SMTP_FROM || 'Peniel Mídia <onboarding@resend.dev>',
+      to: [para],
+      subject: assunto,
+      text: texto
+    })
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(`Resend: ${err?.message || res.status}`)
+  }
+  return { enviado: true }
+}
+
+async function _enviarViaSMTP({ para, assunto, texto }) {
+  const nodemailer = require('nodemailer')
+  const secureFlag = process.env.SMTP_SECURE
+  const secure = secureFlag === '1' || String(secureFlag || '').toLowerCase() === 'true'
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure,
+    auth: process.env.SMTP_USER
+      ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS || '' }
+      : undefined
+  })
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to: para,
+    subject: assunto,
+    text: texto
+  })
+  return { enviado: true }
+}
+
+async function _enviar({ para, assunto, texto }) {
+  if (process.env.RESEND_API_KEY) return _enviarViaResend({ para, assunto, texto })
+  if (process.env.SMTP_HOST)      return _enviarViaSMTP({ para, assunto, texto })
+  console.warn(`[email] Sem provedor configurado — e-mail NÃO enviado para ${para}`)
+  return { enviado: false, motivo: 'sem_provedor' }
+}
+
 /**
- * Envio de e-mail (Nodemailer). Sem SMTP no .env, apenas registra no console.
+ * Envio de e-mail. Suporta Resend (RESEND_API_KEY) ou SMTP (SMTP_HOST).
  */
 async function enviarBoasVindas({ para, nome, senhaTemporaria, mensagemExtra }) {
   const urlLogin =
@@ -23,43 +72,9 @@ Por segurança, ao entrar você precisará definir uma nova senha.${extra}
 Shalom,
 Equipe Peniel Mídia`
 
-  const host = process.env.SMTP_HOST
-  if (!host) {
-    console.warn(
-      `[email] SMTP não configurado — e-mail NÃO enviado para ${para}. Senha provisória: ${senhaTemporaria}`
-    )
-    return { enviado: false, motivo: 'smtp_desligado' }
-  }
-
-  const nodemailer = require('nodemailer')
-  const secureFlag = process.env.SMTP_SECURE
-  const secure =
-    secureFlag === '1' ||
-    String(secureFlag || '').toLowerCase() === 'true'
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure,
-    auth: process.env.SMTP_USER
-      ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS || '' }
-      : undefined
-  })
-
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: para,
-    subject: assunto,
-    text: texto
-  })
-
-  return { enviado: true }
+  return _enviar({ para, assunto, texto })
 }
 
-/**
- * Notifica membros sobre novo comunicado (mesmo SMTP dos convites).
- * Sem SMTP_HOST, apenas avisa no log (como enviarBoasVindas).
- */
 async function enviarComunicadoAviso({
   para,
   nomeDestinatario,
@@ -100,37 +115,7 @@ Abra o sistema para ver o comunicado completo: ${urlApp}
 Shalom,
 Equipe Peniel Mídia`
 
-  const host = process.env.SMTP_HOST
-  if (!host) {
-    console.warn(
-      `[email] SMTP não configurado — comunicado por e-mail NÃO enviado para ${para}`
-    )
-    return { enviado: false, motivo: 'smtp_desligado' }
-  }
-
-  const nodemailer = require('nodemailer')
-  const secureFlag = process.env.SMTP_SECURE
-  const secure =
-    secureFlag === '1' ||
-    String(secureFlag || '').toLowerCase() === 'true'
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure,
-    auth: process.env.SMTP_USER
-      ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS || '' }
-      : undefined
-  })
-
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: para,
-    subject: assunto,
-    text: texto
-  })
-
-  return { enviado: true }
+  return _enviar({ para, assunto, texto })
 }
 
 module.exports = { enviarBoasVindas, enviarComunicadoAviso }
