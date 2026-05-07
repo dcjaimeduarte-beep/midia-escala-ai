@@ -1,0 +1,16 @@
+[phases.setup]
+nixPkgs = [
+  "nodejs_20",
+  "chromium",
+  "nss",
+  "freetype",
+  "harfbuzz",
+  "ca-certificates",
+  "ttf-dejavu"
+]
+
+[phases.install]
+cmds = ["npm install --omit=dev"]
+
+[start]
+cmd = "node src/server.js"

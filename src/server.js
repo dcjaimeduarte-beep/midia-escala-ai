@@ -6,6 +6,9 @@ const { bootstrap } = require('./db/bootstrap')
 const { garantirConexaoWhatsApp } = require('./services/whatsapp')
 
 const app = express()
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1)
+}
 app.use(express.json())
 
 // CORS opcional (ex.: front Vite em outra porta)

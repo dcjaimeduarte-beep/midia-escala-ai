@@ -713,6 +713,86 @@
     .historico-troca-meta { font-size: 0.68rem; opacity: 0.85; display: block; margin-top: 0.15rem; }
     .dash-escala-acoes { margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 
+    /* ── ESCALA CALENDÁRIO ─────────────────────────────────── */
+    .escala-secao-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--texto-mutado);
+      padding: 0.15rem 0.55rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .escala-secao-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--borda);
+    }
+    .escala-secao-hoje .escala-secao-label {
+      color: var(--acento);
+    }
+    .escala-secao-hoje .dash-escala-card {
+      border-color: rgba(201,74,82,0.4);
+      box-shadow: 0 0 0 3px rgba(201,74,82,0.08);
+    }
+    .badge-hoje {
+      background: var(--acento);
+      color: #fff;
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 0.12rem 0.5rem;
+      border-radius: 999px;
+      letter-spacing: 0.06em;
+      vertical-align: middle;
+    }
+    .escala-passada-card {
+      opacity: 0.45;
+      transition: opacity 0.18s;
+    }
+    .escala-passada-card:hover { opacity: 0.75; }
+    .escala-passada-card .dash-escala-card {
+      background: var(--fundo-soft);
+      filter: grayscale(0.45);
+    }
+    .btn-toggle-passados {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: none;
+      border: 1px solid var(--borda);
+      border-radius: var(--raio);
+      color: var(--texto-mutado);
+      font-size: 0.76rem;
+      padding: 0.35rem 0.75rem;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 0.5rem;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-toggle-passados:hover { background: var(--fundo-soft); color: var(--texto); }
+    .btn-toggle-passados .chevron {
+      margin-left: auto;
+      font-size: 0.65rem;
+      transition: transform 0.2s;
+    }
+    .btn-toggle-passados.aberto .chevron { transform: rotate(180deg); }
+    .escalas-passadas-lista {
+      display: none;
+      flex-direction: column;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
+    }
+    .escalas-passadas-lista.aberta {
+      display: flex;
+    }
+    .escala-passada-card-collapsed .dash-escala-card {
+      padding: 0.55rem 1rem;
+    }
+
     /* ── BADGES ────────────────────────────────────────────── */
     .badge {
       display: inline-block;
@@ -2803,91 +2883,143 @@ function agruparEscalasPorEvento(escalas) {
   )
 }
 
+function _classificarDataEscala(dataStr) {
+  const hoje = new Date()
+  const hojeISO = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`
+  const iso = dataEscalaParaISO(dataStr)
+  if (iso < hojeISO) return 'passado'
+  if (iso === hojeISO) return 'hoje'
+  return 'futuro'
+}
+
+function _renderCardEscalaGrupo(grupo, isPassado) {
+  const temMinhaEscala = grupo.itens.some((e) => escalaEhMinha(e))
+  const classificacao = _classificarDataEscala(grupo.data)
+  const bordaHoje = classificacao === 'hoje' ? 'border:1px solid rgba(201,74,82,0.5)' : ''
+  const bordaMinha = temMinhaEscala && classificacao !== 'hoje' ? 'border:1px solid rgba(201,74,82,0.55);box-shadow:0 0 0 2px rgba(201,74,82,0.12) inset' : ''
+  return `
+    <article class="dash-escala-card" style="${bordaHoje || bordaMinha}">
+      <div class="dash-escala-top">
+        <span class="dash-escala-data">${esc(grupo.data)}${classificacao === 'hoje' ? ' <span class="badge-hoje">HOJE</span>' : ''}</span>
+        <span class="dash-escala-depto">${grupo.itens.length} setor(es)</span>
+      </div>
+      ${temMinhaEscala ? '<div style="margin-bottom:0.45rem"><span class="badge badge-vermelho">Tenho participação neste evento</span></div>' : ''}
+      <div class="dash-escala-evento">${esc(nomeEvento(grupo.evento_id))}</div>
+      ${isPassado ? `<p style="font-size:0.72rem;color:var(--texto-mutado);margin:0.1rem 0 0.4rem;font-style:italic">Evento encerrado — clique para expandir detalhes</p>` : ''}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0.6rem;margin-top:0.55rem">
+        ${grupo.itens
+          .map((e) => {
+            const ehMinha = escalaEhMinha(e)
+            const vols = e.voluntarios || []
+            const nomeSetor = e.departamento_nome || nomeDepto(e.departamento_id)
+            const iconeSetor = e.departamento_icone || iconeDepto(e.departamento_id)
+            const chips = vols.length
+              ? vols.map((v) => `<span class="chip-vol">${esc(v.nome)}${v.funcao ? ` · ${esc(v.funcao)}` : ''}</span>`).join('')
+              : '<span class="dash-escala-sem-vol">Ninguém designado ainda.</span>'
+            const hist = htmlHistoricoTrocas(e.trocas)
+            const pendencias = pendenciasPorEscala(e.id)
+            const badgePendencia = pendencias.length
+              ? podeGerirEscalaNoCliente(e.departamento_id)
+                ? `<button type="button" class="btn btn-ghost btn-sm" style="font-size:0.72rem;padding:0.2rem 0.5rem;height:auto;line-height:1.2" onclick="abrirModalAprovarTrocaEscala('${e.id}')">🚨 ${pendencias.length} solicitação(ões) pendente(s)</button>`
+                : `<span class="badge badge-alerta">${pendencias.length} solicitação(ões) pendente(s)</span>`
+              : ''
+            const botoes = []
+            if (podeGerirEscalaNoCliente(e.departamento_id)) {
+              botoes.push(`<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalEditarEscala('${e.id}')">Editar escala</button>`)
+              botoes.push(`<button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirEscala('${e.id}')">Excluir escala</button>`)
+              botoes.push(`<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalAprovarTrocaEscala('${e.id}')">Solicitações de troca${pendencias.length ? ` (${pendencias.length})` : ''}</button>`)
+            } else if (ehMinha && vols.length) {
+              botoes.push(`<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalTrocaEscala('${e.id}')">Solicitar troca</button>`)
+            }
+            const acoes = botoes.length ? `<div class="dash-escala-acoes">${botoes.join('')}</div>` : ''
+            return `
+              <div style="border:1px solid var(--borda);border-radius:10px;padding:0.55rem 0.6rem;background:var(--fundo-soft)">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.45rem;flex-wrap:wrap;margin-bottom:0.35rem">
+                  <div style="font-size:0.82rem;color:var(--texto)">
+                    <span style="margin-right:0.35rem">${esc(iconeSetor)}</span>
+                    <strong>${esc(nomeSetor)}</strong>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap">
+                    ${badgePendencia}
+                    ${ehMinha ? '<span class="badge badge-vermelho">Estou neste setor</span>' : ''}
+                  </div>
+                </div>
+                <div class="dash-escala-vols">
+                  <span class="dash-escala-vols-label">Integrantes</span>
+                  <div class="dash-escala-chips">${chips}</div>
+                </div>
+                ${hist}
+                ${acoes}
+              </div>`
+          })
+          .join('')}
+      </div>
+    </article>`
+}
+
 function renderPainelProximasEscalas(escalas) {
   if (!escalas?.length) {
     return '<div class="tabela-vazia">Nenhuma escala para exibir.</div>'
   }
   const grupos = agruparEscalasPorEvento(escalas)
-  return `
-    <div class="dash-escalas">
-      ${grupos.map((grupo) => {
-        const temMinhaEscala = grupo.itens.some((e) => escalaEhMinha(e))
-        return `
-          <article class="dash-escala-card" style="${temMinhaEscala ? 'border:1px solid rgba(201,74,82,0.55);box-shadow:0 0 0 2px rgba(201,74,82,0.12) inset' : ''}">
-            <div class="dash-escala-top">
-              <span class="dash-escala-data">${esc(grupo.data)}</span>
-              <span class="dash-escala-depto">${grupo.itens.length} setor(es)</span>
-            </div>
-            ${temMinhaEscala ? '<div style="margin-bottom:0.45rem"><span class="badge badge-vermelho">Tenho participação neste evento</span></div>' : ''}
-            <div class="dash-escala-evento">${esc(nomeEvento(grupo.evento_id))}</div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0.6rem;margin-top:0.55rem">
-              ${grupo.itens
-                .map((e) => {
-                  const ehMinha = escalaEhMinha(e)
-                  const vols = e.voluntarios || []
-                  const nomeSetor = e.departamento_nome || nomeDepto(e.departamento_id)
-                  const iconeSetor = e.departamento_icone || iconeDepto(e.departamento_id)
-                  const chips = vols.length
-                    ? vols
-                        .map(
-                          (v) =>
-                            `<span class="chip-vol">${esc(v.nome)}${v.funcao ? ` · ${esc(v.funcao)}` : ''}</span>`
-                        )
-                        .join('')
-                    : '<span class="dash-escala-sem-vol">Ninguém designado ainda.</span>'
-                  const hist = htmlHistoricoTrocas(e.trocas)
-                  const pendencias = pendenciasPorEscala(e.id)
-                  const badgePendencia = pendencias.length
-                    ? podeGerirEscalaNoCliente(e.departamento_id)
-                      ? `<button type="button" class="btn btn-ghost btn-sm" style="font-size:0.72rem;padding:0.2rem 0.5rem;height:auto;line-height:1.2" onclick="abrirModalAprovarTrocaEscala('${e.id}')">🚨 ${pendencias.length} solicitação(ões) pendente(s)</button>`
-                      : `<span class="badge badge-alerta">${pendencias.length} solicitação(ões) pendente(s)</span>`
-                    : ''
-                  const botoes = []
-                  if (podeGerirEscalaNoCliente(e.departamento_id)) {
-                    botoes.push(
-                      `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalEditarEscala('${e.id}')">Editar escala</button>`
-                    )
-                    botoes.push(
-                      `<button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirEscala('${e.id}')">Excluir escala</button>`
-                    )
-                  }
-                  if (podeGerirEscalaNoCliente(e.departamento_id)) {
-                    botoes.push(
-                      `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalAprovarTrocaEscala('${e.id}')">Solicitações de troca${pendencias.length ? ` (${pendencias.length})` : ''}</button>`
-                    )
-                  } else if (ehMinha && vols.length) {
-                    botoes.push(
-                      `<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalTrocaEscala('${e.id}')">Solicitar troca</button>`
-                    )
-                  }
-                  const acoes = botoes.length
-                    ? `<div class="dash-escala-acoes">${botoes.join('')}</div>`
-                    : ''
-                  return `
-                    <div style="border:1px solid var(--borda);border-radius:10px;padding:0.55rem 0.6rem;background:var(--fundo-soft)">
-                      <div style="display:flex;align-items:center;justify-content:space-between;gap:0.45rem;flex-wrap:wrap;margin-bottom:0.35rem">
-                        <div style="font-size:0.82rem;color:var(--texto)">
-                          <span style="margin-right:0.35rem">${esc(iconeSetor)}</span>
-                          <strong>${esc(nomeSetor)}</strong>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap">
-                          ${badgePendencia}
-                          ${ehMinha ? '<span class="badge badge-vermelho">Estou neste setor</span>' : ''}
-                        </div>
-                      </div>
-                      <div class="dash-escala-vols">
-                        <span class="dash-escala-vols-label">Integrantes</span>
-                        <div class="dash-escala-chips">${chips}</div>
-                      </div>
-                      ${hist}
-                      ${acoes}
-                    </div>`
-                })
-                .join('')}
-            </div>
-          </article>`
-      }).join('')}
-    </div>`
+
+  const passados = grupos.filter(g => _classificarDataEscala(g.data) === 'passado')
+  const hoje     = grupos.filter(g => _classificarDataEscala(g.data) === 'hoje')
+  const futuros  = grupos.filter(g => _classificarDataEscala(g.data) === 'futuro')
+
+  let html = '<div class="dash-escalas">'
+
+  // Seção passados — recolhida por padrão
+  if (passados.length) {
+    html += `
+      <div class="escala-secao-passados">
+        <button type="button" class="btn-toggle-passados" onclick="toggleEscalasPassadas(this)" aria-expanded="false">
+          <span style="font-size:0.85rem">📋</span>
+          <span>${passados.length} evento(s) encerrado(s)</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="escalas-passadas-lista">
+          ${passados.map(g => `<div class="escala-passada-card">${_renderCardEscalaGrupo(g, true)}</div>`).join('')}
+        </div>
+      </div>`
+  }
+
+  // Seção hoje
+  if (hoje.length) {
+    html += `
+      <div class="escala-secao-hoje">
+        <div class="escala-secao-label">Hoje</div>
+        <div class="dash-escalas" style="gap:0.65rem;margin-bottom:0">
+          ${hoje.map(g => _renderCardEscalaGrupo(g, false)).join('')}
+        </div>
+      </div>`
+  }
+
+  // Seção próximos
+  if (futuros.length) {
+    html += `
+      <div class="escala-secao-proximos">
+        ${hoje.length ? '<div class="escala-secao-label" style="margin-top:0.75rem">Próximos</div>' : ''}
+        <div class="dash-escalas" style="gap:0.65rem;margin-bottom:0">
+          ${futuros.map(g => _renderCardEscalaGrupo(g, false)).join('')}
+        </div>
+      </div>`
+  }
+
+  if (!hoje.length && !futuros.length && passados.length) {
+    html += '<div class="tabela-vazia" style="margin-top:0.5rem">Nenhuma escala futura cadastrada ainda.</div>'
+  }
+
+  html += '</div>'
+  return html
+}
+
+function toggleEscalasPassadas(btn) {
+  const lista = btn.nextElementSibling
+  const aberto = lista.classList.contains('aberta')
+  lista.classList.toggle('aberta', !aberto)
+  btn.classList.toggle('aberto', !aberto)
+  btn.setAttribute('aria-expanded', String(!aberto))
 }
 
 function renderCardDeptoPainel(d) {
