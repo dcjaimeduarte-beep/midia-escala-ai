@@ -2806,8 +2806,8 @@ function excluirEscalaNoModal() {
   excluirEscala(id)
 }
 
-async function toggleMembrosDepartamento(deptoId, btn) {
-  const box = document.getElementById(`depto-membros-box-${deptoId}`)
+async function toggleMembrosDepartamento(deptoId, btn, prefixo = '') {
+  const box = document.getElementById(`${prefixo}depto-membros-box-${deptoId}`)
   if (!box) return
   if (box.dataset.carregado !== '1') {
     box.innerHTML = '<p class="carregando" style="padding:0.5rem;font-size:0.8rem">Carregando…</p>'
@@ -4832,8 +4832,8 @@ function renderCardDepto(d, detalhado = false) {
        ${!(d.total_membros || 0)
          ? `<p class="muted" style="font-size:0.75rem;margin:0.5rem 0 0;line-height:1.45">Sem vínculos: use <strong style="color:var(--texto)">Equipe → Editar</strong> ou <strong>Cadastros → Convidar</strong>.</p>`
          : `<button type="button" class="btn btn-ghost btn-sm" style="width:100%;margin-top:0.5rem"
-              onclick="toggleMembrosDepartamento('${d.id}', this)">Mostrar membros</button>
-            <div id="depto-membros-box-${d.id}" class="depto-membros-box" hidden></div>`
+              onclick="toggleMembrosDepartamento('${d.id}', this, 'dp-')">Mostrar membros</button>
+            <div id="dp-depto-membros-box-${d.id}" class="depto-membros-box" hidden></div>`
        }
     `
     : `<div class="card-footer">
