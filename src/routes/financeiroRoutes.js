@@ -2,7 +2,7 @@ const express = require('express')
 const router  = express.Router()
 const { v4: uuid } = require('uuid')
 const db = require('../db/database')
-const { autenticar, apenasAdmin, apenasFinanceiro } = require('../auth/middleware')
+const { autenticar, apenasAdmin, apenasFinanceiro, apenasRelatorioFinanceiro } = require('../auth/middleware')
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 function hoje() {
@@ -227,7 +227,7 @@ router.post('/lancamentos/:id/desvalidar', autenticar, apenasAdmin, (req, res) =
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
 
 // GET /financeiro/dashboard?data=DD/MM/YYYY
-router.get('/dashboard', autenticar, apenasFinanceiro, (req, res) => {
+router.get('/dashboard', autenticar, apenasFinanceiro, apenasRelatorioFinanceiro, (req, res) => {
   const data = req.query.data || hoje()
 
   const _isGlobalDash = req.usuario.role === 'admin' || req.usuario.acesso_financeiro_global
@@ -279,7 +279,7 @@ router.get('/dashboard', autenticar, apenasFinanceiro, (req, res) => {
 // ── RELATÓRIO MENSAL ─────────────────────────────────────────────────────────
 
 // GET /financeiro/relatorio?mes=YYYY-MM | data_inicio=YYYY-MM-DD&data_fim=YYYY-MM-DD
-router.get('/relatorio', autenticar, apenasFinanceiro, (req, res) => {
+router.get('/relatorio', autenticar, apenasFinanceiro, apenasRelatorioFinanceiro, (req, res) => {
   const { data_inicio, data_fim } = req.query
   const mes = req.query.mes || isoHoje().slice(0, 7)
   const [y, m] = mes.split('-')

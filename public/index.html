@@ -1731,13 +1731,19 @@
         <input type="checkbox" id="edit-usuario-ativo" style="width:auto;margin-right:0.5rem"/> Conta ativa
       </label></div>
       <div class="form-grupo" id="edit-usuario-financeiro-wrap" style="display:none"><label style="text-transform:none;letter-spacing:0">
-        <input type="checkbox" id="edit-usuario-financeiro" style="width:auto;margin-right:0.5rem"/> Acesso ao módulo financeiro
+        <input type="checkbox" id="edit-usuario-financeiro" style="width:auto;margin-right:0.5rem" onchange="_toggleFinCheckboxes()"/> Acesso ao módulo financeiro
       </label>
-      <p class="muted" style="font-size:0.75rem;margin:0.2rem 0 0;line-height:1.4">Permite lançar entradas e visualizar dashboards e relatórios.</p>
-      <label style="text-transform:none;letter-spacing:0;margin-top:0.5rem;display:flex;align-items:center;gap:0.4rem;cursor:pointer">
-        <input type="checkbox" id="edit-usuario-financeiro-global" style="width:auto"/>
-        <span style="font-size:0.83rem">Acesso financeiro global <span style="color:var(--texto-mutado);font-size:0.75rem">(vê e filtra todas as congregações)</span></span>
-      </label>
+      <p class="muted" style="font-size:0.75rem;margin:0.2rem 0 0;line-height:1.4">Permite lançar entradas no financeiro.</p>
+      <div id="edit-usuario-financeiro-extras" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.35rem">
+        <label style="text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:0.4rem;cursor:pointer">
+          <input type="checkbox" id="edit-usuario-financeiro-relatorio" style="width:auto"/>
+          <span style="font-size:0.83rem">Visualizar relatórios e dashboard <span style="color:var(--texto-mutado);font-size:0.75rem">(dashboards, gráficos e relatório mensal)</span></span>
+        </label>
+        <label style="text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:0.4rem;cursor:pointer">
+          <input type="checkbox" id="edit-usuario-financeiro-global" style="width:auto"/>
+          <span style="font-size:0.83rem">Acesso financeiro global <span style="color:var(--texto-mutado);font-size:0.75rem">(vê e filtra todas as congregações)</span></span>
+        </label>
+      </div>
       </div>
       <div class="form-grupo" id="edit-usuario-cong-wrap" style="display:none">
         <label>Congregação</label>
@@ -4200,7 +4206,9 @@ async function abrirModalEditarUsuario(id) {
     if (finWrap) {
       finWrap.style.display = usuario?.role === 'admin' ? '' : 'none'
       document.getElementById('edit-usuario-financeiro').checked = !!u.acesso_financeiro
+      document.getElementById('edit-usuario-financeiro-relatorio').checked = !!u.acesso_relatorio_financeiro
       document.getElementById('edit-usuario-financeiro-global').checked = !!u.acesso_financeiro_global
+      _toggleFinCheckboxes()
     }
 
     const congWrap = document.getElementById('edit-usuario-cong-wrap')
@@ -4256,6 +4264,7 @@ async function salvarEditUsuario(ev) {
   const finWrap = document.getElementById('edit-usuario-financeiro-wrap')
   if (finWrap && finWrap.style.display !== 'none' && usuario?.role === 'admin') {
     body.acesso_financeiro = document.getElementById('edit-usuario-financeiro').checked
+    body.acesso_relatorio_financeiro = document.getElementById('edit-usuario-financeiro-relatorio').checked
     body.acesso_financeiro_global = document.getElementById('edit-usuario-financeiro-global').checked
   }
 
@@ -4692,7 +4701,11 @@ async function carregarEquipe() {
                     ? u.departamentos.map(d =>
                         `<span class="badge badge-info" style="margin:1px 2px">${esc(d.nome)}</span>`
                       ).join('')
-                    : '<span style="color:var(--texto-mutado)">—</span>'
+                    : (!u.acesso_financeiro ? '<span style="color:var(--texto-mutado)">—</span>' : '')
+                  }
+                  ${u.acesso_financeiro && usuario?.role === 'admin'
+                    ? `<span class="badge" style="margin:1px 2px;background:rgba(22,163,74,.15);color:#16a34a;border:1px solid rgba(22,163,74,.3);cursor:pointer" onclick="abrirModalEditarUsuario('${esc(u.id)}')" title="Clique para editar acesso financeiro">💰 Financeiro${u.acesso_relatorio_financeiro ? ' + 📊' : ''}</span>`
+                    : ''
                   }
                 </td>
                 ${
@@ -5557,7 +5570,26 @@ function _finTemAcesso() {
   return usuario?.role === 'admin' || !!usuario?.acesso_financeiro
 }
 
+function _finTemRelatorio() {
+  return usuario?.role === 'admin' || usuario?.role === 'lider' || !!usuario?.acesso_relatorio_financeiro
+}
+
+// Habilita/desabilita os sub-checkboxes quando "Acesso ao módulo financeiro" muda
+function _toggleFinCheckboxes() {
+  const ativo = document.getElementById('edit-usuario-financeiro')?.checked
+  const extras = document.getElementById('edit-usuario-financeiro-extras')
+  if (extras) extras.style.opacity = ativo ? '1' : '0.4'
+  const chkRel = document.getElementById('edit-usuario-financeiro-relatorio')
+  const chkGlb = document.getElementById('edit-usuario-financeiro-global')
+  if (chkRel) chkRel.disabled = !ativo
+  if (chkGlb) chkGlb.disabled = !ativo
+}
+
 function finTab(aba) {
+  // Bloqueia acesso a dashboard/relatório para quem não tem permissão
+  if ((aba === 'dashboard' || aba === 'relatorio') && !_finTemRelatorio()) {
+    aba = 'lancamentos'
+  }
   finAbaAtiva = aba
   document.querySelectorAll('.fin-tab').forEach(b => b.classList.toggle('ativo', b.dataset.fintab === aba))
   document.querySelectorAll('.fin-panel').forEach(p => p.style.display = 'none')
@@ -5577,6 +5609,17 @@ async function carregarFinanceiro() {
   if (!_finTemAcesso()) return
   const tabCat = document.getElementById('fin-tab-cat')
   if (tabCat) tabCat.style.display = usuario?.role === 'admin' ? '' : 'none'
+
+  // Esconde Dashboard e Relatório para quem só pode lançar
+  const podeRelatorio = _finTemRelatorio()
+  const tabDash = document.querySelector('.fin-tab[data-fintab="dashboard"]')
+  const tabRel  = document.querySelector('.fin-tab[data-fintab="relatorio"]')
+  if (tabDash) tabDash.style.display = podeRelatorio ? '' : 'none'
+  if (tabRel)  tabRel.style.display  = podeRelatorio ? '' : 'none'
+  // Se não tem acesso a relatório, força a aba de lançamentos
+  if (!podeRelatorio && (finAbaAtiva === 'dashboard' || finAbaAtiva === 'relatorio')) {
+    finAbaAtiva = 'lancamentos'
+  }
   try { finCategorias = await api('GET', '/financeiro/categorias') } catch (_) { finCategorias = [] }
   try { finEventos = await api('GET', '/evento/listar') } catch (_) { finEventos = [] }
   try { finEscalas = await api('GET', '/escala/visao-geral') } catch (_) { finEscalas = [] }
@@ -6008,10 +6051,10 @@ function _renderLancamentos(rows) {
     <span style="font-size:0.8rem;color:var(--texto-mutado)">
       ${_nomeCong ? `<span style="color:var(--texto);font-weight:600">⛪ ${esc(_nomeCong)}</span> · ` : ''}${rows.length} lançamento${rows.length !== 1 ? 's' : ''} no período
     </span>
-    <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">
+    ${_finTemRelatorio() ? `<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">
       <button onclick="_imprimirLancamentos()" style="padding:0.3rem 0.7rem;border-radius:var(--raio);font-size:0.78rem;border:1px solid var(--borda);cursor:pointer;background:var(--fundo-elevado);color:var(--texto)" title="Imprimir / PDF">🖨️ Imprimir</button>
       <button onclick="_exportLancamentosCSV()" style="padding:0.3rem 0.7rem;border-radius:var(--raio);font-size:0.78rem;border:1px solid var(--borda);cursor:pointer;background:var(--fundo-elevado);color:var(--texto)" title="Exportar Excel/CSV">📊 Excel</button>
-    </div>
+    </div>` : ''}
   </div>
   <div style="display:flex;gap:0.4rem;margin-bottom:1rem;flex-wrap:wrap">
     <button style="${btnStyle('todos')}" onclick="_setFinLancFiltro('todos')">Todos</button>
