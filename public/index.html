@@ -5410,7 +5410,7 @@ function _renderDiaEventos(data, itens, isHoje) {
     </div>`
 
   for (const g of grupos) {
-    if (grupos.length > 1) {
+    if (g.nome && g.nome !== 'Sem evento') {
       html += `<div style="font-size:0.72rem;color:var(--texto-mutado);margin:0.4rem 0 0.3rem">🎵 ${esc(g.nome)}</div>`
     }
     html += `<div class="fin-chips-wrap">`
