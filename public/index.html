@@ -1913,12 +1913,12 @@
         <input id="lanc-valor" type="number" step="0.01" min="0.01" required placeholder="0,00"/>
       </div>
       <div class="form-grupo">
-        <label>Data (DD/MM/AAAA)</label>
-        <input id="lanc-data" type="text" required placeholder="DD/MM/AAAA" oninput="_popularEventosModal(this.value)"/>
+        <label>Culto escalado (opcional)</label>
+        <select id="lanc-escala" onchange="_escalaSelecionada(this.value)"></select>
       </div>
       <div class="form-grupo">
-        <label>Culto escalado (opcional)</label>
-        <select id="lanc-escala"><option value="">Sem culto vinculado</option></select>
+        <label>Data (DD/MM/AAAA)</label>
+        <input id="lanc-data" type="text" required placeholder="DD/MM/AAAA"/>
       </div>
       <div class="form-grupo">
         <label>Descrição (opcional)</label>
@@ -5672,28 +5672,44 @@ async function carregarFinCategorias() {
 
 // ── MODAL LANÇAMENTO ────────────────────────────────────────
 
-function _popularEventosModal(dataVal, escalaIdSelecionado) {
+function _popularEventosModal(escalaIdSelecionado) {
   const selEv = document.getElementById('lanc-escala')
   if (!selEv) return
 
-  // Escalas que têm o mesmo dia — uma opção por escala (id único)
-  const escalasNaData = (finEscalas || []).filter(e => e.data === dataVal)
+  // Ordena escalas por data ISO desc para agrupar visualmente por data
+  const todas = [...(finEscalas || [])].sort((a, b) => {
+    return _ddmmToISO(b.data).localeCompare(_ddmmToISO(a.data))
+  })
+
+  // Agrupa por data para exibir optgroup por data
+  const porData = {}
+  for (const e of todas) {
+    if (!porData[e.data]) porData[e.data] = []
+    porData[e.data].push(e)
+  }
 
   let opts = '<option value="">Sem culto vinculado</option>'
-  if (escalasNaData.length) {
-    for (const e of escalasNaData) {
+  for (const [data, escalas] of Object.entries(porData)) {
+    opts += `<optgroup label="${esc(data)}">`
+    for (const e of escalas) {
       const evNome = finEventos.find(ev => ev.id === e.evento_id)?.nome || 'Culto'
       const depto  = e.departamento_nome ? ` — ${e.departamento_nome}` : ''
-      opts += `<option value="${esc(e.id)}">${esc(evNome)}${esc(depto)}</option>`
+      opts += `<option value="${esc(e.id)}" data-data="${esc(e.data)}">${esc(evNome)}${esc(depto)}</option>`
     }
+    opts += '</optgroup>'
   }
   selEv.innerHTML = opts
 
   if (escalaIdSelecionado) {
     selEv.value = escalaIdSelecionado
-  } else if (escalasNaData.length === 1) {
-    selEv.value = escalasNaData[0].id   // auto-seleciona quando há um único culto
   }
+}
+
+function _escalaSelecionada(escalaId) {
+  if (!escalaId) return
+  const opt = document.querySelector(`#lanc-escala option[value="${CSS.escape(escalaId)}"]`)
+  const data = opt?.dataset?.data
+  if (data) document.getElementById('lanc-data').value = data
 }
 
 function abrirModalLancamento(existente) {
@@ -5708,19 +5724,20 @@ function abrirModalLancamento(existente) {
   const optSaida = document.querySelector('#lanc-tipo option[value="saida"]')
   if (optSaida) optSaida.style.display = usuario?.role === 'admin' ? '' : 'none'
 
+  _popularEventosModal(existente?.escala_id || '')
+
   if (existente) {
     document.getElementById('lanc-tipo').value      = existente.tipo || 'entrada'
     document.getElementById('lanc-valor').value     = existente.valor || ''
     document.getElementById('lanc-data').value      = existente.data || ''
     document.getElementById('lanc-descricao').value = existente.descricao || ''
     selCat.value = existente.categoria_id || ''
-    _popularEventosModal(existente.data || '', existente.escala_id || '')
+    document.getElementById('lanc-escala').value    = existente.escala_id || ''
   } else {
     document.getElementById('lanc-tipo').value      = 'entrada'
     document.getElementById('lanc-valor').value     = ''
     document.getElementById('lanc-data').value      = _dataHoje()
     document.getElementById('lanc-descricao').value = ''
-    _popularEventosModal(_dataHoje(), '')
   }
   document.getElementById('modal-lancamento').classList.add('aberto')
 }
