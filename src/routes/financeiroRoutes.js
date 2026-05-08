@@ -90,11 +90,15 @@ router.get('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
   const sql = `
     SELECT l.*, c.nome as categoria_nome, c.tipo as categoria_tipo,
            u.nome as lancado_por_nome,
-           e.nome as evento_nome
+           COALESCE(ev2.nome, e.nome) as evento_nome,
+           es.data as escala_data, d.nome as escala_depto
     FROM lancamentos_financeiro l
     JOIN categorias_financeiro c ON c.id = l.categoria_id
     JOIN usuarios u ON u.id = l.lancado_por
-    LEFT JOIN eventos e ON e.id = l.evento_id
+    LEFT JOIN eventos e  ON e.id  = l.evento_id
+    LEFT JOIN escalas es ON es.id = l.escala_id
+    LEFT JOIN eventos ev2 ON ev2.id = es.evento_id
+    LEFT JOIN departamentos d ON d.id = es.departamento_id
     ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     ORDER BY l.data DESC, l.criado_em DESC
   `
@@ -103,7 +107,7 @@ router.get('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
 
 // POST /financeiro/lancamentos
 router.post('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
-  const { data, evento_id, categoria_id, valor, descricao, tipo } = req.body
+  const { data, escala_id, evento_id, categoria_id, valor, descricao, tipo } = req.body
   if (!data || !categoria_id || !valor || !tipo)
     return res.status(400).json({ erro: 'data, categoria_id, valor e tipo são obrigatórios' })
   if (!['entrada','saida'].includes(tipo))
@@ -114,18 +118,29 @@ router.post('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
   const cat = db.get('SELECT id FROM categorias_financeiro WHERE id=? AND ativo=1', categoria_id)
   if (!cat) return res.status(400).json({ erro: 'Categoria inválida ou inativa' })
 
+  // Deriva evento_id da escala se não fornecido diretamente
+  let eventoFinal = evento_id || null
+  if (escala_id && !eventoFinal) {
+    const esc = db.get('SELECT evento_id FROM escalas WHERE id=?', escala_id)
+    if (esc) eventoFinal = esc.evento_id
+  }
+
   const id = uuid()
   const agora = new Date().toISOString()
   db.run(`INSERT INTO lancamentos_financeiro
-    (id,data,evento_id,categoria_id,valor,descricao,tipo,lancado_por,validado,criado_em)
-    VALUES (?,?,?,?,?,?,?,?,0,?)`,
-    id, data, evento_id || null, categoria_id, Number(valor), descricao || '', tipo, req.usuario.id, agora)
+    (id,data,escala_id,evento_id,categoria_id,valor,descricao,tipo,lancado_por,validado,criado_em)
+    VALUES (?,?,?,?,?,?,?,?,?,0,?)`,
+    id, data, escala_id || null, eventoFinal, categoria_id, Number(valor), descricao || '', tipo, req.usuario.id, agora)
 
   res.status(201).json(db.get(`
-    SELECT l.*, c.nome as categoria_nome, u.nome as lancado_por_nome
+    SELECT l.*, c.nome as categoria_nome, u.nome as lancado_por_nome,
+           COALESCE(ev2.nome, e.nome) as evento_nome
     FROM lancamentos_financeiro l
     JOIN categorias_financeiro c ON c.id=l.categoria_id
     JOIN usuarios u ON u.id=l.lancado_por
+    LEFT JOIN eventos e   ON e.id   = l.evento_id
+    LEFT JOIN escalas es  ON es.id  = l.escala_id
+    LEFT JOIN eventos ev2 ON ev2.id = es.evento_id
     WHERE l.id=?`, id))
 })
 
@@ -138,18 +153,30 @@ router.put('/lancamentos/:id', autenticar, apenasFinanceiro, (req, res) => {
   if (lanc.lancado_por !== req.usuario.id && req.usuario.role !== 'admin')
     return res.status(403).json({ erro: 'Sem permissão para editar este lançamento' })
 
-  const { valor, descricao, categoria_id, evento_id, data } = req.body
+  const { valor, descricao, categoria_id, escala_id, evento_id, data } = req.body
   if (valor !== undefined) db.run('UPDATE lancamentos_financeiro SET valor=? WHERE id=?', Number(valor), req.params.id)
   if (descricao !== undefined) db.run('UPDATE lancamentos_financeiro SET descricao=? WHERE id=?', descricao, req.params.id)
   if (categoria_id) db.run('UPDATE lancamentos_financeiro SET categoria_id=? WHERE id=?', categoria_id, req.params.id)
-  if (evento_id !== undefined) db.run('UPDATE lancamentos_financeiro SET evento_id=? WHERE id=?', evento_id || null, req.params.id)
   if (data) db.run('UPDATE lancamentos_financeiro SET data=? WHERE id=?', data, req.params.id)
+  if (escala_id !== undefined) {
+    db.run('UPDATE lancamentos_financeiro SET escala_id=? WHERE id=?', escala_id || null, req.params.id)
+    if (escala_id && !evento_id) {
+      const esc = db.get('SELECT evento_id FROM escalas WHERE id=?', escala_id)
+      if (esc?.evento_id) db.run('UPDATE lancamentos_financeiro SET evento_id=? WHERE id=?', esc.evento_id, req.params.id)
+    }
+  } else if (evento_id !== undefined) {
+    db.run('UPDATE lancamentos_financeiro SET evento_id=? WHERE id=?', evento_id || null, req.params.id)
+  }
 
   res.json(db.get(`
-    SELECT l.*, c.nome as categoria_nome, u.nome as lancado_por_nome
+    SELECT l.*, c.nome as categoria_nome, u.nome as lancado_por_nome,
+           COALESCE(ev2.nome, e.nome) as evento_nome
     FROM lancamentos_financeiro l
     JOIN categorias_financeiro c ON c.id=l.categoria_id
     JOIN usuarios u ON u.id=l.lancado_por
+    LEFT JOIN eventos e   ON e.id   = l.evento_id
+    LEFT JOIN escalas es  ON es.id  = l.escala_id
+    LEFT JOIN eventos ev2 ON ev2.id = es.evento_id
     WHERE l.id=?`, req.params.id))
 })
 
@@ -188,20 +215,25 @@ router.get('/dashboard', autenticar, apenasFinanceiro, (req, res) => {
 
   const lancamentos = db.all(`
     SELECT l.*, c.nome as categoria_nome, c.tipo as categoria_tipo,
-           u.nome as lancado_por_nome, e.nome as evento_nome
+           u.nome as lancado_por_nome,
+           COALESCE(ev2.nome, e.nome) as evento_nome,
+           es.data as escala_data, d.nome as escala_depto
     FROM lancamentos_financeiro l
     JOIN categorias_financeiro c ON c.id = l.categoria_id
     JOIN usuarios u ON u.id = l.lancado_por
-    LEFT JOIN eventos e ON e.id = l.evento_id
+    LEFT JOIN eventos e   ON e.id   = l.evento_id
+    LEFT JOIN escalas es  ON es.id  = l.escala_id
+    LEFT JOIN eventos ev2 ON ev2.id = es.evento_id
+    LEFT JOIN departamentos d ON d.id = es.departamento_id
     WHERE l.data = ?
     ORDER BY l.criado_em
   `, data)
 
-  // Agrupa por evento
+  // Agrupa por escala_id (quando disponível) ou evento_id
   const porEvento = {}
   for (const l of lancamentos) {
-    const chave = l.evento_id || '__sem_evento__'
-    if (!porEvento[chave]) porEvento[chave] = { evento_id: l.evento_id, evento_nome: l.evento_nome || 'Sem evento', items: [] }
+    const chave = l.escala_id || l.evento_id || '__sem_evento__'
+    if (!porEvento[chave]) porEvento[chave] = { evento_id: l.evento_id, escala_id: l.escala_id, evento_nome: l.evento_nome || 'Sem evento', items: [] }
     porEvento[chave].items.push(l)
   }
 
@@ -227,11 +259,16 @@ router.get('/relatorio', autenticar, apenasFinanceiro, (req, res) => {
 
   const lancamentos = db.all(`
     SELECT l.*, c.nome as categoria_nome, c.tipo as categoria_tipo,
-           u.nome as lancado_por_nome, e.nome as evento_nome
+           u.nome as lancado_por_nome,
+           COALESCE(ev2.nome, e.nome) as evento_nome,
+           d.nome as escala_depto
     FROM lancamentos_financeiro l
     JOIN categorias_financeiro c ON c.id = l.categoria_id
     JOIN usuarios u ON u.id = l.lancado_por
-    LEFT JOIN eventos e ON e.id = l.evento_id
+    LEFT JOIN eventos e   ON e.id   = l.evento_id
+    LEFT JOIN escalas es  ON es.id  = l.escala_id
+    LEFT JOIN eventos ev2 ON ev2.id = es.evento_id
+    LEFT JOIN departamentos d ON d.id = es.departamento_id
     WHERE substr(l.data,7,4) = ? AND substr(l.data,4,2) = ?
     ORDER BY l.data, l.criado_em
   `, y, m)

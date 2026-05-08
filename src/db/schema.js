@@ -213,6 +213,8 @@ function migrate() {
     }
   }
 
+  tryExec(`ALTER TABLE lancamentos_financeiro ADD COLUMN escala_id TEXT REFERENCES escalas(id) ON DELETE SET NULL`)
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS escala_trocas (
       id                   TEXT PRIMARY KEY,

@@ -8,7 +8,6 @@
   <link rel="apple-touch-icon" href="/docs/Foguinho%20vazado.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet"/>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1164,65 +1163,105 @@
     .fin-stat-saida      { color: var(--erro); }
     .fin-stat-saldo-pos  { color: var(--sucesso); }
     .fin-stat-saldo-neg  { color: var(--erro); }
-    .fin-grupo {
-      margin-bottom: 1.25rem;
+    /* card de evento (dashboard) */
+    .fin-evento-card {
       background: var(--fundo-card);
       border: 1px solid var(--borda);
       border-radius: var(--raio-lg);
-      overflow: hidden;
+      padding: 1rem;
+      margin-bottom: 1rem;
     }
-    .fin-grupo-header {
-      padding: 0.65rem 1rem;
-      background: rgba(255,255,255,0.02);
-      border-bottom: 1px solid var(--borda);
+    .fin-evento-topo {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       gap: 0.5rem;
+      margin-bottom: 0.75rem;
       flex-wrap: wrap;
     }
-    .fin-grupo-nome { font-weight: 600; font-size: 0.85rem; }
-    .fin-grupo-resumo {
-      font-size: 0.75rem;
-      color: var(--texto-mutado);
+    .fin-evento-nome {
+      font-family: var(--fonte-display);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    .fin-evento-mini-stats {
       display: flex;
       gap: 0.75rem;
-    }
-    .fin-lancamento-row {
-      padding: 0.6rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      border-bottom: 1px solid var(--borda);
-      font-size: 0.8rem;
-    }
-    .fin-lancamento-row:last-child { border-bottom: none; }
-    .fin-lancamento-tipo {
-      font-size: 0.67rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 0.15rem 0.45rem;
-      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
       flex-shrink: 0;
     }
-    .fin-tipo-entrada { background: rgba(92,173,106,0.12); color: #8fcf98; border: 1px solid rgba(92,173,106,0.22); }
-    .fin-tipo-saida   { background: rgba(232,93,93,0.10); color: #f0a0a0; border: 1px solid rgba(232,93,93,0.20); }
-    .fin-lancamento-desc { flex: 1; min-width: 0; overflow: hidden; }
-    .fin-lancamento-cat  { color: var(--texto-mutado); font-size: 0.73rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .fin-lancamento-valor { font-weight: 600; margin-left: auto; white-space: nowrap; flex-shrink: 0; }
-    .fin-lancamento-acoes { display: flex; gap: 0.25rem; flex-shrink: 0; }
-    .fin-lancamento-validado { color: var(--sucesso); font-size: 0.7rem; margin-left: 0.3rem; }
-    .fin-data-header {
-      padding: 0.45rem 1rem;
-      font-size: 0.7rem;
-      font-weight: 600;
+    /* chips dentro do card */
+    .fin-chips-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .fin-chip {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--borda-forte);
+      border-radius: var(--raio);
+      padding: 0.45rem 0.7rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.12rem;
+      min-width: 9rem;
+      flex: 1 1 9rem;
+      max-width: 16rem;
+      position: relative;
+    }
+    .fin-chip-entrada { border-left: 3px solid var(--sucesso); }
+    .fin-chip-saida   { border-left: 3px solid var(--erro); }
+    .fin-chip-cat {
+      font-size: 0.72rem;
+      color: var(--texto-mutado);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .fin-chip-valor {
+      font-family: var(--fonte-display);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+    .fin-chip-desc {
+      font-size: 0.71rem;
+      color: var(--texto-mutado);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .fin-chip-validado {
+      position: absolute;
+      top: 0.3rem;
+      right: 0.4rem;
+      font-size: 0.65rem;
+      color: var(--sucesso);
+    }
+    .fin-chip-acoes {
+      display: flex;
+      gap: 0.15rem;
+      margin-top: 0.3rem;
+    }
+    /* card de dia (lançamentos / relatório) */
+    .fin-dia-card {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio-lg);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .fin-dia-header {
+      font-size: 0.75rem;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--texto-mutado);
-      background: rgba(255,255,255,0.015);
-      border-bottom: 1px solid var(--borda);
+      margin-bottom: 0.65rem;
     }
+    /* tipo badge inline */
+    .fin-tipo-entrada { background: rgba(92,173,106,0.12); color: #8fcf98; border: 1px solid rgba(92,173,106,0.22); }
+    .fin-tipo-saida   { background: rgba(232,93,93,0.10); color: #f0a0a0; border: 1px solid rgba(232,93,93,0.20); }
     .fin-cat-row {
       background: var(--fundo-card);
       border: 1px solid var(--borda);
@@ -1243,6 +1282,27 @@
       padding: 1.1rem 1rem;
       margin-bottom: 1rem;
     }
+    .fin-hoje-card {
+      border-color: rgba(201,74,82,0.35);
+      background: rgba(201,74,82,0.04);
+    }
+    .fin-hoje-badge {
+      font-size: 0.64rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--primaria);
+      background: rgba(201,74,82,0.12);
+      border: 1px solid rgba(201,74,82,0.25);
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .fin-passados-lista {
+      display: none;
+      flex-direction: column;
+    }
+    .fin-passados-lista.aberta { display: flex; }
   </style>
 </head>
 <body>
@@ -1854,11 +1914,11 @@
       </div>
       <div class="form-grupo">
         <label>Data (DD/MM/AAAA)</label>
-        <input id="lanc-data" type="text" required placeholder="DD/MM/AAAA"/>
+        <input id="lanc-data" type="text" required placeholder="DD/MM/AAAA" oninput="_popularEventosModal(this.value)"/>
       </div>
       <div class="form-grupo">
-        <label>Evento / Culto (opcional)</label>
-        <select id="lanc-evento"><option value="">Sem evento</option></select>
+        <label>Culto escalado (opcional)</label>
+        <select id="lanc-escala"><option value="">Sem culto vinculado</option></select>
       </div>
       <div class="form-grupo">
         <label>Descrição (opcional)</label>
@@ -5178,6 +5238,7 @@ async function validarFluxoAgora() {
 let finAbaAtiva = 'dashboard'
 let finCategorias = []
 let finEventos = []
+let finEscalas = []
 let finLancamentosData = []
 let finRelatorioData = null
 
@@ -5204,6 +5265,7 @@ async function carregarFinanceiro() {
   if (tabCat) tabCat.style.display = usuario?.role === 'admin' ? '' : 'none'
   try { finCategorias = await api('GET', '/financeiro/categorias') } catch (_) { finCategorias = [] }
   try { finEventos = await api('GET', '/evento/listar') } catch (_) { finEventos = [] }
+  try { finEscalas = await api('GET', '/escala/visao-geral') } catch (_) { finEscalas = [] }
   finTab(finAbaAtiva)
 }
 
@@ -5227,58 +5289,142 @@ async function carregarFinDashboard() {
   const el = document.getElementById('fin-dashboard')
   if (!el) return
   el.innerHTML = '<p class="carregando">Carregando…</p>'
+  const agora = new Date()
+  const mes = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`
   try {
-    const data = await api('GET', `/financeiro/dashboard?data=${_dataHoje()}`)
-    el.innerHTML = _renderDashboard(data)
+    const rows = await api('GET', `/financeiro/lancamentos?mes=${mes}`)
+    el.innerHTML = _renderDashboard(rows, mes)
   } catch (e) {
     el.innerHTML = `<p class="muted">Não foi possível carregar: ${e.erro || 'Erro'}</p>`
   }
 }
 
-function _renderDashboard(data) {
-  const { totais, grupos } = data
-  const saldoCls = totais.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'
+async function carregarFinDashboardData(mes) {
+  const el = document.getElementById('fin-dashboard')
+  if (!el || !mes) return
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+  try {
+    const rows = await api('GET', `/financeiro/lancamentos?mes=${mes}`)
+    el.innerHTML = _renderDashboard(rows, mes)
+  } catch (e) {
+    el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
+  }
+}
+
+function _renderDashboard(rows, mes) {
+  const hoje = _dataHoje()
+  const isoHoje = _ddmmToISO(hoje)
+
+  // Agrupar por data
+  const porData = {}
+  for (const l of rows) {
+    if (!porData[l.data]) porData[l.data] = []
+    porData[l.data].push(l)
+  }
+
+  // Classificar datas
+  const passados = [], hojeArr = [], futuros = []
+  for (const [data, itens] of Object.entries(porData)) {
+    const isoD = _ddmmToISO(data)
+    if      (isoD < isoHoje) passados.push({ data, itens })
+    else if (isoD === isoHoje) hojeArr.push({ data, itens })
+    else                      futuros.push({ data, itens })
+  }
+  passados.sort((a, b) => _ddmmToISO(b.data).localeCompare(_ddmmToISO(a.data)))
+  futuros.sort((a, b) => _ddmmToISO(a.data).localeCompare(_ddmmToISO(b.data)))
+
+  // Totais do mês
+  const entMes  = rows.filter(l => l.tipo === 'entrada').reduce((s,l) => s + l.valor, 0)
+  const saiMes  = rows.filter(l => l.tipo === 'saida').reduce((s,l) => s + l.valor, 0)
+  const saldoMes = entMes - saiMes
+  const saldoCls = saldoMes >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'
+  const [ano, mesN] = mes.split('-')
+  const nomeMes = new Date(parseInt(ano), parseInt(mesN)-1, 1).toLocaleString('pt-BR', { month: 'long' })
+
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
-    <span style="font-size:0.8rem;color:var(--texto-mutado)">Resumo do dia — ${data.data}</span>
-    <input type="date" value="${_ddmmToISO(data.data)}" onchange="carregarFinDashboardData(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
+    <span style="font-size:0.8rem;color:var(--texto-mutado)">${nomeMes} de ${ano}</span>
+    <input type="month" value="${mes}" onchange="carregarFinDashboardData(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
   </div>
   <div class="fin-resumo-grid">
-    <div class="fin-stat-card"><div class="fin-stat-label">Entradas</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(totais.entradas)}</div></div>
-    <div class="fin-stat-card"><div class="fin-stat-label">Saídas</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(totais.saidas)}</div></div>
-    <div class="fin-stat-card"><div class="fin-stat-label">Saldo</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(totais.saldo)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Entradas</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(entMes)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Saídas</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(saiMes)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Saldo</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(saldoMes)}</div></div>
   </div>`
-  if (!grupos.length) {
-    html += `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento para esta data.</p>`
+
+  // ── Passados colapsados ──────────────────────────────────
+  if (passados.length) {
+    html += `<div style="margin-bottom:0.75rem">
+      <button type="button" class="btn-toggle-passados" onclick="toggleFinPassados(this)">
+        📅 ${passados.length} dia${passados.length > 1 ? 's' : ''} anterior${passados.length > 1 ? 'es' : ''}
+        <span class="chevron">▾</span>
+      </button>
+      <div class="fin-passados-lista">`
+    for (const { data, itens } of passados) html += _renderDiaEventos(data, itens, false)
+    html += `</div></div>`
+  }
+
+  // ── Hoje ────────────────────────────────────────────────
+  if (hojeArr.length) {
+    for (const { data, itens } of hojeArr) html += _renderDiaEventos(data, itens, true)
   } else {
-    for (const g of grupos) {
-      html += `<div class="fin-grupo">
-        <div class="fin-grupo-header">
-          <span class="fin-grupo-nome">${esc(g.evento_nome || 'Sem evento')}</span>
-          <span class="fin-grupo-resumo">
-            <span style="color:var(--sucesso)">+${_fmtVal(g.entradas)}</span>
-            <span style="color:var(--erro)">-${_fmtVal(g.saidas)}</span>
-          </span>
-        </div>`
-      for (const l of g.items) html += _renderLancRow(l, false)
-      html += `</div>`
-    }
+    html += `<div class="fin-evento-card fin-hoje-card" style="border-style:dashed">
+      <div class="fin-evento-topo">
+        <span class="fin-evento-nome" style="display:flex;align-items:center;gap:0.5rem">
+          <span class="fin-hoje-badge">HOJE</span>${esc(hoje)}
+        </span>
+        <span style="font-size:0.78rem;color:var(--texto-mutado)">Nenhum lançamento hoje</span>
+      </div>
+    </div>`
+  }
+
+  // ── Futuros ─────────────────────────────────────────────
+  for (const { data, itens } of futuros) html += _renderDiaEventos(data, itens, false)
+
+  if (!rows.length) {
+    html += `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento neste mês.</p>`
   }
   return html
 }
 
-async function carregarFinDashboardData(isoVal) {
-  if (!isoVal) return
-  const [y, m, d] = isoVal.split('-')
-  const ddmm = `${d}/${m}/${y}`
-  const el = document.getElementById('fin-dashboard')
-  if (!el) return
-  el.innerHTML = '<p class="carregando">Carregando…</p>'
-  try {
-    const data = await api('GET', `/financeiro/dashboard?data=${ddmm}`)
-    el.innerHTML = _renderDashboard(data)
-  } catch (e) {
-    el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
+function _renderDiaEventos(data, itens, isHoje) {
+  // Agrupar por evento dentro do dia
+  const porEvento = {}
+  for (const l of itens) {
+    const key = l.evento_id || '__sem__'
+    if (!porEvento[key]) porEvento[key] = { nome: l.evento_nome || 'Sem evento', itens: [] }
+    porEvento[key].itens.push(l)
   }
+  const grupos = Object.values(porEvento)
+  const entDia = itens.filter(l => l.tipo === 'entrada').reduce((s,l) => s + l.valor, 0)
+  const saiDia = itens.filter(l => l.tipo === 'saida').reduce((s,l)  => s + l.valor, 0)
+
+  let html = `<div class="fin-evento-card${isHoje ? ' fin-hoje-card' : ''}">
+    <div class="fin-evento-topo">
+      <span class="fin-evento-nome" style="display:flex;align-items:center;gap:0.5rem">
+        ${isHoje ? '<span class="fin-hoje-badge">HOJE</span>' : ''}${esc(data)}
+      </span>
+      <span class="fin-evento-mini-stats">
+        <span style="color:var(--sucesso)">+${_fmtVal(entDia)}</span>
+        <span style="color:var(--erro)">-${_fmtVal(saiDia)}</span>
+      </span>
+    </div>`
+
+  for (const g of grupos) {
+    if (grupos.length > 1) {
+      html += `<div style="font-size:0.72rem;color:var(--texto-mutado);margin:0.4rem 0 0.3rem">🎵 ${esc(g.nome)}</div>`
+    }
+    html += `<div class="fin-chips-wrap">`
+    for (const l of g.itens) html += _renderChip(l, false)
+    html += `</div>`
+  }
+  html += `</div>`
+  return html
+}
+
+function toggleFinPassados(btn) {
+  const lista = btn.nextElementSibling
+  lista.classList.toggle('aberta')
+  btn.classList.toggle('aberto')
 }
 
 // ── LANÇAMENTOS ────────────────────────────────────────────
@@ -5304,9 +5450,27 @@ function _renderLancamentos(rows, mes) {
     <input type="month" value="${mes}" onchange="filtrarFinLancamentos(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
   </div>`
   if (!rows.length) return html + `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento no mês.</p>`
-  html += `<div class="fin-grupo">`
-  for (const l of rows) html += _renderLancRow(l, true)
-  html += `</div>`
+  // Agrupar por data
+  const porData = {}
+  for (const l of rows) {
+    if (!porData[l.data]) porData[l.data] = []
+    porData[l.data].push(l)
+  }
+  for (const [data, itens] of Object.entries(porData)) {
+    const entDia = itens.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
+    const saiDia = itens.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
+    html += `<div class="fin-dia-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem;flex-wrap:wrap;gap:0.35rem">
+        <span class="fin-dia-header" style="margin:0">${esc(data)}</span>
+        <span style="font-size:0.75rem;font-weight:600;display:flex;gap:0.65rem">
+          <span style="color:var(--sucesso)">+${_fmtVal(entDia)}</span>
+          <span style="color:var(--erro)">-${_fmtVal(saiDia)}</span>
+        </span>
+      </div>
+      <div class="fin-chips-wrap">`
+    for (const l of itens) html += _renderChip(l, true)
+    html += `</div></div>`
+  }
   return html
 }
 
@@ -5323,29 +5487,31 @@ async function filtrarFinLancamentos(mes) {
   }
 }
 
-function _renderLancRow(l, comAcoes) {
+function _renderChip(l, comAcoes) {
   const isAdmin = usuario?.role === 'admin'
   const isOwner = l.lancado_por === usuario?.id
-  const validIcon = l.validado ? `<span class="fin-lancamento-validado" title="Validado por ${esc(l.validado_por || '')}">✓</span>` : ''
+  const cor = l.tipo === 'entrada' ? 'var(--sucesso)' : 'var(--erro)'
+  const cls = l.tipo === 'entrada' ? 'fin-chip-entrada' : 'fin-chip-saida'
+  const validMark = l.validado ? `<span class="fin-chip-validado" title="Validado">✓</span>` : ''
+
   let acoes = ''
   if (comAcoes) {
     if (isAdmin || (!l.validado && isOwner))
-      acoes += `<button class="btn btn-ghost btn-sm" onclick="editarLancamento('${esc(l.id)}')" title="Editar">✏️</button>`
+      acoes += `<button class="btn btn-ghost btn-sm" style="padding:0.1rem 0.3rem;font-size:0.7rem" onclick="editarLancamento('${esc(l.id)}')" title="Editar">✏️</button>`
     if (isAdmin && !l.validado)
-      acoes += `<button class="btn btn-ghost btn-sm" style="color:var(--sucesso)" onclick="validarLancamento('${esc(l.id)}')" title="Validar">✓</button>`
+      acoes += `<button class="btn btn-ghost btn-sm" style="padding:0.1rem 0.3rem;font-size:0.7rem;color:var(--sucesso)" onclick="validarLancamento('${esc(l.id)}')" title="Validar">✓</button>`
     if (isAdmin && l.validado)
-      acoes += `<button class="btn btn-ghost btn-sm" style="color:var(--alerta);font-size:0.9rem" onclick="desvalidarLancamento('${esc(l.id)}')" title="Desvalidar">↩</button>`
+      acoes += `<button class="btn btn-ghost btn-sm" style="padding:0.1rem 0.3rem;font-size:0.7rem;color:var(--alerta)" onclick="desvalidarLancamento('${esc(l.id)}')" title="Desvalidar">↩</button>`
     if (isAdmin || (!l.validado && isOwner))
-      acoes += `<button class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirLancamento('${esc(l.id)}')" title="Excluir">🗑</button>`
+      acoes += `<button class="btn btn-ghost btn-sm" style="padding:0.1rem 0.3rem;font-size:0.7rem;color:var(--erro)" onclick="excluirLancamento('${esc(l.id)}')" title="Excluir">🗑</button>`
   }
-  return `<div class="fin-lancamento-row">
-    <span class="fin-lancamento-tipo ${l.tipo === 'entrada' ? 'fin-tipo-entrada' : 'fin-tipo-saida'}">${l.tipo === 'entrada' ? 'Entrada' : 'Saída'}</span>
-    <div class="fin-lancamento-desc">
-      <div>${esc(l.descricao || l.categoria_nome)}${validIcon}</div>
-      <div class="fin-lancamento-cat">${esc(l.categoria_nome)}${l.evento_nome ? ' · ' + esc(l.evento_nome) : ''}</div>
-    </div>
-    <span class="fin-lancamento-valor" style="color:${l.tipo === 'entrada' ? 'var(--sucesso)' : 'var(--erro)'}">${l.tipo === 'saida' ? '-' : '+'}${_fmtVal(l.valor)}</span>
-    ${comAcoes ? `<div class="fin-lancamento-acoes">${acoes}</div>` : ''}
+
+  return `<div class="fin-chip ${cls}">
+    ${validMark}
+    <span class="fin-chip-cat">${esc(l.categoria_nome)}</span>
+    <span class="fin-chip-valor" style="color:${cor}">${l.tipo === 'saida' ? '-' : '+'}${_fmtVal(l.valor)}</span>
+    ${l.descricao ? `<span class="fin-chip-desc">${esc(l.descricao)}</span>` : ''}
+    ${acoes ? `<div class="fin-chip-acoes">${acoes}</div>` : ''}
   </div>`
 }
 
@@ -5361,7 +5527,6 @@ async function carregarFinRelatorio() {
     const data = await api('GET', `/financeiro/relatorio?mes=${mes}`)
     finRelatorioData = data
     el.innerHTML = _renderRelatorio(data)
-    _desenharGrafico(data)
   } catch (e) {
     el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
   }
@@ -5375,7 +5540,6 @@ async function filtrarFinRelatorio(mes) {
     const data = await api('GET', `/financeiro/relatorio?mes=${mes}`)
     finRelatorioData = data
     el.innerHTML = _renderRelatorio(data)
-    _desenharGrafico(data)
   } catch (e) {
     el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
   }
@@ -5398,9 +5562,29 @@ function _renderRelatorio(data) {
   </div>`
 
   if (por_data.length) {
+    const maxVal = Math.max(...por_data.map(d => Math.max(d.entradas, d.saidas)), 1)
+    const barHeight = 100
     html += `<div class="fin-relatorio-chart-wrapper">
-      <p style="font-size:0.78rem;font-weight:600;margin-bottom:0.75rem;color:var(--texto-mutado)">Entradas × Saídas por dia</p>
-      <canvas id="fin-chart-barras" height="180"></canvas>
+      <p style="font-size:0.78rem;font-weight:600;margin-bottom:0.85rem;color:var(--texto-mutado)">Entradas × Saídas por dia</p>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:${barHeight}px;overflow-x:auto;padding-bottom:1.5rem;position:relative">
+        <div style="position:absolute;bottom:1.5rem;left:0;right:0;height:1px;background:rgba(255,255,255,0.07)"></div>`
+    for (const d of por_data) {
+      const hEnt = Math.round((d.entradas / maxVal) * barHeight)
+      const hSai = Math.round((d.saidas   / maxVal) * barHeight)
+      const dia  = d.data.split('/')[0]
+      html += `<div style="flex:1;min-width:18px;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end;height:100%" title="${esc(d.data)} — +${_fmtVal(d.entradas)} / -${_fmtVal(d.saidas)}">
+          <div style="display:flex;gap:2px;align-items:flex-end;width:100%">
+            <div style="flex:1;height:${hEnt}px;background:rgba(92,173,106,0.7);border-radius:2px 2px 0 0;min-height:${d.entradas?2:0}px"></div>
+            <div style="flex:1;height:${hSai}px;background:rgba(232,93,93,0.65);border-radius:2px 2px 0 0;min-height:${d.saidas?2:0}px"></div>
+          </div>
+          <span style="font-size:0.6rem;color:var(--texto-mutado);position:absolute;bottom:0">${dia}</span>
+        </div>`
+    }
+    html += `</div>
+      <div style="display:flex;gap:1rem;margin-top:0.3rem;font-size:0.72rem;color:var(--texto-mutado)">
+        <span><span style="display:inline-block;width:10px;height:10px;background:rgba(92,173,106,0.7);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Entradas</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:rgba(232,93,93,0.65);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Saídas</span>
+      </div>
     </div>`
   }
 
@@ -5424,49 +5608,32 @@ function _renderRelatorio(data) {
   }
 
   if (lancamentos.length) {
-    html += `<div class="fin-grupo">`
-    let dataAtual = ''
+    const porData = {}
     for (const l of lancamentos) {
-      if (l.data !== dataAtual) {
-        dataAtual = l.data
-        html += `<div class="fin-data-header">${esc(l.data)}</div>`
-      }
-      html += _renderLancRow(l, false)
+      if (!porData[l.data]) porData[l.data] = []
+      porData[l.data].push(l)
     }
-    html += `</div>`
+    for (const [data, itens] of Object.entries(porData)) {
+      const entDia = itens.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
+      const saiDia = itens.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
+      html += `<div class="fin-dia-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem;flex-wrap:wrap;gap:0.35rem">
+          <span class="fin-dia-header" style="margin:0">${esc(data)}</span>
+          <span style="font-size:0.75rem;font-weight:600;display:flex;gap:0.65rem">
+            <span style="color:var(--sucesso)">+${_fmtVal(entDia)}</span>
+            <span style="color:var(--erro)">-${_fmtVal(saiDia)}</span>
+          </span>
+        </div>
+        <div class="fin-chips-wrap">`
+      for (const l of itens) html += _renderChip(l, false)
+      html += `</div></div>`
+    }
   } else {
     html += `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento no mês.</p>`
   }
   return html
 }
 
-function _desenharGrafico(data) {
-  setTimeout(() => {
-    const canvas = document.getElementById('fin-chart-barras')
-    if (!canvas || !window.Chart) return
-    if (canvas._chartInstance) { canvas._chartInstance.destroy() }
-    const { por_data } = data
-    const inst = new window.Chart(canvas, {
-      type: 'bar',
-      data: {
-        labels: por_data.map(d => d.data),
-        datasets: [
-          { label: 'Entradas', data: por_data.map(d => d.entradas), backgroundColor: 'rgba(92,173,106,0.55)', borderColor: 'rgba(92,173,106,0.9)', borderWidth: 1 },
-          { label: 'Saídas',   data: por_data.map(d => d.saidas),   backgroundColor: 'rgba(232,93,93,0.45)',  borderColor: 'rgba(232,93,93,0.9)',  borderWidth: 1 }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#8d96a3', font: { size: 11 } } } },
-        scales: {
-          x: { ticks: { color: '#8d96a3', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
-          y: { ticks: { color: '#8d96a3', font: { size: 10 }, callback: v => 'R$' + v.toFixed(0) }, grid: { color: 'rgba(255,255,255,0.06)' } }
-        }
-      }
-    })
-    canvas._chartInstance = inst
-  }, 50)
-}
 
 // ── CATEGORIAS ─────────────────────────────────────────────
 
@@ -5505,17 +5672,38 @@ async function carregarFinCategorias() {
 
 // ── MODAL LANÇAMENTO ────────────────────────────────────────
 
+function _popularEventosModal(dataVal, escalaIdSelecionado) {
+  const selEv = document.getElementById('lanc-escala')
+  if (!selEv) return
+
+  // Escalas que têm o mesmo dia — uma opção por escala (id único)
+  const escalasNaData = (finEscalas || []).filter(e => e.data === dataVal)
+
+  let opts = '<option value="">Sem culto vinculado</option>'
+  if (escalasNaData.length) {
+    for (const e of escalasNaData) {
+      const evNome = finEventos.find(ev => ev.id === e.evento_id)?.nome || 'Culto'
+      const depto  = e.departamento_nome ? ` — ${e.departamento_nome}` : ''
+      opts += `<option value="${esc(e.id)}">${esc(evNome)}${esc(depto)}</option>`
+    }
+  }
+  selEv.innerHTML = opts
+
+  if (escalaIdSelecionado) {
+    selEv.value = escalaIdSelecionado
+  } else if (escalasNaData.length === 1) {
+    selEv.value = escalasNaData[0].id   // auto-seleciona quando há um único culto
+  }
+}
+
 function abrirModalLancamento(existente) {
   document.getElementById('modal-lancamento-titulo').textContent = existente ? 'Editar Lançamento' : 'Novo Lançamento'
   document.getElementById('lanc-id').value = existente?.id || ''
   document.getElementById('lanc-erro').style.display = 'none'
 
   const selCat = document.getElementById('lanc-categoria')
-  const selEv  = document.getElementById('lanc-evento')
   const cats = finCategorias.filter(c => c.ativo || existente?.categoria_id === c.id)
   selCat.innerHTML = cats.map(c => `<option value="${esc(c.id)}">${esc(c.nome)} (${c.tipo})</option>`).join('')
-  selEv.innerHTML = `<option value="">Sem evento</option>` +
-    finEventos.map(e => `<option value="${esc(e.id)}">${esc(e.nome)}</option>`).join('')
 
   const optSaida = document.querySelector('#lanc-tipo option[value="saida"]')
   if (optSaida) optSaida.style.display = usuario?.role === 'admin' ? '' : 'none'
@@ -5526,12 +5714,13 @@ function abrirModalLancamento(existente) {
     document.getElementById('lanc-data').value      = existente.data || ''
     document.getElementById('lanc-descricao').value = existente.descricao || ''
     selCat.value = existente.categoria_id || ''
-    selEv.value  = existente.evento_id    || ''
+    _popularEventosModal(existente.data || '', existente.escala_id || '')
   } else {
     document.getElementById('lanc-tipo').value      = 'entrada'
     document.getElementById('lanc-valor').value     = ''
     document.getElementById('lanc-data').value      = _dataHoje()
     document.getElementById('lanc-descricao').value = ''
+    _popularEventosModal(_dataHoje(), '')
   }
   document.getElementById('modal-lancamento').classList.add('aberto')
 }
@@ -5550,7 +5739,7 @@ async function salvarLancamento(ev) {
     categoria_id: document.getElementById('lanc-categoria').value,
     valor:        parseFloat(document.getElementById('lanc-valor').value),
     data:         document.getElementById('lanc-data').value,
-    evento_id:    document.getElementById('lanc-evento').value || null,
+    escala_id:    document.getElementById('lanc-escala').value || null,
     descricao:    document.getElementById('lanc-descricao').value.trim()
   }
   try {
