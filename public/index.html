@@ -1413,14 +1413,14 @@
     </div>
 
     <nav class="header-nav" id="header-nav">
-      <button class="nav-link ativo" data-pagina="dashboard" onclick="navegar('dashboard')">🏠 Painel</button>
-      <button class="nav-link" data-pagina="escalas"       onclick="navegar('escalas')">📅 Escalas</button>
-      <button class="nav-link" data-pagina="equipe"        onclick="navegar('equipe')">👥 Equipe</button>
-      <button class="nav-link" data-pagina="departamentos" onclick="navegar('departamentos')">🏛️ Departamentos</button>
-      <button class="nav-link" data-pagina="comunicacoes" onclick="navegar('comunicacoes')">💬 Comunicações</button>
-      <button class="nav-link" id="nav-cadastro" data-pagina="cadastros" onclick="navegar('cadastros')" style="display:none">⚙️ Cadastros</button>
-      <button class="nav-link" id="nav-financeiro" data-pagina="financeiro" onclick="navegar('financeiro')" style="display:none">💰 Financeiro</button>
-      <button class="nav-link" data-pagina="agente"        onclick="navegar('agente')">🔥 Pastor IA</button>
+      <button class="nav-link ativo" id="nav-dashboard"     data-pagina="dashboard"     onclick="navegar('dashboard')">🏠 Painel</button>
+      <button class="nav-link"       id="nav-escalas"       data-pagina="escalas"       onclick="navegar('escalas')">📅 Escalas</button>
+      <button class="nav-link"       id="nav-equipe"        data-pagina="equipe"        onclick="navegar('equipe')">👥 Equipe</button>
+      <button class="nav-link"       id="nav-departamentos" data-pagina="departamentos" onclick="navegar('departamentos')">🏛️ Departamentos</button>
+      <button class="nav-link"       id="nav-comunicacoes"  data-pagina="comunicacoes"  onclick="navegar('comunicacoes')">💬 Comunicações</button>
+      <button class="nav-link" id="nav-cadastro"            data-pagina="cadastros"     onclick="navegar('cadastros')" style="display:none">⚙️ Cadastros</button>
+      <button class="nav-link" id="nav-financeiro"          data-pagina="financeiro"    onclick="navegar('financeiro')" style="display:none">💰 Financeiro</button>
+      <button class="nav-link"       id="nav-agente"        data-pagina="agente"        onclick="navegar('agente')">🔥 Pastor IA</button>
     </nav>
 
     <div class="header-right">
@@ -2312,8 +2312,15 @@ function mostrarApp() {
   roleEl.textContent = rotuloPerfil(usuario?.role)
   roleEl.className = `usuario-role role-${usuario?.role || 'membro'}`
 
+  const somenteFinanceiro = _apenasFinanceiro()
+  const paginasMedia = ['nav-escalas','nav-equipe','nav-departamentos','nav-comunicacoes','nav-cadastro','nav-agente','nav-dashboard']
+  for (const id of paginasMedia) {
+    const el = document.getElementById(id)
+    if (el) el.style.display = somenteFinanceiro ? 'none' : ''
+  }
+  // Cadastros: só liderança (já estava restrito)
   const navCad = document.getElementById('nav-cadastro')
-  if (navCad) navCad.style.display = temPapelLiderancaNoApp() ? '' : 'none'
+  if (navCad && !somenteFinanceiro) navCad.style.display = temPapelLiderancaNoApp() ? '' : 'none'
 
   const navFin = document.getElementById('nav-financeiro')
   if (navFin) navFin.style.display = (usuario?.role === 'admin' || usuario?.acesso_financeiro) ? '' : 'none'
@@ -2367,6 +2374,9 @@ function irEquipeParaVincular() {
 // NAVEGAÇÃO
 // ═══════════════════════════════════════════════════════════
 function navegar(pagina) {
+  const restritas = ['escalas','equipe','departamentos','comunicacoes','cadastros','agente','dashboard']
+  if (_apenasFinanceiro() && restritas.includes(pagina)) pagina = 'financeiro'
+
   document.querySelectorAll('.nav-link').forEach(el =>
     el.classList.toggle('ativo', el.dataset.pagina === pagina)
   )
@@ -2421,6 +2431,12 @@ function dataEscalaParaISO(dataStr) {
 
 function dataBRparaInputDate(dataBR) {
   return dataEscalaParaISO(dataBR)
+}
+
+/** Usuário financeiro puro: tem acesso_financeiro mas não pertence a nenhum departamento e não é admin. */
+function _apenasFinanceiro() {
+  if (!usuario || usuario.role === 'admin') return false
+  return !!(usuario.acesso_financeiro && !(usuario.departamentos?.length))
 }
 
 /** Líder em pelo menos um departamento (mesmo com perfil global “membro” em dados antigos). */
@@ -3592,8 +3608,12 @@ async function carregarCadastros() {
           <div class="form-grupo"><label>Nome completo</label><input id="conv-nome" required placeholder="Nome do voluntário"/></div>
           <div class="form-grupo"><label>E-mail</label><input id="conv-email" type="email" required placeholder="email@exemplo.com"/></div>
           <div class="form-grupo"><label>Celular</label><input id="conv-celular" type="tel" placeholder="(11) 99999-9999"/></div>
-          <div class="form-grupo"><label>Departamento</label><select id="conv-depto" required><option value="">Selecione…</option>${optDeptos}</select></div>
-          <div class="form-grupo"><label>Perfil e permissões</label>
+          <div class="form-grupo"><label style="text-transform:none;letter-spacing:0">
+            <input type="checkbox" id="conv-apenas-financeiro" style="width:auto;margin-right:0.5rem" onchange="_toggleConvFinanceiro(this.checked)"/>
+            Obreiro financeiro (sem acesso às escalas de mídia)
+          </label></div>
+          <div id="conv-depto-wrap" class="form-grupo"><label>Departamento</label><select id="conv-depto" required><option value="">Selecione…</option>${optDeptos}</select></div>
+          <div id="conv-perfil-wrap" class="form-grupo"><label>Perfil e permissões</label>
             <select id="conv-perfil" aria-describedby="conv-perfil-ajuda">
               <option value="voluntario">Voluntário — visualizar escalas, comunicações e solicitar trocas</option>
               <option value="lider">Líder deste departamento — cadastros, escalas, aprovar trocas e convites aqui</option>
@@ -3653,13 +3673,23 @@ async function carregarCadastros() {
   }
 }
 
+function _toggleConvFinanceiro(checked) {
+  const deptoWrap = document.getElementById('conv-depto-wrap')
+  const perfilWrap = document.getElementById('conv-perfil-wrap')
+  const selDepto = document.getElementById('conv-depto')
+  if (deptoWrap) deptoWrap.style.display = checked ? 'none' : ''
+  if (perfilWrap) perfilWrap.style.display = checked ? 'none' : ''
+  if (selDepto) selDepto.required = !checked
+}
+
 async function handleConvidarAdmin(e) {
   e.preventDefault()
   const nome = document.getElementById('conv-nome').value.trim()
   const email = document.getElementById('conv-email').value.trim()
   const celular = document.getElementById('conv-celular').value.trim()
-  const departamento_id = document.getElementById('conv-depto').value
-  const perfil_convite = document.getElementById('conv-perfil')?.value || 'voluntario'
+  const apenasFinanceiro = document.getElementById('conv-apenas-financeiro')?.checked
+  const departamento_id = apenasFinanceiro ? '' : document.getElementById('conv-depto').value
+  const perfil_convite = apenasFinanceiro ? 'voluntario' : (document.getElementById('conv-perfil')?.value || 'voluntario')
   const enviar_email = document.getElementById('conv-enviar-email').checked
   const enviar_whatsapp = document.getElementById('conv-enviar-whatsapp')?.checked === true
   const mensagem_convite = document.getElementById('conv-mensagem')?.value?.trim() || ''
@@ -3668,16 +3698,10 @@ async function handleConvidarAdmin(e) {
   btn.disabled = true
   erro.style.display = 'none'
   try {
-    const data = await api('POST', '/auth/convidar', {
-      nome,
-      email,
-      celular,
-      departamento_id,
-      perfil_convite,
-      enviar_email,
-      enviar_whatsapp,
-      mensagem_convite
-    })
+    const body = { nome, email, celular, perfil_convite, enviar_email, enviar_whatsapp, mensagem_convite }
+    if (departamento_id) body.departamento_id = departamento_id
+    if (apenasFinanceiro) body.acesso_financeiro = true
+    const data = await api('POST', '/auth/convidar', body)
     const baseUrl = window.location.origin || ''
     if (!data.email?.enviado && data.senha_provisoria) {
       const texto = montarTextoConviteWhatsApp({

@@ -131,15 +131,27 @@ router.post('/convidar', autenticar, async (req, res) => {
     perfil_convite,
     enviar_email,
     enviar_whatsapp,
-    mensagem_convite
+    mensagem_convite,
+    acesso_financeiro
   } = req.body
-  if (!nome || !email || !departamento_id)
-    return res.status(400).json({ erro: 'nome, email e departamento_id são obrigatórios' })
 
-  const depto = db.get('SELECT id FROM departamentos WHERE id = ? AND ativo = 1', departamento_id)
-  if (!depto) return res.status(404).json({ erro: 'Departamento não encontrado' })
+  const apenasFinanceiro = !departamento_id && !!acesso_financeiro
+  if (!nome || !email)
+    return res.status(400).json({ erro: 'nome e email são obrigatórios' })
+  if (!apenasFinanceiro && !departamento_id)
+    return res.status(400).json({ erro: 'departamento_id é obrigatório para membros da equipe' })
 
-  if (req.usuario.role !== 'admin') {
+  // Apenas admin pode criar obreiros financeiros sem departamento
+  if (apenasFinanceiro && req.usuario.role !== 'admin')
+    return res.status(403).json({ erro: 'Apenas admin pode cadastrar obreiros financeiros' })
+
+  let depto = null
+  if (departamento_id) {
+    depto = db.get('SELECT id FROM departamentos WHERE id = ? AND ativo = 1', departamento_id)
+    if (!depto) return res.status(404).json({ erro: 'Departamento não encontrado' })
+  }
+
+  if (!apenasFinanceiro && req.usuario.role !== 'admin') {
     if (req.usuario.role !== 'lider') {
       return res.status(403).json({ erro: 'Acesso restrito a administradores e líderes' })
     }
@@ -182,25 +194,28 @@ router.post('/convidar', autenticar, async (req, res) => {
   const agora = new Date().toISOString()
 
   db.run(
-    `INSERT INTO usuarios (id, nome, email, celular, senha, role, ativo, criado_em, precisa_trocar_senha) VALUES (?,?,?,?,?,?,1,?,1)`,
+    `INSERT INTO usuarios (id, nome, email, celular, senha, role, ativo, criado_em, precisa_trocar_senha, acesso_financeiro) VALUES (?,?,?,?,?,?,1,?,1,?)`,
     id,
     nome,
     email,
     celular || '',
     hash,
     globalRole,
-    agora
+    agora,
+    apenasFinanceiro ? 1 : 0
   )
 
-  const vid = uuid()
-  db.run(
-    `INSERT INTO usuario_departamento (id, usuario_id, departamento_id, role_depto, acesso_departamentos) VALUES (?,?,?,?,?)`,
-    vid,
-    id,
-    departamento_id,
-    roleDeptoFinal,
-    '[]'
-  )
+  if (departamento_id) {
+    const vid = uuid()
+    db.run(
+      `INSERT INTO usuario_departamento (id, usuario_id, departamento_id, role_depto, acesso_departamentos) VALUES (?,?,?,?,?)`,
+      vid,
+      id,
+      departamento_id,
+      roleDeptoFinal,
+      '[]'
+    )
+  }
 
   syncTudoParaMemoria()
 
