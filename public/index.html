@@ -5405,7 +5405,10 @@ function _renderDiaEventos(data, itens, isHoje) {
       </span>
       <span class="fin-evento-mini-stats">
         <span style="color:var(--sucesso)">+${_fmtVal(entDia)}</span>
-        <span style="color:var(--erro)">-${_fmtVal(saiDia)}</span>
+        <span style="color:var(--texto-mutado)">−</span>
+        <span style="color:var(--erro)">${_fmtVal(saiDia)}</span>
+        <span style="color:var(--texto-mutado)">=</span>
+        <span style="color:${entDia - saiDia >= 0 ? 'var(--sucesso)' : 'var(--erro)'}; font-weight:600">${_fmtVal(entDia - saiDia)}</span>
       </span>
     </div>`
 
