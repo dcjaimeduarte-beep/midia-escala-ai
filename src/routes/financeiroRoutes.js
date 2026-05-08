@@ -87,11 +87,18 @@ router.get('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
     return res.status(403).json({ erro: 'Sem permissão' })
   }
 
+  // Não-admin só vê a própria congregação
+  if (req.usuario.role !== 'admin' && req.usuario.congregacao_id) {
+    where.push('l.congregacao_id = ?')
+    params.push(req.usuario.congregacao_id)
+  }
+
   const sql = `
     SELECT l.*, c.nome as categoria_nome, c.tipo as categoria_tipo,
            u.nome as lancado_por_nome,
            COALESCE(ev2.nome, e.nome) as evento_nome,
-           es.data as escala_data, d.nome as escala_depto
+           es.data as escala_data, d.nome as escala_depto,
+           cg.nome as congregacao_nome
     FROM lancamentos_financeiro l
     JOIN categorias_financeiro c ON c.id = l.categoria_id
     JOIN usuarios u ON u.id = l.lancado_por
@@ -99,6 +106,7 @@ router.get('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
     LEFT JOIN escalas es ON es.id = l.escala_id
     LEFT JOIN eventos ev2 ON ev2.id = es.evento_id
     LEFT JOIN departamentos d ON d.id = es.departamento_id
+    LEFT JOIN congregacoes cg ON cg.id = l.congregacao_id
     ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     ORDER BY l.data DESC, l.criado_em DESC
   `
@@ -127,10 +135,11 @@ router.post('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
 
   const id = uuid()
   const agora = new Date().toISOString()
+  const congId = req.usuario.congregacao_id || null
   db.run(`INSERT INTO lancamentos_financeiro
-    (id,data,escala_id,evento_id,categoria_id,valor,descricao,tipo,lancado_por,validado,criado_em)
-    VALUES (?,?,?,?,?,?,?,?,?,0,?)`,
-    id, data, escala_id || null, eventoFinal, categoria_id, Number(valor), descricao || '', tipo, req.usuario.id, agora)
+    (id,data,escala_id,evento_id,categoria_id,valor,descricao,tipo,lancado_por,validado,criado_em,congregacao_id)
+    VALUES (?,?,?,?,?,?,?,?,?,0,?,?)`,
+    id, data, escala_id || null, eventoFinal, categoria_id, Number(valor), descricao || '', tipo, req.usuario.id, agora, congId)
 
   res.status(201).json(db.get(`
     SELECT l.*, c.nome as categoria_nome, u.nome as lancado_por_nome,
@@ -213,11 +222,17 @@ router.post('/lancamentos/:id/desvalidar', autenticar, apenasAdmin, (req, res) =
 router.get('/dashboard', autenticar, apenasFinanceiro, (req, res) => {
   const data = req.query.data || hoje()
 
+  const congFilter = req.usuario.role !== 'admin' && req.usuario.congregacao_id
+    ? 'AND l.congregacao_id = ?' : ''
+  const congParam  = req.usuario.role !== 'admin' && req.usuario.congregacao_id
+    ? [req.usuario.congregacao_id] : []
+
   const lancamentos = db.all(`
     SELECT l.*, c.nome as categoria_nome, c.tipo as categoria_tipo,
            u.nome as lancado_por_nome,
            COALESCE(ev2.nome, e.nome) as evento_nome,
-           es.data as escala_data, d.nome as escala_depto
+           es.data as escala_data, d.nome as escala_depto,
+           cg.nome as congregacao_nome
     FROM lancamentos_financeiro l
     JOIN categorias_financeiro c ON c.id = l.categoria_id
     JOIN usuarios u ON u.id = l.lancado_por
@@ -225,9 +240,10 @@ router.get('/dashboard', autenticar, apenasFinanceiro, (req, res) => {
     LEFT JOIN escalas es  ON es.id  = l.escala_id
     LEFT JOIN eventos ev2 ON ev2.id = es.evento_id
     LEFT JOIN departamentos d ON d.id = es.departamento_id
-    WHERE l.data = ?
+    LEFT JOIN congregacoes cg ON cg.id = l.congregacao_id
+    WHERE l.data = ? ${congFilter}
     ORDER BY l.criado_em
-  `, data)
+  `, data, ...congParam)
 
   // Agrupa por escala_id (quando disponível) ou evento_id
   const porEvento = {}
@@ -257,11 +273,17 @@ router.get('/relatorio', autenticar, apenasFinanceiro, (req, res) => {
   const mes = req.query.mes || isoHoje().slice(0, 7)
   const [y, m] = mes.split('-')
 
+  const relCongFilter = req.usuario.role !== 'admin' && req.usuario.congregacao_id
+    ? 'AND l.congregacao_id = ?' : ''
+  const relCongParam  = req.usuario.role !== 'admin' && req.usuario.congregacao_id
+    ? [req.usuario.congregacao_id] : []
+
   const lancamentos = db.all(`
     SELECT l.*, c.nome as categoria_nome, c.tipo as categoria_tipo,
            u.nome as lancado_por_nome,
            COALESCE(ev2.nome, e.nome) as evento_nome,
-           d.nome as escala_depto
+           d.nome as escala_depto,
+           cg.nome as congregacao_nome
     FROM lancamentos_financeiro l
     JOIN categorias_financeiro c ON c.id = l.categoria_id
     JOIN usuarios u ON u.id = l.lancado_por
@@ -269,9 +291,10 @@ router.get('/relatorio', autenticar, apenasFinanceiro, (req, res) => {
     LEFT JOIN escalas es  ON es.id  = l.escala_id
     LEFT JOIN eventos ev2 ON ev2.id = es.evento_id
     LEFT JOIN departamentos d ON d.id = es.departamento_id
-    WHERE substr(l.data,7,4) = ? AND substr(l.data,4,2) = ?
+    LEFT JOIN congregacoes cg ON cg.id = l.congregacao_id
+    WHERE substr(l.data,7,4) = ? AND substr(l.data,4,2) = ? ${relCongFilter}
     ORDER BY l.data, l.criado_em
-  `, y, m)
+  `, y, m, ...relCongParam)
 
   // Por categoria
   const porCategoria = {}

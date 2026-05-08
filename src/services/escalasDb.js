@@ -209,20 +209,15 @@ function criarEscalaNoBanco(opts) {
     evento_id = null,
     observacao = '',
     criado_por = null,
+    congregacao_id = null,
     voluntarios = []
   } = opts
 
   const id = uuid()
   const agora = new Date().toISOString()
   sql.run(
-    `INSERT INTO escalas (id, data, departamento_id, observacao, criado_por, criado_em, evento_id) VALUES (?,?,?,?,?,?,?)`,
-    id,
-    data,
-    departamento_id,
-    observacao,
-    criado_por,
-    agora,
-    evento_id || null
+    `INSERT INTO escalas (id, data, departamento_id, observacao, criado_por, criado_em, evento_id, congregacao_id) VALUES (?,?,?,?,?,?,?,?)`,
+    id, data, departamento_id, observacao, criado_por, agora, evento_id || null, congregacao_id
   )
   inserirVoluntariosNaEscala(id, departamento_id, voluntarios)
   return id

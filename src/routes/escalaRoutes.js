@@ -47,6 +47,7 @@ router.post('/criar', autenticar, verificarAcessoDepartamento, (req, res) => {
       evento_id: evento_id || null,
       observacao: observacao || '',
       criado_por: req.usuario.id,
+      congregacao_id: req.usuario.congregacao_id || null,
       voluntarios: voluntarios || []
     })
     syncEscalasParaMemoria()

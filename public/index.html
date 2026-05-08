@@ -1427,6 +1427,7 @@
       <div class="usuario-info">
         <div class="usuario-nome" id="hdr-nome">—</div>
         <span class="usuario-role" id="hdr-role"></span>
+        <span id="hdr-cong" style="font-size:0.65rem;color:var(--texto-mutado);display:none;margin-top:0.1rem"></span>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="logout()">Sair</button>
       <button class="hamburger" onclick="toggleMenu()">
@@ -2315,6 +2316,13 @@ function mostrarApp() {
   const roleEl = document.getElementById('hdr-role')
   roleEl.textContent = rotuloPerfil(usuario?.role)
   roleEl.className = `usuario-role role-${usuario?.role || 'membro'}`
+
+  const congEl = document.getElementById('hdr-cong')
+  if (congEl) {
+    const nomeCong = usuario?.congregacao?.nome
+    if (nomeCong) { congEl.textContent = '⛪ ' + nomeCong; congEl.style.display = '' }
+    else congEl.style.display = 'none'
+  }
 
   const somenteFinanceiro = _apenasFinanceiro()
   const paginasMedia = ['nav-escalas','nav-equipe','nav-departamentos','nav-comunicacoes','nav-cadastro','nav-agente','nav-dashboard']
@@ -5478,8 +5486,11 @@ function _renderDashboard(rows, mes) {
   const [ano, mesN] = mes.split('-')
   const nomeMes = new Date(parseInt(ano), parseInt(mesN)-1, 1).toLocaleString('pt-BR', { month: 'long' })
 
+  const nomeCong = usuario?.congregacao?.nome
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
-    <span style="font-size:0.8rem;color:var(--texto-mutado)">${nomeMes} de ${ano}</span>
+    <span style="font-size:0.8rem;color:var(--texto-mutado)">
+      ${nomeCong ? `<span style="color:var(--texto);font-weight:600">⛪ ${esc(nomeCong)}</span> · ` : ''}${nomeMes} de ${ano}
+    </span>
     <input type="month" value="${mes}" onchange="carregarFinDashboardData(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
   </div>
   <div class="fin-resumo-grid">
