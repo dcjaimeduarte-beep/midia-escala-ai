@@ -17,7 +17,7 @@ function autenticar(req, res, next) {
   try {
     const payload = jwt.verify(auth.split(' ')[1], SECRET)
     const row = db.get(
-      'SELECT id, nome, email, role, acesso_financeiro FROM usuarios WHERE id = ? AND ativo = 1',
+      'SELECT id, nome, email, role, acesso_financeiro, congregacao_id FROM usuarios WHERE id = ? AND ativo = 1',
       payload.id
     )
     if (!row) return res.status(401).json({ erro: 'Usuário inválido ou inativo' })
@@ -26,7 +26,8 @@ function autenticar(req, res, next) {
       nome: row.nome,
       email: row.email,
       role: row.role,
-      acesso_financeiro: !!row.acesso_financeiro
+      acesso_financeiro: !!row.acesso_financeiro,
+      congregacao_id: row.congregacao_id || null
     }
     next()
   } catch {

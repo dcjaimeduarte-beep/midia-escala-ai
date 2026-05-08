@@ -258,6 +258,36 @@ function migrate() {
       hora_fim         TEXT NOT NULL DEFAULT ''
     );
   `)
+
+  // ── CONGREGAÇÕES ─────────────────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS congregacoes (
+      id        TEXT PRIMARY KEY,
+      nome      TEXT NOT NULL,
+      tipo      TEXT NOT NULL DEFAULT 'subcongregacao' CHECK(tipo IN ('sede','subcongregacao')),
+      cidade    TEXT NOT NULL DEFAULT '',
+      endereco  TEXT NOT NULL DEFAULT '',
+      ativo     INTEGER NOT NULL DEFAULT 1,
+      criado_em TEXT NOT NULL
+    );
+  `)
+
+  tryExec(`ALTER TABLE usuarios    ADD COLUMN congregacao_id TEXT REFERENCES congregacoes(id) ON DELETE SET NULL`)
+  tryExec(`ALTER TABLE escalas     ADD COLUMN congregacao_id TEXT REFERENCES congregacoes(id) ON DELETE SET NULL`)
+  tryExec(`ALTER TABLE lancamentos_financeiro ADD COLUMN congregacao_id TEXT REFERENCES congregacoes(id) ON DELETE SET NULL`)
+
+  // Garante que existe ao menos uma congregação sede
+  const { n: nCong } = db.get('SELECT COUNT(*) as n FROM congregacoes') || { n: 0 }
+  if (!nCong) {
+    const { v4: uuidv4 } = require('uuid')
+    const sedeId = uuidv4()
+    db.run(`INSERT INTO congregacoes (id,nome,tipo,cidade,endereco,ativo,criado_em) VALUES (?,?,?,?,?,1,?)`,
+      sedeId, 'Igreja Sede', 'sede', '', '', new Date().toISOString())
+    // Vincula todos os usuários e escalas existentes à sede
+    db.run(`UPDATE usuarios SET congregacao_id = ? WHERE congregacao_id IS NULL`, sedeId)
+    db.run(`UPDATE escalas  SET congregacao_id = ? WHERE congregacao_id IS NULL`, sedeId)
+    db.run(`UPDATE lancamentos_financeiro SET congregacao_id = ? WHERE congregacao_id IS NULL`, sedeId)
+  }
 }
 
 module.exports = { initSchema, seedDepartamentos, migrate }

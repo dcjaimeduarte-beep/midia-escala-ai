@@ -31,10 +31,16 @@ function departamentosPayload(usuarioId) {
 function usuarioPublico(row) {
   if (!row) return null
   const { senha, ...rest } = row
+  // Enriquece com nome da congregação
+  const cong = rest.congregacao_id
+    ? db.get('SELECT id, nome, tipo FROM congregacoes WHERE id = ?', rest.congregacao_id)
+    : null
   return {
     ...rest,
     ativo: !!rest.ativo,
-    precisa_trocar_senha: !!rest.precisa_trocar_senha
+    precisa_trocar_senha: !!rest.precisa_trocar_senha,
+    acesso_financeiro: !!rest.acesso_financeiro,
+    congregacao: cong || null
   }
 }
 
@@ -132,7 +138,8 @@ router.post('/convidar', autenticar, async (req, res) => {
     enviar_email,
     enviar_whatsapp,
     mensagem_convite,
-    acesso_financeiro
+    acesso_financeiro,
+    congregacao_id
   } = req.body
 
   const apenasFinanceiro = !departamento_id && !!acesso_financeiro
@@ -193,8 +200,12 @@ router.post('/convidar', autenticar, async (req, res) => {
   const id = uuid()
   const agora = new Date().toISOString()
 
+  // Resolve congregação: usa a fornecida, ou a do admin que convida, ou a sede
+  const sede = db.get(`SELECT id FROM congregacoes WHERE tipo = 'sede' LIMIT 1`)
+  const congId = congregacao_id || req.usuario.congregacao_id || sede?.id || null
+
   db.run(
-    `INSERT INTO usuarios (id, nome, email, celular, senha, role, ativo, criado_em, precisa_trocar_senha, acesso_financeiro) VALUES (?,?,?,?,?,?,1,?,1,?)`,
+    `INSERT INTO usuarios (id, nome, email, celular, senha, role, ativo, criado_em, precisa_trocar_senha, acesso_financeiro, congregacao_id) VALUES (?,?,?,?,?,?,1,?,1,?,?)`,
     id,
     nome,
     email,
@@ -202,7 +213,8 @@ router.post('/convidar', autenticar, async (req, res) => {
     hash,
     globalRole,
     agora,
-    apenasFinanceiro ? 1 : 0
+    apenasFinanceiro ? 1 : 0,
+    congId
   )
 
   if (departamento_id) {

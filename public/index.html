@@ -1707,6 +1707,10 @@
         <input type="checkbox" id="edit-usuario-financeiro" style="width:auto;margin-right:0.5rem"/> Acesso ao módulo financeiro
       </label>
       <p class="muted" style="font-size:0.75rem;margin:0.2rem 0 0;line-height:1.4">Permite lançar entradas e visualizar dashboards e relatórios.</p></div>
+      <div class="form-grupo" id="edit-usuario-cong-wrap" style="display:none">
+        <label>Congregação</label>
+        <select id="edit-usuario-cong"><option value="">Sem congregação</option></select>
+      </div>
       <div class="form-grupo" id="edit-usuario-deptos-wrap">
         <label>Departamentos</label>
         <p class="muted" style="font-size:0.78rem;margin:0 0 0.5rem;line-height:1.45">
@@ -3586,6 +3590,25 @@ async function carregarCadastros() {
         `).join('') + '</tbody></table></div>'
       : '<p class="vazio">Nenhum tipo de evento cadastrado.</p>'
 
+    await carregarCongregacoesCache()
+    const tabelaCongs = congregacoesCache.length
+      ? `<div class="tabela-wrapper" style="margin-bottom:1.5rem"><table><thead><tr><th>Nome</th><th>Tipo</th><th>Cidade</th><th>Membros</th><th>Status</th><th></th></tr></thead><tbody>` +
+        congregacoesCache.map(c => `
+          <tr>
+            <td><strong>${esc(c.nome)}</strong></td>
+            <td>${c.tipo === 'sede' ? '<span class="badge badge-sucesso">Sede</span>' : 'Subcongregação'}</td>
+            <td>${esc(c.cidade || '—')}</td>
+            <td>${c.total_membros ?? 0}</td>
+            <td>${c.ativo ? '<span class="badge badge-sucesso">Ativa</span>' : '<span class="badge badge-vermelho">Inativa</span>'}</td>
+            <td style="white-space:nowrap">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalEditarCong('${esc(c.id)}')">Editar</button>
+              ${c.tipo !== 'sede' ? `<button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirCong('${esc(c.id)}')">Excluir</button>` : ''}
+            </td>
+          </tr>`).join('') + '</tbody></table></div>'
+      : '<p class="vazio">Nenhuma congregação.</p>'
+
+    const optCongs = congregacoesCache.map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('')
+
     el.innerHTML = `
       <div class="card" style="margin-bottom:1.5rem;padding:1.25rem;text-align:left">
         <h3 style="font-family:var(--fonte-display);font-size:1rem;font-weight:600;margin-bottom:0.75rem;letter-spacing:-0.02em">Onde alterar cada cadastro</h3>
@@ -3598,16 +3621,35 @@ async function carregarCadastros() {
         </ul>
       </div>
 
+      <p class="secao-label">⛪ Congregações</p>
+      <p class="muted" style="font-size:0.8rem;margin:-0.5rem 0 1rem">Gerencie a sede e as subcongregações.</p>
+      ${tabelaCongs}
+      <div class="card" style="margin-bottom:1.5rem">
+        <form onsubmit="criarCong(event)" class="card-body" style="padding:1.25rem">
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+            <div class="form-grupo" style="flex:2;min-width:160px"><label>Nome</label><input id="cong-nome" required placeholder="Ex.: Congregação Norte"/></div>
+            <div class="form-grupo" style="flex:1;min-width:120px"><label>Tipo</label>
+              <select id="cong-tipo"><option value="subcongregacao">Subcongregação</option><option value="sede">Sede</option></select>
+            </div>
+            <div class="form-grupo" style="flex:1;min-width:120px"><label>Cidade</label><input id="cong-cidade" placeholder="Cidade"/></div>
+            <div class="form-grupo" style="flex:2;min-width:160px"><label>Endereço</label><input id="cong-end" placeholder="Rua, número…"/></div>
+          </div>
+          <p id="cong-erro" class="erro-msg"></p>
+          <button type="submit" class="btn btn-primario btn-sm">Adicionar congregação</button>
+        </form>
+      </div>
+
       <p class="secao-label">🏛️ Departamentos cadastrados</p>
       <p class="muted" style="font-size:0.8rem;margin:-0.5rem 0 1rem">Altere nome/aparência ou exclua quando necessário.</p>
       ${tabelaDeptosGerir}
 
-      <p class="secao-label">📧 Convidar voluntário</p>
+      <p class="secao-label">📧 Convidar voluntário / obreiro</p>
       <div class="card" style="margin-bottom:1.5rem">
         <form id="form-convidar" onsubmit="handleConvidarAdmin(event)" class="card-body" style="padding:1.25rem">
           <div class="form-grupo"><label>Nome completo</label><input id="conv-nome" required placeholder="Nome do voluntário"/></div>
           <div class="form-grupo"><label>E-mail</label><input id="conv-email" type="email" required placeholder="email@exemplo.com"/></div>
           <div class="form-grupo"><label>Celular</label><input id="conv-celular" type="tel" placeholder="(11) 99999-9999"/></div>
+          <div class="form-grupo"><label>Congregação</label><select id="conv-cong"><option value="">Selecione…</option>${optCongs}</select></div>
           <div class="form-grupo"><label style="text-transform:none;letter-spacing:0">
             <input type="checkbox" id="conv-apenas-financeiro" style="width:auto;margin-right:0.5rem" onchange="_toggleConvFinanceiro(this.checked)"/>
             Obreiro financeiro (sem acesso às escalas de mídia)
@@ -3689,6 +3731,7 @@ async function handleConvidarAdmin(e) {
   const celular = document.getElementById('conv-celular').value.trim()
   const apenasFinanceiro = document.getElementById('conv-apenas-financeiro')?.checked
   const departamento_id = apenasFinanceiro ? '' : document.getElementById('conv-depto').value
+  const congregacao_id  = document.getElementById('conv-cong')?.value || ''
   const perfil_convite = apenasFinanceiro ? 'voluntario' : (document.getElementById('conv-perfil')?.value || 'voluntario')
   const enviar_email = document.getElementById('conv-enviar-email').checked
   const enviar_whatsapp = document.getElementById('conv-enviar-whatsapp')?.checked === true
@@ -3700,6 +3743,7 @@ async function handleConvidarAdmin(e) {
   try {
     const body = { nome, email, celular, perfil_convite, enviar_email, enviar_whatsapp, mensagem_convite }
     if (departamento_id) body.departamento_id = departamento_id
+    if (congregacao_id)  body.congregacao_id  = congregacao_id
     if (apenasFinanceiro) body.acesso_financeiro = true
     const data = await api('POST', '/auth/convidar', body)
     const baseUrl = window.location.origin || ''
@@ -3730,6 +3774,48 @@ async function handleConvidarAdmin(e) {
     erro.style.display = 'block'
   } finally {
     btn.disabled = false
+  }
+}
+
+// ── CONGREGAÇÕES ────────────────────────────────────────────
+async function criarCong(e) {
+  e.preventDefault()
+  const nome     = document.getElementById('cong-nome')?.value.trim()
+  const tipo     = document.getElementById('cong-tipo')?.value
+  const cidade   = document.getElementById('cong-cidade')?.value.trim()
+  const endereco = document.getElementById('cong-end')?.value.trim()
+  const erroEl   = document.getElementById('cong-erro')
+  if (erroEl) erroEl.style.display = 'none'
+  try {
+    await api('POST', '/congregacao', { nome, tipo, cidade, endereco })
+    recarregarAposMudanca('Congregação criada.')
+  } catch (err) {
+    if (erroEl) { erroEl.textContent = err.erro || 'Erro ao criar.'; erroEl.style.display = 'block' }
+  }
+}
+
+async function abrirModalEditarCong(id) {
+  const c = congregacoesCache.find(x => x.id === id)
+  if (!c) return
+  const novo = prompt(`Nome da congregação:`, c.nome)
+  if (novo === null) return
+  const cidade = prompt('Cidade:', c.cidade || '')
+  if (cidade === null) return
+  try {
+    await api('PUT', `/congregacao/${id}`, { nome: novo.trim(), cidade: cidade.trim() })
+    recarregarAposMudanca('Congregação atualizada.')
+  } catch (err) {
+    toast(err.erro || 'Erro ao atualizar.', 'err')
+  }
+}
+
+async function excluirCong(id) {
+  if (!confirm('Excluir esta congregação? Só é possível se não houver membros vinculados.')) return
+  try {
+    await api('DELETE', `/congregacao/${id}`)
+    recarregarAposMudanca('Congregação excluída.')
+  } catch (err) {
+    toast(err.erro || 'Erro ao excluir.', 'err')
   }
 }
 
@@ -3986,6 +4072,14 @@ async function abrirModalEditarUsuario(id) {
       document.getElementById('edit-usuario-financeiro').checked = !!u.acesso_financeiro
     }
 
+    const congWrap = document.getElementById('edit-usuario-cong-wrap')
+    const selCong  = document.getElementById('edit-usuario-cong')
+    if (congWrap && selCong && usuario?.role === 'admin') {
+      congWrap.style.display = ''
+      if (!congregacoesCache.length) await carregarCongregacoesCache()
+      selCong.innerHTML = '<option value="">Sem congregação</option>' + _optsCongregacoes(u.congregacao_id || u.congregacao?.id)
+    }
+
     const wrapPerfil = document.getElementById('edit-usuario-perfil-wrap')
     const optAdmin = document.getElementById('edit-usuario-perfil-opt-admin')
     const ajudaPerfil = document.getElementById('edit-usuario-perfil-ajuda')
@@ -4031,6 +4125,11 @@ async function salvarEditUsuario(ev) {
   const finWrap = document.getElementById('edit-usuario-financeiro-wrap')
   if (finWrap && finWrap.style.display !== 'none' && usuario?.role === 'admin') {
     body.acesso_financeiro = document.getElementById('edit-usuario-financeiro').checked
+  }
+
+  const congWrap = document.getElementById('edit-usuario-cong-wrap')
+  if (congWrap && congWrap.style.display !== 'none' && usuario?.role === 'admin') {
+    body.congregacao_id = document.getElementById('edit-usuario-cong').value || null
   }
 
   const wrapPerfil = document.getElementById('edit-usuario-perfil-wrap')
@@ -5257,6 +5356,20 @@ async function validarFluxoAgora() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// CONGREGAÇÕES
+// ═══════════════════════════════════════════════════════════
+let congregacoesCache = []
+
+async function carregarCongregacoesCache() {
+  try { congregacoesCache = await api('GET', '/congregacao') } catch (_) { congregacoesCache = [] }
+}
+
+function _optsCongregacoes(selecionada) {
+  return congregacoesCache.map(c =>
+    `<option value="${esc(c.id)}" ${c.id === selecionada ? 'selected' : ''}>${esc(c.nome)} (${c.tipo === 'sede' ? 'Sede' : 'Subcongregação'})</option>`
+  ).join('')
+}
+
 // FINANCEIRO
 // ═══════════════════════════════════════════════════════════
 let finAbaAtiva = 'dashboard'
