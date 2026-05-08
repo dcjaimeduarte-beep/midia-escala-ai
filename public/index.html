@@ -5447,27 +5447,46 @@ async function carregarFinLancamentos() {
   }
 }
 
+let _finLancFiltroTipo = 'todos'
+
 function _renderLancamentos(rows, mes) {
+  const filtro = _finLancFiltroTipo
+  const filtrados = filtro === 'todos' ? rows : rows.filter(l => l.tipo === filtro)
+
+  const entMes = rows.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
+  const saiMes = rows.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
+
+  const btnStyle = (t) => `padding:0.3rem 0.8rem;border-radius:var(--raio);font-size:0.78rem;border:1px solid var(--borda);cursor:pointer;background:${filtro===t?'var(--primaria)':'var(--fundo-elevado)'};color:${filtro===t?'#fff':'var(--texto)'}`
+
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
     <span style="font-size:0.8rem;color:var(--texto-mutado)">${rows.length} lançamento${rows.length !== 1 ? 's' : ''} no mês</span>
     <input type="month" value="${mes}" onchange="filtrarFinLancamentos(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
+  </div>
+  <div style="display:flex;gap:0.4rem;margin-bottom:1rem;flex-wrap:wrap">
+    <button style="${btnStyle('todos')}" onclick="_setFinLancFiltro('todos','${mes}')">Todos</button>
+    <button style="${btnStyle('entrada')}" onclick="_setFinLancFiltro('entrada','${mes}')">↑ Entradas <span style="opacity:.7">${_fmtVal(entMes)}</span></button>
+    <button style="${btnStyle('saida')}" onclick="_setFinLancFiltro('saida','${mes}')">↓ Saídas <span style="opacity:.7">${_fmtVal(saiMes)}</span></button>
   </div>`
-  if (!rows.length) return html + `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento no mês.</p>`
+
+  if (!filtrados.length) return html + `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento${filtro !== 'todos' ? ' deste tipo' : ''} no mês.</p>`
+
   // Agrupar por data
   const porData = {}
-  for (const l of rows) {
+  for (const l of filtrados) {
     if (!porData[l.data]) porData[l.data] = []
     porData[l.data].push(l)
   }
-  for (const [data, itens] of Object.entries(porData)) {
+  const datasOrdenadas = Object.keys(porData).sort((a, b) => _ddmmToISO(b).localeCompare(_ddmmToISO(a)))
+  for (const data of datasOrdenadas) {
+    const itens = porData[data]
     const entDia = itens.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
     const saiDia = itens.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
     html += `<div class="fin-dia-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem;flex-wrap:wrap;gap:0.35rem">
         <span class="fin-dia-header" style="margin:0">${esc(data)}</span>
-        <span style="font-size:0.75rem;font-weight:600;display:flex;gap:0.65rem">
-          <span style="color:var(--sucesso)">+${_fmtVal(entDia)}</span>
-          <span style="color:var(--erro)">-${_fmtVal(saiDia)}</span>
+        <span style="font-size:0.75rem;font-weight:600;display:flex;gap:0.65rem;align-items:center">
+          ${filtro !== 'saida'  ? `<span style="color:var(--sucesso)">+${_fmtVal(entDia)}</span>` : ''}
+          ${filtro !== 'entrada' ? `<span style="color:var(--erro)">-${_fmtVal(saiDia)}</span>` : ''}
         </span>
       </div>
       <div class="fin-chips-wrap">`
@@ -5475,6 +5494,12 @@ function _renderLancamentos(rows, mes) {
     html += `</div></div>`
   }
   return html
+}
+
+function _setFinLancFiltro(tipo, mes) {
+  _finLancFiltroTipo = tipo
+  const el = document.getElementById('fin-lancamentos')
+  if (el) el.innerHTML = _renderLancamentos(finLancamentosData, mes)
 }
 
 async function filtrarFinLancamentos(mes) {
