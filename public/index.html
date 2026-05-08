@@ -5676,32 +5676,37 @@ function _popularEventosModal(escalaIdSelecionado) {
   const selEv = document.getElementById('lanc-escala')
   if (!selEv) return
 
-  // Ordena escalas por data ISO desc para agrupar visualmente por data
-  const todas = [...(finEscalas || [])].sort((a, b) => {
-    return _ddmmToISO(b.data).localeCompare(_ddmmToISO(a.data))
-  })
-
-  // Agrupa por data para exibir optgroup por data
-  const porData = {}
+  // Deduplica por (data + evento_id) → uma linha por culto, sem departamentos
+  const visto = new Set()
+  const cultos = []
+  const todas = [...(finEscalas || [])].sort((a, b) =>
+    _ddmmToISO(b.data).localeCompare(_ddmmToISO(a.data))
+  )
   for (const e of todas) {
-    if (!porData[e.data]) porData[e.data] = []
-    porData[e.data].push(e)
+    const chave = `${e.data}|${e.evento_id || ''}`
+    if (visto.has(chave)) continue
+    visto.add(chave)
+    cultos.push(e)
   }
 
   let opts = '<option value="">Sem culto vinculado</option>'
-  for (const [data, escalas] of Object.entries(porData)) {
-    opts += `<optgroup label="${esc(data)}">`
-    for (const e of escalas) {
-      const evNome = finEventos.find(ev => ev.id === e.evento_id)?.nome || 'Culto'
-      const depto  = e.departamento_nome ? ` — ${e.departamento_nome}` : ''
-      opts += `<option value="${esc(e.id)}" data-data="${esc(e.data)}">${esc(evNome)}${esc(depto)}</option>`
-    }
-    opts += '</optgroup>'
+  for (const e of cultos) {
+    const evNome = finEventos.find(ev => ev.id === e.evento_id)?.nome || 'Culto'
+    opts += `<option value="${esc(e.id)}" data-data="${esc(e.data)}">${esc(e.data)} — ${esc(evNome)}</option>`
   }
   selEv.innerHTML = opts
 
   if (escalaIdSelecionado) {
-    selEv.value = escalaIdSelecionado
+    // Tenta selecionar pelo id exato; se não achar, busca pela mesma data+evento
+    const escala = (finEscalas || []).find(e => e.id === escalaIdSelecionado)
+    if (escala) {
+      const chave = `${escala.data}|${escala.evento_id || ''}`
+      const opt = [...selEv.options].find(o => {
+        const oe = (finEscalas || []).find(fe => fe.id === o.value)
+        return oe && `${oe.data}|${oe.evento_id || ''}` === chave
+      })
+      if (opt) selEv.value = opt.value
+    }
   }
 }
 
