@@ -1899,7 +1899,7 @@
       <input type="hidden" id="lanc-id"/>
       <div class="form-grupo">
         <label>Tipo</label>
-        <select id="lanc-tipo" required>
+        <select id="lanc-tipo" required onchange="_filtrarCategoriasPorTipo(this.value)">
           <option value="entrada">↑ Entrada</option>
           <option value="saida">↓ Saída</option>
         </select>
@@ -5741,6 +5741,14 @@ function _popularEventosModal(escalaIdSelecionado) {
   }
 }
 
+function _filtrarCategoriasPorTipo(tipo, catIdSelecionada) {
+  const sel = document.getElementById('lanc-categoria')
+  if (!sel) return
+  const cats = finCategorias.filter(c => c.ativo && c.tipo === tipo)
+  sel.innerHTML = cats.map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('')
+  if (catIdSelecionada) sel.value = catIdSelecionada
+}
+
 function _escalaSelecionada(escalaId) {
   if (!escalaId) return
   const opt = document.querySelector(`#lanc-escala option[value="${CSS.escape(escalaId)}"]`)
@@ -5753,10 +5761,6 @@ function abrirModalLancamento(existente) {
   document.getElementById('lanc-id').value = existente?.id || ''
   document.getElementById('lanc-erro').style.display = 'none'
 
-  const selCat = document.getElementById('lanc-categoria')
-  const cats = finCategorias.filter(c => c.ativo || existente?.categoria_id === c.id)
-  selCat.innerHTML = cats.map(c => `<option value="${esc(c.id)}">${esc(c.nome)} (${c.tipo})</option>`).join('')
-
   const optSaida = document.querySelector('#lanc-tipo option[value="saida"]')
   if (optSaida) optSaida.style.display = usuario?.role === 'admin' ? '' : 'none'
 
@@ -5767,13 +5771,14 @@ function abrirModalLancamento(existente) {
     document.getElementById('lanc-valor').value     = existente.valor || ''
     document.getElementById('lanc-data').value      = existente.data || ''
     document.getElementById('lanc-descricao').value = existente.descricao || ''
-    selCat.value = existente.categoria_id || ''
     document.getElementById('lanc-escala').value    = existente.escala_id || ''
+    _filtrarCategoriasPorTipo(existente.tipo || 'entrada', existente.categoria_id)
   } else {
     document.getElementById('lanc-tipo').value      = 'entrada'
     document.getElementById('lanc-valor').value     = ''
     document.getElementById('lanc-data').value      = _dataHoje()
     document.getElementById('lanc-descricao').value = ''
+    _filtrarCategoriasPorTipo('entrada')
   }
   document.getElementById('modal-lancamento').classList.add('aberto')
 }
