@@ -5677,12 +5677,15 @@ function _popularEventosModal(escalaIdSelecionado) {
   if (!selEv) return
 
   // Deduplica por (data + evento_id) → uma linha por culto, sem departamentos
+  // Só mostra escalas a partir de hoje
+  const hoje = _ddmmToISO(_dataHoje())
   const visto = new Set()
   const cultos = []
   const todas = [...(finEscalas || [])].sort((a, b) =>
-    _ddmmToISO(b.data).localeCompare(_ddmmToISO(a.data))
+    _ddmmToISO(a.data).localeCompare(_ddmmToISO(b.data))
   )
   for (const e of todas) {
+    if (_ddmmToISO(e.data) < hoje) continue
     const chave = `${e.data}|${e.evento_id || ''}`
     if (visto.has(chave)) continue
     visto.add(chave)
