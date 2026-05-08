@@ -4798,7 +4798,10 @@ function renderCardDepto(d, detalhado = false) {
        </div>
        ${!(d.total_membros || 0)
          ? `<p class="muted" style="font-size:0.75rem;margin:0.5rem 0 0;line-height:1.45">Sem vínculos: use <strong style="color:var(--texto)">Equipe → Editar</strong> ou <strong>Cadastros → Convidar</strong>.</p>`
-         : ''}
+         : `<button type="button" class="btn btn-ghost btn-sm" style="width:100%;margin-top:0.5rem"
+              onclick="toggleMembrosDepartamento('${d.id}', this)">Mostrar membros</button>
+            <div id="depto-membros-box-${d.id}" class="depto-membros-box" hidden></div>`
+       }
     `
     : `<div class="card-footer">
          <span class="badge badge-info">${d.total_membros || 0} membros</span>
