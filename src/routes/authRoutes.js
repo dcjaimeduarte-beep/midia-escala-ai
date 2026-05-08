@@ -40,6 +40,7 @@ function usuarioPublico(row) {
     ativo: !!rest.ativo,
     precisa_trocar_senha: !!rest.precisa_trocar_senha,
     acesso_financeiro: !!rest.acesso_financeiro,
+    acesso_financeiro_global: !!rest.acesso_financeiro_global,
     congregacao: cong || null
   }
 }

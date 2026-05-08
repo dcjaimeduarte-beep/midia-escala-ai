@@ -67,17 +67,20 @@ router.delete('/categorias/:id', autenticar, apenasAdmin, (req, res) => {
 
 // ── LANÇAMENTOS ──────────────────────────────────────────────────────────────
 
-// GET /financeiro/lancamentos?data=DD/MM/YYYY&mes=YYYY-MM
+// GET /financeiro/lancamentos?data=DD/MM/YYYY | mes=YYYY-MM | data_inicio=YYYY-MM-DD&data_fim=YYYY-MM-DD
 router.get('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
-  const { data, mes } = req.query
+  const { data, mes, data_inicio, data_fim } = req.query
   let where = []
   let params = []
 
-  if (data) {
+  if (data_inicio && data_fim) {
+    // Converte DD/MM/YYYY armazenado para ISO para comparar
+    where.push(`substr(l.data,7,4)||'-'||substr(l.data,4,2)||'-'||substr(l.data,1,2) BETWEEN ? AND ?`)
+    params.push(data_inicio, data_fim)
+  } else if (data) {
     where.push('l.data = ?')
     params.push(data)
   } else if (mes) {
-    // mes = YYYY-MM
     const [y, m] = mes.split('-')
     where.push(`substr(l.data,7,4) = ? AND substr(l.data,4,2) = ?`)
     params.push(y, m)
@@ -87,10 +90,15 @@ router.get('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
     return res.status(403).json({ erro: 'Sem permissão' })
   }
 
-  // Não-admin só vê a própria congregação
-  if (req.usuario.role !== 'admin' && req.usuario.congregacao_id) {
+  const isGlobal = req.usuario.role === 'admin' || req.usuario.acesso_financeiro_global
+  if (!isGlobal && req.usuario.congregacao_id) {
+    // Usuário sem acesso global só vê a própria congregação
     where.push('l.congregacao_id = ?')
     params.push(req.usuario.congregacao_id)
+  } else if (isGlobal && req.query.congregacao_id) {
+    // Acesso global pode filtrar por congregação específica
+    where.push('l.congregacao_id = ?')
+    params.push(req.query.congregacao_id)
   }
 
   const sql = `
@@ -222,10 +230,12 @@ router.post('/lancamentos/:id/desvalidar', autenticar, apenasAdmin, (req, res) =
 router.get('/dashboard', autenticar, apenasFinanceiro, (req, res) => {
   const data = req.query.data || hoje()
 
-  const congFilter = req.usuario.role !== 'admin' && req.usuario.congregacao_id
-    ? 'AND l.congregacao_id = ?' : ''
-  const congParam  = req.usuario.role !== 'admin' && req.usuario.congregacao_id
-    ? [req.usuario.congregacao_id] : []
+  const _isGlobalDash = req.usuario.role === 'admin' || req.usuario.acesso_financeiro_global
+  const congId = _isGlobalDash
+    ? (req.query.congregacao_id || null)
+    : (req.usuario.congregacao_id || null)
+  const congFilter = congId ? 'AND l.congregacao_id = ?' : ''
+  const congParam  = congId ? [congId] : []
 
   const lancamentos = db.all(`
     SELECT l.*, c.nome as categoria_nome, c.tipo as categoria_tipo,
@@ -268,15 +278,27 @@ router.get('/dashboard', autenticar, apenasFinanceiro, (req, res) => {
 
 // ── RELATÓRIO MENSAL ─────────────────────────────────────────────────────────
 
-// GET /financeiro/relatorio?mes=YYYY-MM
+// GET /financeiro/relatorio?mes=YYYY-MM | data_inicio=YYYY-MM-DD&data_fim=YYYY-MM-DD
 router.get('/relatorio', autenticar, apenasFinanceiro, (req, res) => {
+  const { data_inicio, data_fim } = req.query
   const mes = req.query.mes || isoHoje().slice(0, 7)
   const [y, m] = mes.split('-')
 
-  const relCongFilter = req.usuario.role !== 'admin' && req.usuario.congregacao_id
-    ? 'AND l.congregacao_id = ?' : ''
-  const relCongParam  = req.usuario.role !== 'admin' && req.usuario.congregacao_id
-    ? [req.usuario.congregacao_id] : []
+  const _isGlobalRel = req.usuario.role === 'admin' || req.usuario.acesso_financeiro_global
+  const relCongId = _isGlobalRel
+    ? (req.query.congregacao_id || null)
+    : (req.usuario.congregacao_id || null)
+  const relCongFilter = relCongId ? 'AND l.congregacao_id = ?' : ''
+  const relCongParam  = relCongId ? [relCongId] : []
+
+  let periodoFilter, periodoParams
+  if (data_inicio && data_fim) {
+    periodoFilter = `substr(l.data,7,4)||'-'||substr(l.data,4,2)||'-'||substr(l.data,1,2) BETWEEN ? AND ?`
+    periodoParams = [data_inicio, data_fim]
+  } else {
+    periodoFilter = `substr(l.data,7,4) = ? AND substr(l.data,4,2) = ?`
+    periodoParams = [y, m]
+  }
 
   const lancamentos = db.all(`
     SELECT l.*, c.nome as categoria_nome, c.tipo as categoria_tipo,
@@ -292,9 +314,9 @@ router.get('/relatorio', autenticar, apenasFinanceiro, (req, res) => {
     LEFT JOIN eventos ev2 ON ev2.id = es.evento_id
     LEFT JOIN departamentos d ON d.id = es.departamento_id
     LEFT JOIN congregacoes cg ON cg.id = l.congregacao_id
-    WHERE substr(l.data,7,4) = ? AND substr(l.data,4,2) = ? ${relCongFilter}
+    WHERE ${periodoFilter} ${relCongFilter}
     ORDER BY l.data, l.criado_em
-  `, y, m, ...relCongParam)
+  `, ...periodoParams, ...relCongParam)
 
   // Por categoria
   const porCategoria = {}

@@ -247,6 +247,13 @@
 
     .btn-ghost:hover { color: var(--texto); border-color: rgba(255,255,255,0.16); }
 
+    .btn-secondary {
+      background: var(--fundo-elevado);
+      color: var(--texto);
+      border: 1px solid var(--borda);
+    }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.05); }
+
     .btn-sm { padding: 0.35rem 0.875rem; font-size: 0.8rem; }
     .btn-full { width: 100%; justify-content: center; }
 
@@ -1495,6 +1502,25 @@
       <div class="pagina-actions">
         <h2 class="pagina-titulo">💰 Financeiro</h2>
         <button class="btn btn-primario" id="btn-novo-lancamento" onclick="abrirModalLancamento()" style="display:none">+ Lançamento</button>
+        <button class="btn btn-secondary" id="btn-lancamento-lote" onclick="abrirModalLancamentoLote()" style="display:none">+ Em lote</button>
+      </div>
+
+      <!-- Filtro de congregação (admin / acesso global) -->
+      <div id="fin-cong-bar" style="display:none;align-items:center;gap:0.6rem;margin-bottom:0.85rem;padding:0.5rem 0.85rem;background:var(--fundo-elevado);border-radius:var(--raio);border:1px solid var(--borda)">
+        <span style="font-size:0.78rem;color:var(--texto-mutado);white-space:nowrap">⛪ Congregação:</span>
+        <select id="fin-cong-select" onchange="_setFinCong(this.value)" style="flex:1;max-width:260px;padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo);border:1px solid var(--borda);color:var(--texto);font-size:0.83rem">
+          <option value="">Todas</option>
+        </select>
+      </div>
+
+      <!-- Filtro de período -->
+      <div id="fin-periodo-bar" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem;padding:0.45rem 0.85rem;background:var(--fundo-elevado);border-radius:var(--raio);border:1px solid var(--borda);flex-wrap:wrap">
+        <span style="font-size:0.78rem;color:var(--texto-mutado);white-space:nowrap">📅 Período:</span>
+        <input type="date" id="fin-data-inicio" onchange="_setFinPeriodo()"
+               style="padding:0.28rem 0.55rem;border-radius:var(--raio);background:var(--fundo);border:1px solid var(--borda);color:var(--texto);font-size:0.82rem;cursor:pointer"/>
+        <span style="font-size:0.78rem;color:var(--texto-mutado)">até</span>
+        <input type="date" id="fin-data-fim" onchange="_setFinPeriodo()"
+               style="padding:0.28rem 0.55rem;border-radius:var(--raio);background:var(--fundo);border:1px solid var(--borda);color:var(--texto);font-size:0.82rem;cursor:pointer"/>
       </div>
 
       <!-- Sub-tabs -->
@@ -1707,7 +1733,12 @@
       <div class="form-grupo" id="edit-usuario-financeiro-wrap" style="display:none"><label style="text-transform:none;letter-spacing:0">
         <input type="checkbox" id="edit-usuario-financeiro" style="width:auto;margin-right:0.5rem"/> Acesso ao módulo financeiro
       </label>
-      <p class="muted" style="font-size:0.75rem;margin:0.2rem 0 0;line-height:1.4">Permite lançar entradas e visualizar dashboards e relatórios.</p></div>
+      <p class="muted" style="font-size:0.75rem;margin:0.2rem 0 0;line-height:1.4">Permite lançar entradas e visualizar dashboards e relatórios.</p>
+      <label style="text-transform:none;letter-spacing:0;margin-top:0.5rem;display:flex;align-items:center;gap:0.4rem;cursor:pointer">
+        <input type="checkbox" id="edit-usuario-financeiro-global" style="width:auto"/>
+        <span style="font-size:0.83rem">Acesso financeiro global <span style="color:var(--texto-mutado);font-size:0.75rem">(vê e filtra todas as congregações)</span></span>
+      </label>
+      </div>
       <div class="form-grupo" id="edit-usuario-cong-wrap" style="display:none">
         <label>Congregação</label>
         <select id="edit-usuario-cong"><option value="">Sem congregação</option></select>
@@ -1915,8 +1946,11 @@
         <select id="lanc-categoria" required></select>
       </div>
       <div class="form-grupo">
-        <label>Valor (R$)</label>
-        <input id="lanc-valor" type="number" step="0.01" min="0.01" required placeholder="0,00"/>
+        <label>Valor</label>
+        <div style="position:relative">
+          <span style="position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);color:var(--texto-mutado);font-size:0.88rem;pointer-events:none;user-select:none">R$</span>
+          <input id="lanc-valor" type="text" inputmode="numeric" required placeholder="0,00" style="padding-left:2.4rem" oninput="_maskCurrency(this)"/>
+        </div>
       </div>
       <div class="form-grupo">
         <label>Culto escalado (opcional)</label>
@@ -1936,6 +1970,68 @@
         <button type="submit" class="btn btn-primario">Salvar</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- LANÇAMENTO EM LOTE -->
+<div id="modal-lancamento-lote" class="modal-overlay" onclick="if(event.target===this)fecharModalLancamentoLote()">
+  <div class="modal" style="max-width:620px" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo">Lançamento em Lote</h3>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+      <div class="form-grupo" style="margin:0">
+        <label>Culto escalado (opcional)</label>
+        <select id="lote-escala" onchange="_loteEscalaSelecionada(this.value)"></select>
+      </div>
+      <div class="form-grupo" style="margin:0">
+        <label>Data (DD/MM/AAAA)</label>
+        <input id="lote-data" type="text" placeholder="DD/MM/AAAA"/>
+      </div>
+    </div>
+
+    <div style="background:var(--fundo-elevado);border-radius:var(--raio);padding:0.85rem;margin-bottom:0.75rem;border:1px solid var(--borda)">
+      <p style="font-size:0.72rem;color:var(--texto-mutado);margin:0 0 0.65rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Adicionar item</p>
+      <div style="display:grid;grid-template-columns:120px 1fr 130px;gap:0.5rem">
+        <div class="form-grupo" style="margin:0">
+          <label>Tipo</label>
+          <select id="lote-tipo" onchange="_loteFiltrarCats(this.value)">
+            <option value="entrada">↑ Entrada</option>
+            <option value="saida">↓ Saída</option>
+          </select>
+        </div>
+        <div class="form-grupo" style="margin:0">
+          <label>Categoria</label>
+          <select id="lote-categoria"></select>
+        </div>
+        <div class="form-grupo" style="margin:0">
+          <label>Valor</label>
+          <div style="position:relative">
+            <span style="position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);color:var(--texto-mutado);font-size:0.88rem;pointer-events:none;user-select:none">R$</span>
+            <input id="lote-valor" type="text" inputmode="numeric" placeholder="0,00" style="padding-left:2.4rem"
+                   oninput="_maskCurrency(this)"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();_loteAdicionarItem()}"/>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:0.5rem;align-items:flex-end;margin-top:0.5rem">
+        <div class="form-grupo" style="margin:0">
+          <label>Descrição (opcional)</label>
+          <input id="lote-descricao" type="text" placeholder="Observação"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();_loteAdicionarItem()}"/>
+        </div>
+        <button type="button" class="btn btn-primario" onclick="_loteAdicionarItem()" style="white-space:nowrap;height:38px">+ Adicionar</button>
+      </div>
+    </div>
+
+    <div id="lote-lista-wrap">
+      <p class="muted" style="text-align:center;padding:1.5rem 0;font-size:0.85rem">Nenhum item adicionado ainda.</p>
+    </div>
+
+    <p id="lote-erro" class="erro-msg" style="display:none"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="fecharModalLancamentoLote()">Cancelar</button>
+      <button type="button" class="btn btn-primario" id="lote-btn-salvar" onclick="_salvarLote()" disabled>Salvar todos (0)</button>
+    </div>
   </div>
 </div>
 
@@ -1962,6 +2058,28 @@
         <button type="submit" class="btn btn-primario">Salvar</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- MODAL PERÍODO IMPRESSÃO -->
+<div id="modal-imprimir-periodo" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('aberto')">
+  <div class="modal" style="max-width:420px" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo">Imprimir Lançamentos</h3>
+    <p class="muted" style="font-size:0.83rem;margin:-0.25rem 0 1rem">Defina o período que deseja imprimir. Deixe em branco para incluir todos os lançamentos carregados.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+      <div class="form-grupo" style="margin:0">
+        <label>Data início</label>
+        <input id="imp-data-inicio" type="date" style="padding:0.35rem 0.55rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.88rem;cursor:pointer"/>
+      </div>
+      <div class="form-grupo" style="margin:0">
+        <label>Data fim</label>
+        <input id="imp-data-fim" type="date" style="padding:0.35rem 0.55rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.88rem;cursor:pointer"/>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:1.25rem">
+      <button type="button" class="btn btn-ghost" onclick="document.getElementById('modal-imprimir-periodo').classList.remove('aberto')">Cancelar</button>
+      <button type="button" class="btn btn-primario" onclick="_confirmarImpressao()">🖨️ Imprimir</button>
+    </div>
   </div>
 </div>
 
@@ -4082,6 +4200,7 @@ async function abrirModalEditarUsuario(id) {
     if (finWrap) {
       finWrap.style.display = usuario?.role === 'admin' ? '' : 'none'
       document.getElementById('edit-usuario-financeiro').checked = !!u.acesso_financeiro
+      document.getElementById('edit-usuario-financeiro-global').checked = !!u.acesso_financeiro_global
     }
 
     const congWrap = document.getElementById('edit-usuario-cong-wrap')
@@ -4137,6 +4256,7 @@ async function salvarEditUsuario(ev) {
   const finWrap = document.getElementById('edit-usuario-financeiro-wrap')
   if (finWrap && finWrap.style.display !== 'none' && usuario?.role === 'admin') {
     body.acesso_financeiro = document.getElementById('edit-usuario-financeiro').checked
+    body.acesso_financeiro_global = document.getElementById('edit-usuario-financeiro-global').checked
   }
 
   const congWrap = document.getElementById('edit-usuario-cong-wrap')
@@ -4554,6 +4674,7 @@ async function carregarEquipe() {
               <th>E-mail</th>
               <th>Celular</th>
               <th>Perfil ${usuario?.role === 'admin' ? '<span style="font-weight:400;color:var(--texto-mutado);font-size:0.75rem">(admin altera)</span>' : ''}</th>
+              <th>Congregação</th>
               <th>Departamentos</th>
               ${thAcoes}
             </tr>
@@ -4563,8 +4684,9 @@ async function carregarEquipe() {
               <tr>
                 <td><strong>${esc(u.nome)}</strong></td>
                 <td style="color:var(--texto-mutado)">${esc(u.email)}</td>
-                <td style="color:var(--texto-mutado)">${esc(u.celular || '—')}</td>
+                <td style="color:var(--texto-mutado);white-space:nowrap">${esc(u.celular || '—')}</td>
                 <td>${celulaPerfil(u)}</td>
+                <td style="color:var(--texto-mutado);font-size:0.85rem">${esc(u.congregacao?.nome || '—')}</td>
                 <td>
                   ${(u.departamentos || []).length
                     ? u.departamentos.map(d =>
@@ -5398,6 +5520,38 @@ let finEventos = []
 let finEscalas = []
 let finLancamentosData = []
 let finRelatorioData = null
+let finCongFiltro = null   // null = todas (admin); string = id da congregação
+let finPeriodo    = { inicio: '', fim: '' }  // YYYY-MM-DD
+
+function _finPeriodoPadrao() {
+  const agora = new Date()
+  const y = agora.getFullYear()
+  const m = String(agora.getMonth() + 1).padStart(2, '0')
+  const ultimo = new Date(y, agora.getMonth() + 1, 0).getDate()
+  return { inicio: `${y}-${m}-01`, fim: `${y}-${m}-${String(ultimo).padStart(2,'0')}` }
+}
+
+function _finApiParams() {
+  const parts = []
+  if (finPeriodo.inicio && finPeriodo.fim) {
+    parts.push(`data_inicio=${finPeriodo.inicio}`, `data_fim=${finPeriodo.fim}`)
+  } else {
+    const agora = new Date()
+    parts.push(`mes=${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`)
+  }
+  const podeVer = usuario?.role === 'admin' || !!usuario?.acesso_financeiro_global
+  if (podeVer && finCongFiltro) parts.push(`congregacao_id=${finCongFiltro}`)
+  return parts.join('&')
+}
+
+function _setFinPeriodo() {
+  const inicio = document.getElementById('fin-data-inicio')?.value || ''
+  const fim    = document.getElementById('fin-data-fim')?.value    || ''
+  finPeriodo = { inicio, fim }
+  if (finAbaAtiva === 'dashboard')    carregarFinDashboard()
+  else if (finAbaAtiva === 'lancamentos') carregarFinLancamentos()
+  else if (finAbaAtiva === 'relatorio')   carregarFinRelatorio()
+}
 
 function _finTemAcesso() {
   return usuario?.role === 'admin' || !!usuario?.acesso_financeiro
@@ -5408,8 +5562,11 @@ function finTab(aba) {
   document.querySelectorAll('.fin-tab').forEach(b => b.classList.toggle('ativo', b.dataset.fintab === aba))
   document.querySelectorAll('.fin-panel').forEach(p => p.style.display = 'none')
   document.getElementById(`fin-${aba}`).style.display = 'block'
-  const btnNovo = document.getElementById('btn-novo-lancamento')
-  if (btnNovo) btnNovo.style.display = aba === 'lancamentos' ? '' : 'none'
+  const btnNovo  = document.getElementById('btn-novo-lancamento')
+  const btnLote  = document.getElementById('btn-lancamento-lote')
+  const mostrar  = aba === 'lancamentos' ? '' : 'none'
+  if (btnNovo) btnNovo.style.display = mostrar
+  if (btnLote) btnLote.style.display = mostrar
   if (aba === 'dashboard')    carregarFinDashboard()
   else if (aba === 'lancamentos') carregarFinLancamentos()
   else if (aba === 'relatorio')   carregarFinRelatorio()
@@ -5423,7 +5580,43 @@ async function carregarFinanceiro() {
   try { finCategorias = await api('GET', '/financeiro/categorias') } catch (_) { finCategorias = [] }
   try { finEventos = await api('GET', '/evento/listar') } catch (_) { finEventos = [] }
   try { finEscalas = await api('GET', '/escala/visao-geral') } catch (_) { finEscalas = [] }
+
+  // Período padrão = mês atual
+  const _p = _finPeriodoPadrao()
+  finPeriodo = _p
+  const elI = document.getElementById('fin-data-inicio')
+  const elF = document.getElementById('fin-data-fim')
+  if (elI) elI.value = _p.inicio
+  if (elF) elF.value = _p.fim
+
+  // Filtro de congregação: admin ou acesso_financeiro_global
+  const podeVerTodasCongs = usuario?.role === 'admin' || !!usuario?.acesso_financeiro_global
+  if (podeVerTodasCongs) {
+    finCongFiltro = usuario?.congregacao_id || null
+    const bar = document.getElementById('fin-cong-bar')
+    const sel = document.getElementById('fin-cong-select')
+    if (bar && sel) {
+      bar.style.display = 'flex'
+      let congs = []
+      try { congs = await api('GET', '/congregacao') } catch (_) {}
+      sel.innerHTML = '<option value="">Todas</option>' +
+        congs.map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('')
+      sel.value = finCongFiltro || ''
+    }
+  } else {
+    finCongFiltro = usuario?.congregacao_id || null
+    const bar = document.getElementById('fin-cong-bar')
+    if (bar) bar.style.display = 'none'
+  }
+
   finTab(finAbaAtiva)
+}
+
+function _setFinCong(congId) {
+  finCongFiltro = congId || null
+  if (finAbaAtiva === 'dashboard')    carregarFinDashboard()
+  else if (finAbaAtiva === 'lancamentos') carregarFinLancamentos()
+  else if (finAbaAtiva === 'relatorio')   carregarFinRelatorio()
 }
 
 // ── DASHBOARD ──────────────────────────────────────────────
@@ -5439,7 +5632,199 @@ function _ddmmToISO(s) {
   return s
 }
 function _fmtVal(v) {
-  return `R$ ${(v || 0).toFixed(2).replace('.', ',')}`
+  const n = parseFloat(v) || 0
+  const [int, dec] = n.toFixed(2).split('.')
+  return `R$ ${int.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${dec}`
+}
+
+function _maskCurrency(input) {
+  let digits = input.value.replace(/\D/g, '')
+  if (!digits) { input.value = ''; return }
+  const num = parseInt(digits, 10)
+  const cents = String(num).padStart(3, '0')
+  const dec = cents.slice(-2)
+  const intPart = cents.slice(0, -2).replace(/^0+/, '') || '0'
+  const intFormatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  input.value = intFormatted + ',' + dec
+}
+
+function _parseCurrency(str) {
+  if (!str) return 0
+  return parseFloat(String(str).replace(/\./g, '').replace(',', '.')) || 0
+}
+
+function _formatCurrency(num) {
+  const n = parseFloat(num) || 0
+  const [int, dec] = n.toFixed(2).split('.')
+  const intFormatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return intFormatted + ',' + dec
+}
+
+function _exportLancamentosCSV() {
+  const rows = finLancamentosData
+  if (!rows?.length) { toast('Sem lançamentos para exportar.', 'err'); return }
+  const sel = document.getElementById('fin-cong-select')
+  const congNome = finCongFiltro
+    ? (sel ? [...sel.options].find(o => o.value === finCongFiltro)?.text : null) || ''
+    : (usuario?.role !== 'admin' ? usuario?.congregacao?.nome || '' : 'Todas')
+  const headers = ['Data', 'Tipo', 'Categoria', 'Valor (R$)', 'Descrição', 'Culto', 'Congregação', 'Lançado por']
+  const lines = [headers.join(';')]
+  for (const l of rows) {
+    lines.push([
+      l.data || '',
+      l.tipo === 'entrada' ? 'Entrada' : 'Saída',
+      l.categoria_nome || '',
+      _formatCurrency(l.valor),
+      l.descricao || '',
+      l.evento_nome || '',
+      l.congregacao_nome || congNome,
+      l.lancado_por_nome || ''
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'))
+  }
+  const csv = '﻿' + lines.join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  const hoje = new Date().toISOString().slice(0, 10)
+  a.download = `lancamentos_${hoje}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  toast('Arquivo CSV gerado.', 'ok')
+}
+
+function _maskData(input) {
+  let v = input.value.replace(/\D/g, '').slice(0, 8)
+  if (v.length > 4) v = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4)
+  else if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2)
+  input.value = v
+}
+
+function _imprimirLancamentos() {
+  if (!finLancamentosData?.length) { toast('Sem lançamentos para imprimir.', 'err'); return }
+  document.getElementById('imp-data-inicio').value = finPeriodo.inicio || ''
+  document.getElementById('imp-data-fim').value    = finPeriodo.fim    || ''
+  document.getElementById('modal-imprimir-periodo').classList.add('aberto')
+}
+
+function _confirmarImpressao() {
+  document.getElementById('modal-imprimir-periodo').classList.remove('aberto')
+  const isoInicio = document.getElementById('imp-data-inicio').value.trim() || null
+  const isoFim    = document.getElementById('imp-data-fim').value.trim()    || null
+
+  let rows = [...(finLancamentosData || [])]
+  if (isoInicio) rows = rows.filter(l => _ddmmToISO(l.data) >= isoInicio)
+  if (isoFim)    rows = rows.filter(l => _ddmmToISO(l.data) <= isoFim)
+  if (!rows.length) { toast('Nenhum lançamento no período informado.', 'err'); return }
+
+  const sel = document.getElementById('fin-cong-select')
+  const congNome = finCongFiltro
+    ? (sel ? [...sel.options].find(o => o.value === finCongFiltro)?.text : null) || ''
+    : (usuario?.role !== 'admin' ? usuario?.congregacao?.nome || '' : '')
+
+  // Agrupar por data (ordem decrescente)
+  const porData = {}
+  for (const l of rows) {
+    if (!porData[l.data]) porData[l.data] = []
+    porData[l.data].push(l)
+  }
+  const datasOrdenadas = Object.keys(porData).sort((a, b) => _ddmmToISO(b).localeCompare(_ddmmToISO(a)))
+
+  const entTotal = rows.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
+  const saiTotal = rows.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
+  const saldo    = entTotal - saiTotal
+  const hoje     = new Date().toLocaleDateString('pt-BR')
+  const fmtIso = iso => iso ? iso.split('-').reverse().join('/') : '?'
+  const periodo = fmtIso(isoInicio) + (isoFim && isoFim !== isoInicio ? ' a ' + fmtIso(isoFim) : '')
+
+  let blocos = ''
+  for (const data of datasOrdenadas) {
+    const itens = porData[data]
+    const dEnt  = itens.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
+    const dSai  = itens.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
+    const linhas = itens.map(l => {
+      const cor   = l.tipo === 'entrada' ? '#16a34a' : '#dc2626'
+      const sinal = l.tipo === 'entrada' ? '+' : '−'
+      return `<tr>
+        <td class="cat">${esc(l.categoria_nome || '')}</td>
+        <td class="desc">${esc(l.descricao || '')}</td>
+        <td class="culto">${esc(l.evento_nome || '')}</td>
+        <td class="val" style="color:${cor}">${sinal} R$ ${_formatCurrency(l.valor)}</td>
+        <td class="lanc">${esc(l.lancado_por_nome || '')}</td>
+      </tr>`
+    }).join('')
+    const subEnt = dEnt > 0 ? `<span class="entrada">+ R$ ${_formatCurrency(dEnt)}</span>` : ''
+    const subSai = dSai > 0 ? `<span class="saida">− R$ ${_formatCurrency(dSai)}</span>` : ''
+    const subSaldo = `<span class="${dEnt - dSai >= 0 ? 'entrada' : 'saida'}">${dEnt - dSai >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(dEnt - dSai))}</span>`
+    blocos += `
+      <div class="grupo">
+        <div class="grupo-header">
+          <span class="grupo-data">${esc(data)}</span>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Categoria</th><th>Descrição</th><th>Culto</th><th>Valor</th><th>Lançado por</th>
+          </tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>
+        <div class="grupo-footer">
+          <span class="grupo-stats">${subEnt}${dEnt > 0 && dSai > 0 ? '<span class="sep"> / </span>' : ''}${subSai}<span class="sep"> = </span>${subSaldo}</span>
+        </div>
+      </div>`
+  }
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Lançamentos Financeiros</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:Arial,sans-serif; font-size:12px; color:#111; padding:28px 32px; }
+    h1 { font-size:17px; font-weight:700; margin-bottom:3px; }
+    .meta { font-size:11px; color:#666; margin-bottom:18px; }
+    .resumo { display:flex; gap:28px; margin-bottom:22px; padding:11px 16px; background:#f4f4f4; border-radius:5px; border-left:4px solid #333; }
+    .resumo div { font-size:11px; color:#555; }
+    .resumo strong { font-size:15px; display:block; margin-top:2px; }
+    .entrada { color:#16a34a; font-weight:700; }
+    .saida   { color:#dc2626; font-weight:700; }
+    .grupo { margin-bottom:22px; page-break-inside:avoid; }
+    .grupo-header { display:flex; justify-content:space-between; align-items:baseline; padding:6px 10px; background:#e8e8e8; border-radius:4px 4px 0 0; border-bottom:2px solid #bbb; }
+    .grupo-data  { font-weight:700; font-size:13px; }
+    .grupo-footer { display:flex; justify-content:flex-end; padding:5px 10px; background:#f4f4f4; border-top:1px solid #ccc; border-radius:0 0 4px 4px; }
+    .grupo-stats { font-size:11px; display:flex; gap:4px; align-items:center; }
+    .sep { color:#888; }
+    table { width:100%; border-collapse:collapse; }
+    th { padding:5px 9px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.04em; background:#f8f8f8; border-bottom:1px solid #ccc; color:#555; }
+    td { padding:5px 9px; border-bottom:1px solid #ececec; vertical-align:top; font-size:11.5px; }
+    td.val { font-weight:600; white-space:nowrap; }
+    td.cat { font-weight:500; }
+    td.culto { color:#444; }
+    td.lanc { color:#666; }
+    tr:last-child td { border-bottom:none; }
+    .total-geral { margin-top:10px; padding:10px 16px; background:#f0f0f0; border-radius:4px; display:flex; gap:28px; border-top:2px solid #999; }
+    .total-geral span { font-size:12px; }
+    .total-geral strong { font-size:14px; display:block; margin-top:2px; }
+    @media print { body { padding:16px; } .grupo { page-break-inside:avoid; } }
+  </style></head><body>
+  <h1>Lançamentos Financeiros${congNome ? ' — ' + esc(congNome) : ''}</h1>
+  <div class="meta">Período: ${esc(periodo)} · Gerado em ${hoje} · ${rows.length} lançamento${rows.length !== 1 ? 's' : ''}</div>
+  <div class="resumo">
+    <div><span>Entradas</span><strong class="entrada">+ R$ ${_formatCurrency(entTotal)}</strong></div>
+    <div><span>Saídas</span><strong class="saida">− R$ ${_formatCurrency(saiTotal)}</strong></div>
+    <div><span>Saldo</span><strong class="${saldo >= 0 ? 'entrada' : 'saida'}">${saldo >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldo))}</strong></div>
+  </div>
+  ${blocos}
+  <div class="total-geral">
+    <span><span>Total Entradas</span><strong class="entrada">+ R$ ${_formatCurrency(entTotal)}</strong></span>
+    <span><span>Total Saídas</span><strong class="saida">− R$ ${_formatCurrency(saiTotal)}</strong></span>
+    <span><span>Saldo Geral</span><strong class="${saldo >= 0 ? 'entrada' : 'saida'}">${saldo >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldo))}</strong></span>
+  </div>
+  <script>window.onload = () => { window.print() }<\/script>
+  </body></html>`
+
+  const win = window.open('', '_blank')
+  win.document.write(html)
+  win.document.close()
 }
 
 async function carregarFinDashboard() {
@@ -5449,8 +5834,8 @@ async function carregarFinDashboard() {
   const agora = new Date()
   const mes = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`
   try {
-    const rows = await api('GET', `/financeiro/lancamentos?mes=${mes}`)
-    el.innerHTML = _renderDashboard(rows, mes)
+    const rows = await api('GET', `/financeiro/lancamentos?${_finApiParams()}`)
+    el.innerHTML = _renderDashboard(rows)
   } catch (e) {
     el.innerHTML = `<p class="muted">Não foi possível carregar: ${e.erro || 'Erro'}</p>`
   }
@@ -5461,25 +5846,23 @@ async function carregarFinDashboardData(mes) {
   if (!el || !mes) return
   el.innerHTML = '<p class="carregando">Carregando…</p>'
   try {
-    const rows = await api('GET', `/financeiro/lancamentos?mes=${mes}`)
-    el.innerHTML = _renderDashboard(rows, mes)
+    const rows = await api('GET', `/financeiro/lancamentos?${_finApiParams()}`)
+    el.innerHTML = _renderDashboard(rows)
   } catch (e) {
     el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
   }
 }
 
-function _renderDashboard(rows, mes) {
+function _renderDashboard(rows) {
   const hoje = _dataHoje()
   const isoHoje = _ddmmToISO(hoje)
 
-  // Agrupar por data
   const porData = {}
   for (const l of rows) {
     if (!porData[l.data]) porData[l.data] = []
     porData[l.data].push(l)
   }
 
-  // Classificar datas
   const passados = [], hojeArr = [], futuros = []
   for (const [data, itens] of Object.entries(porData)) {
     const isoD = _ddmmToISO(data)
@@ -5490,20 +5873,18 @@ function _renderDashboard(rows, mes) {
   passados.sort((a, b) => _ddmmToISO(b.data).localeCompare(_ddmmToISO(a.data)))
   futuros.sort((a, b) => _ddmmToISO(a.data).localeCompare(_ddmmToISO(b.data)))
 
-  // Totais do mês
-  const entMes  = rows.filter(l => l.tipo === 'entrada').reduce((s,l) => s + l.valor, 0)
-  const saiMes  = rows.filter(l => l.tipo === 'saida').reduce((s,l) => s + l.valor, 0)
+  const entMes   = rows.filter(l => l.tipo === 'entrada').reduce((s,l) => s + l.valor, 0)
+  const saiMes   = rows.filter(l => l.tipo === 'saida').reduce((s,l) => s + l.valor, 0)
   const saldoMes = entMes - saiMes
   const saldoCls = saldoMes >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'
-  const [ano, mesN] = mes.split('-')
-  const nomeMes = new Date(parseInt(ano), parseInt(mesN)-1, 1).toLocaleString('pt-BR', { month: 'long' })
 
-  const nomeCong = usuario?.congregacao?.nome
-  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
-    <span style="font-size:0.8rem;color:var(--texto-mutado)">
-      ${nomeCong ? `<span style="color:var(--texto);font-weight:600">⛪ ${esc(nomeCong)}</span> · ` : ''}${nomeMes} de ${ano}
-    </span>
-    <input type="month" value="${mes}" onchange="carregarFinDashboardData(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
+  const _congSel = document.getElementById('fin-cong-select')
+  const nomeCong = finCongFiltro
+    ? (_congSel ? [..._congSel.options].find(o => o.value === finCongFiltro)?.text : null) || usuario?.congregacao?.nome
+    : (usuario?.role !== 'admin' ? usuario?.congregacao?.nome : null)
+
+  let html = `<div style="font-size:0.8rem;color:var(--texto-mutado);margin-bottom:0.75rem">
+    ${nomeCong ? `<span style="color:var(--texto);font-weight:600">⛪ ${esc(nomeCong)}</span> · ` : ''}${rows.length} lançamento${rows.length !== 1 ? 's' : ''} no período
   </div>
   <div class="fin-resumo-grid">
     <div class="fin-stat-card"><div class="fin-stat-label">Entradas</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(entMes)}</div></div>
@@ -5599,9 +5980,9 @@ async function carregarFinLancamentos() {
   const agora = new Date()
   const mes = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`
   try {
-    const rows = await api('GET', `/financeiro/lancamentos?mes=${mes}`)
+    const rows = await api('GET', `/financeiro/lancamentos?${_finApiParams()}`)
     finLancamentosData = rows
-    el.innerHTML = _renderLancamentos(rows, mes)
+    el.innerHTML = _renderLancamentos(rows)
   } catch (e) {
     el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
   }
@@ -5609,8 +5990,8 @@ async function carregarFinLancamentos() {
 
 let _finLancFiltroTipo = 'todos'
 
-function _renderLancamentos(rows, mes) {
-  const filtro = _finLancFiltroTipo
+function _renderLancamentos(rows) {
+  const filtro   = _finLancFiltroTipo
   const filtrados = filtro === 'todos' ? rows : rows.filter(l => l.tipo === filtro)
 
   const entMes = rows.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
@@ -5618,19 +5999,28 @@ function _renderLancamentos(rows, mes) {
 
   const btnStyle = (t) => `padding:0.3rem 0.8rem;border-radius:var(--raio);font-size:0.78rem;border:1px solid var(--borda);cursor:pointer;background:${filtro===t?'var(--primaria)':'var(--fundo-elevado)'};color:${filtro===t?'#fff':'var(--texto)'}`
 
+  const _congSel2 = document.getElementById('fin-cong-select')
+  const _nomeCong = finCongFiltro
+    ? (_congSel2 ? [..._congSel2.options].find(o => o.value === finCongFiltro)?.text : null) || usuario?.congregacao?.nome
+    : (usuario?.role !== 'admin' ? usuario?.congregacao?.nome : null)
+
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
-    <span style="font-size:0.8rem;color:var(--texto-mutado)">${rows.length} lançamento${rows.length !== 1 ? 's' : ''} no mês</span>
-    <input type="month" value="${mes}" onchange="filtrarFinLancamentos(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
+    <span style="font-size:0.8rem;color:var(--texto-mutado)">
+      ${_nomeCong ? `<span style="color:var(--texto);font-weight:600">⛪ ${esc(_nomeCong)}</span> · ` : ''}${rows.length} lançamento${rows.length !== 1 ? 's' : ''} no período
+    </span>
+    <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">
+      <button onclick="_imprimirLancamentos()" style="padding:0.3rem 0.7rem;border-radius:var(--raio);font-size:0.78rem;border:1px solid var(--borda);cursor:pointer;background:var(--fundo-elevado);color:var(--texto)" title="Imprimir / PDF">🖨️ Imprimir</button>
+      <button onclick="_exportLancamentosCSV()" style="padding:0.3rem 0.7rem;border-radius:var(--raio);font-size:0.78rem;border:1px solid var(--borda);cursor:pointer;background:var(--fundo-elevado);color:var(--texto)" title="Exportar Excel/CSV">📊 Excel</button>
+    </div>
   </div>
   <div style="display:flex;gap:0.4rem;margin-bottom:1rem;flex-wrap:wrap">
-    <button style="${btnStyle('todos')}" onclick="_setFinLancFiltro('todos','${mes}')">Todos</button>
-    <button style="${btnStyle('entrada')}" onclick="_setFinLancFiltro('entrada','${mes}')">↑ Entradas <span style="opacity:.7">${_fmtVal(entMes)}</span></button>
-    <button style="${btnStyle('saida')}" onclick="_setFinLancFiltro('saida','${mes}')">↓ Saídas <span style="opacity:.7">${_fmtVal(saiMes)}</span></button>
+    <button style="${btnStyle('todos')}" onclick="_setFinLancFiltro('todos')">Todos</button>
+    <button style="${btnStyle('entrada')}" onclick="_setFinLancFiltro('entrada')">↑ Entradas <span style="opacity:.7">${_fmtVal(entMes)}</span></button>
+    <button style="${btnStyle('saida')}" onclick="_setFinLancFiltro('saida')">↓ Saídas <span style="opacity:.7">${_fmtVal(saiMes)}</span></button>
   </div>`
 
-  if (!filtrados.length) return html + `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento${filtro !== 'todos' ? ' deste tipo' : ''} no mês.</p>`
+  if (!filtrados.length) return html + `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento${filtro !== 'todos' ? ' deste tipo' : ''} no período.</p>`
 
-  // Agrupar por data
   const porData = {}
   for (const l of filtrados) {
     if (!porData[l.data]) porData[l.data] = []
@@ -5638,28 +6028,31 @@ function _renderLancamentos(rows, mes) {
   }
   const datasOrdenadas = Object.keys(porData).sort((a, b) => _ddmmToISO(b).localeCompare(_ddmmToISO(a)))
   for (const data of datasOrdenadas) {
-    const itens = porData[data]
+    const itens  = porData[data]
     const entDia = itens.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
     const saiDia = itens.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
+    const saldoDia = entDia - saiDia
     html += `<div class="fin-dia-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem;flex-wrap:wrap;gap:0.35rem">
+      <div style="margin-bottom:0.65rem">
         <span class="fin-dia-header" style="margin:0">${esc(data)}</span>
-        <span style="font-size:0.75rem;font-weight:600;display:flex;gap:0.65rem;align-items:center">
-          ${filtro !== 'saida'  ? `<span style="color:var(--sucesso)">+${_fmtVal(entDia)}</span>` : ''}
-          ${filtro !== 'entrada' ? `<span style="color:var(--erro)">-${_fmtVal(saiDia)}</span>` : ''}
-        </span>
       </div>
       <div class="fin-chips-wrap">`
     for (const l of itens) html += _renderChip(l, true)
-    html += `</div></div>`
+    html += `</div>
+      <div style="display:flex;gap:0.65rem;align-items:center;justify-content:flex-end;margin-top:0.55rem;padding-top:0.45rem;border-top:1px solid var(--borda);font-size:0.75rem;font-weight:600">
+        ${filtro !== 'saida'   ? `<span style="color:var(--sucesso)">+${_fmtVal(entDia)}</span>` : ''}
+        ${filtro !== 'entrada' ? `<span style="color:var(--erro)">−${_fmtVal(saiDia)}</span>` : ''}
+        ${filtro === 'todos'   ? `<span style="color:var(--texto-mutado)">= </span><span style="color:${saldoDia>=0?'var(--sucesso)':'var(--erro)'}">${_fmtVal(saldoDia)}</span>` : ''}
+      </div>
+    </div>`
   }
   return html
 }
 
-function _setFinLancFiltro(tipo, mes) {
+function _setFinLancFiltro(tipo) {
   _finLancFiltroTipo = tipo
   const el = document.getElementById('fin-lancamentos')
-  if (el) el.innerHTML = _renderLancamentos(finLancamentosData, mes)
+  if (el) el.innerHTML = _renderLancamentos(finLancamentosData)
 }
 
 async function filtrarFinLancamentos(mes) {
@@ -5667,9 +6060,9 @@ async function filtrarFinLancamentos(mes) {
   if (!el || !mes) return
   el.innerHTML = '<p class="carregando">Carregando…</p>'
   try {
-    const rows = await api('GET', `/financeiro/lancamentos?mes=${mes}`)
+    const rows = await api('GET', `/financeiro/lancamentos?${_finApiParams()}`)
     finLancamentosData = rows
-    el.innerHTML = _renderLancamentos(rows, mes)
+    el.innerHTML = _renderLancamentos(rows)
   } catch (e) {
     el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
   }
@@ -5712,7 +6105,7 @@ async function carregarFinRelatorio() {
   const agora = new Date()
   const mes = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`
   try {
-    const data = await api('GET', `/financeiro/relatorio?mes=${mes}`)
+    const data = await api('GET', `/financeiro/relatorio?${_finApiParams()}`)
     finRelatorioData = data
     el.innerHTML = _renderRelatorio(data)
   } catch (e) {
@@ -5725,7 +6118,7 @@ async function filtrarFinRelatorio(mes) {
   if (!el || !mes) return
   el.innerHTML = '<p class="carregando">Carregando…</p>'
   try {
-    const data = await api('GET', `/financeiro/relatorio?mes=${mes}`)
+    const data = await api('GET', `/financeiro/relatorio?${_finApiParams()}`)
     finRelatorioData = data
     el.innerHTML = _renderRelatorio(data)
   } catch (e) {
@@ -5928,7 +6321,7 @@ function abrirModalLancamento(existente) {
 
   if (existente) {
     document.getElementById('lanc-tipo').value      = existente.tipo || 'entrada'
-    document.getElementById('lanc-valor').value     = existente.valor || ''
+    document.getElementById('lanc-valor').value     = existente.valor ? _formatCurrency(existente.valor) : ''
     document.getElementById('lanc-data').value      = existente.data || ''
     document.getElementById('lanc-descricao').value = existente.descricao || ''
     document.getElementById('lanc-escala').value    = existente.escala_id || ''
@@ -5947,6 +6340,161 @@ function fecharModalLancamento() {
   document.getElementById('modal-lancamento').classList.remove('aberto')
 }
 
+// ── LANÇAMENTO EM LOTE ──────────────────────────────────────
+
+let _loteItens = []
+
+function abrirModalLancamentoLote() {
+  _loteItens = []
+  document.getElementById('lote-data').value = _dataHoje()
+  document.getElementById('lote-valor').value = ''
+  document.getElementById('lote-descricao').value = ''
+  document.getElementById('lote-tipo').value = 'entrada'
+  document.getElementById('lote-erro').style.display = 'none'
+  _popularEventosModalLote()
+  _loteFiltrarCats('entrada')
+  _loteRenderLista()
+  document.getElementById('modal-lancamento-lote').classList.add('aberto')
+  setTimeout(() => document.getElementById('lote-valor').focus(), 100)
+}
+
+function fecharModalLancamentoLote() {
+  document.getElementById('modal-lancamento-lote').classList.remove('aberto')
+}
+
+function _popularEventosModalLote() {
+  const selEv = document.getElementById('lote-escala')
+  if (!selEv) return
+  const hoje = _ddmmToISO(_dataHoje())
+  const visto = new Set()
+  const cultos = []
+  const todas = [...(finEscalas || [])].sort((a, b) =>
+    _ddmmToISO(a.data).localeCompare(_ddmmToISO(b.data))
+  )
+  for (const e of todas) {
+    if (_ddmmToISO(e.data) < hoje) continue
+    const chave = `${e.data}|${e.evento_id || ''}`
+    if (visto.has(chave)) continue
+    visto.add(chave)
+    cultos.push(e)
+  }
+  let opts = '<option value="">Sem culto vinculado</option>'
+  for (const e of cultos) {
+    const evNome = (finEventos || []).find(ev => ev.id === e.evento_id)?.nome || 'Culto'
+    opts += `<option value="${esc(e.id)}" data-data="${esc(e.data)}">${esc(e.data)} — ${esc(evNome)}</option>`
+  }
+  selEv.innerHTML = opts
+}
+
+function _loteEscalaSelecionada(escalaId) {
+  if (!escalaId) return
+  const escala = (finEscalas || []).find(e => e.id === escalaId)
+  if (escala?.data) document.getElementById('lote-data').value = escala.data
+}
+
+function _loteFiltrarCats(tipo) {
+  const sel = document.getElementById('lote-categoria')
+  if (!sel) return
+  const cats = (finCategorias || []).filter(c => c.tipo === tipo)
+  sel.innerHTML = cats.map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('')
+  if (!sel.innerHTML) sel.innerHTML = '<option value="">Sem categorias</option>'
+}
+
+function _loteAdicionarItem() {
+  const tipo     = document.getElementById('lote-tipo').value
+  const catId    = document.getElementById('lote-categoria').value
+  const valor    = _parseCurrency(document.getElementById('lote-valor').value)
+  const descricao = document.getElementById('lote-descricao').value.trim()
+  if (!catId)             { toast('Selecione uma categoria.', 'err'); return }
+  if (!valor || valor <= 0) { toast('Informe um valor válido.', 'err'); return }
+  const catNome = (finCategorias || []).find(c => c.id === catId)?.nome || catId
+  _loteItens.push({ tipo, categoria_id: catId, categoria_nome: catNome, valor, descricao })
+  document.getElementById('lote-valor').value = ''
+  document.getElementById('lote-valor').focus()
+  _loteRenderLista()
+}
+
+function _loteRemoverItem(idx) {
+  _loteItens.splice(idx, 1)
+  _loteRenderLista()
+}
+
+function _loteRenderLista() {
+  const wrap     = document.getElementById('lote-lista-wrap')
+  const btnSalvar = document.getElementById('lote-btn-salvar')
+  if (!_loteItens.length) {
+    wrap.innerHTML = `<p class="muted" style="text-align:center;padding:1.5rem 0;font-size:0.85rem">Nenhum item adicionado ainda.</p>`
+    btnSalvar.textContent = 'Salvar todos (0)'
+    btnSalvar.disabled = true
+    return
+  }
+  const totalEnt = _loteItens.filter(i => i.tipo === 'entrada').reduce((s, i) => s + i.valor, 0)
+  const totalSai = _loteItens.filter(i => i.tipo === 'saida').reduce((s, i) => s + i.valor, 0)
+  let html = `<div style="border:1px solid var(--borda);border-radius:var(--raio);overflow:hidden;margin-bottom:0.5rem">
+    <div style="background:var(--fundo-elevado);padding:0.35rem 0.75rem;font-size:0.7rem;color:var(--texto-mutado);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--borda)">
+      Itens adicionados (${_loteItens.length})
+    </div>`
+  for (let i = 0; i < _loteItens.length; i++) {
+    const item = _loteItens[i]
+    const cor   = item.tipo === 'entrada' ? 'var(--sucesso)' : 'var(--erro)'
+    const sinal = item.tipo === 'entrada' ? '+' : '−'
+    const icone = item.tipo === 'entrada' ? '↑' : '↓'
+    const borda = i < _loteItens.length - 1 ? 'border-bottom:1px solid var(--borda);' : ''
+    html += `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0.75rem;${borda}font-size:0.85rem">
+      <span style="color:${cor};font-size:0.8rem;min-width:12px">${icone}</span>
+      <span style="flex:1;font-weight:500">${esc(item.categoria_nome)}</span>
+      <span style="color:var(--texto-mutado);font-size:0.78rem;flex:1.2">${esc(item.descricao || '')}</span>
+      <span style="color:${cor};font-weight:600;min-width:85px;text-align:right">${sinal}${_fmtVal(item.valor)}</span>
+      <button type="button" onclick="_loteRemoverItem(${i})" style="background:none;border:none;cursor:pointer;color:var(--erro);padding:0 0.2rem;font-size:1.1rem;line-height:1" title="Remover">×</button>
+    </div>`
+  }
+  html += `</div>`
+  let totHtml = `<div style="display:flex;gap:1.25rem;justify-content:flex-end;font-size:0.82rem;margin-bottom:0.75rem">`
+  if (totalEnt > 0) totHtml += `<span>Entradas: <strong style="color:var(--sucesso)">+${_fmtVal(totalEnt)}</strong></span>`
+  if (totalSai > 0) totHtml += `<span>Saídas: <strong style="color:var(--erro)">−${_fmtVal(totalSai)}</strong></span>`
+  totHtml += `</div>`
+  wrap.innerHTML = html + totHtml
+  btnSalvar.textContent = `Salvar todos (${_loteItens.length})`
+  btnSalvar.disabled = false
+}
+
+async function _salvarLote() {
+  if (!_loteItens.length) return
+  const data = document.getElementById('lote-data').value.trim()
+  if (!data) { toast('Informe a data.', 'err'); return }
+  const escalaId = document.getElementById('lote-escala').value || null
+  const errEl    = document.getElementById('lote-erro')
+  const btnSalvar = document.getElementById('lote-btn-salvar')
+  errEl.style.display = 'none'
+  btnSalvar.disabled = true
+  btnSalvar.textContent = 'Salvando…'
+  let erros = 0
+  for (const item of _loteItens) {
+    try {
+      await api('POST', '/financeiro/lancamentos', {
+        tipo:         item.tipo,
+        categoria_id: item.categoria_id,
+        valor:        item.valor,
+        data,
+        escala_id:    escalaId,
+        descricao:    item.descricao || ''
+      })
+    } catch (_) { erros++ }
+  }
+  if (erros === 0) {
+    const n = _loteItens.length
+    fecharModalLancamentoLote()
+    toast(`${n} lançamento${n !== 1 ? 's' : ''} registrado${n !== 1 ? 's' : ''}.`, 'ok')
+  } else {
+    errEl.textContent = `${erros} lançamento(s) não puderam ser salvos.`
+    errEl.style.display = 'block'
+    btnSalvar.disabled = false
+    btnSalvar.textContent = `Salvar todos (${_loteItens.length})`
+  }
+  if (finAbaAtiva === 'lancamentos') carregarFinLancamentos()
+  else carregarFinDashboard()
+}
+
 async function salvarLancamento(ev) {
   ev.preventDefault()
   const err = document.getElementById('lanc-erro')
@@ -5955,7 +6503,7 @@ async function salvarLancamento(ev) {
   const body = {
     tipo:         document.getElementById('lanc-tipo').value,
     categoria_id: document.getElementById('lanc-categoria').value,
-    valor:        parseFloat(document.getElementById('lanc-valor').value),
+    valor:        _parseCurrency(document.getElementById('lanc-valor').value),
     data:         document.getElementById('lanc-data').value,
     escala_id:    document.getElementById('lanc-escala').value || null,
     descricao:    document.getElementById('lanc-descricao').value.trim()

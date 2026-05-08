@@ -148,7 +148,7 @@ router.put('/:id', autenticar, async (req, res) => {
   if (!podeEditar)
     return res.status(403).json({ erro: 'Sem permissão para alterar cadastros' })
 
-  const { nome, email, celular, senha, ativo, avatar, role, acesso_financeiro, congregacao_id } = req.body
+  const { nome, email, celular, senha, ativo, avatar, role, acesso_financeiro, acesso_financeiro_global, congregacao_id } = req.body
 
   if (role !== undefined) {
     if (req.usuario.role !== 'admin')
@@ -174,16 +174,19 @@ router.put('/:id', autenticar, async (req, res) => {
   }
   if (acesso_financeiro !== undefined && admin)
     sql.run(`UPDATE usuarios SET acesso_financeiro = ? WHERE id = ?`, acesso_financeiro ? 1 : 0, req.params.id)
+  if (acesso_financeiro_global !== undefined && admin)
+    sql.run(`UPDATE usuarios SET acesso_financeiro_global = ? WHERE id = ?`, acesso_financeiro_global ? 1 : 0, req.params.id)
   if (congregacao_id !== undefined && admin)
     sql.run(`UPDATE usuarios SET congregacao_id = ? WHERE id = ?`, congregacao_id || null, req.params.id)
 
   syncTudoParaMemoria()
-  const atual = sql.get(`SELECT id, nome, email, celular, role, ativo, avatar, criado_em, precisa_trocar_senha, acesso_financeiro FROM usuarios WHERE id = ?`, req.params.id)
+  const atual = sql.get(`SELECT id, nome, email, celular, role, ativo, avatar, criado_em, precisa_trocar_senha, acesso_financeiro, acesso_financeiro_global FROM usuarios WHERE id = ?`, req.params.id)
   res.json({
     ...atual,
     ativo: !!atual.ativo,
     precisa_trocar_senha: !!atual.precisa_trocar_senha,
-    acesso_financeiro: !!atual.acesso_financeiro
+    acesso_financeiro: !!atual.acesso_financeiro,
+    acesso_financeiro_global: !!atual.acesso_financeiro_global
   })
 })
 
