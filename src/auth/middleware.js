@@ -17,7 +17,7 @@ function autenticar(req, res, next) {
   try {
     const payload = jwt.verify(auth.split(' ')[1], SECRET)
     const row = db.get(
-      'SELECT id, nome, email, role FROM usuarios WHERE id = ? AND ativo = 1',
+      'SELECT id, nome, email, role, acesso_financeiro, acesso_financeiro_global, congregacao_id FROM usuarios WHERE id = ? AND ativo = 1',
       payload.id
     )
     if (!row) return res.status(401).json({ erro: 'Usuário inválido ou inativo' })
@@ -25,7 +25,10 @@ function autenticar(req, res, next) {
       id: row.id,
       nome: row.nome,
       email: row.email,
-      role: row.role
+      role: row.role,
+      acesso_financeiro: !!row.acesso_financeiro,
+      acesso_financeiro_global: !!row.acesso_financeiro_global,
+      congregacao_id: row.congregacao_id || null
     }
     next()
   } catch {
@@ -70,11 +73,17 @@ function verificarAcessoDepartamento(req, res, next) {
   next()
 }
 
+function apenasFinanceiro(req, res, next) {
+  if (req.usuario.role === 'admin' || req.usuario.acesso_financeiro) return next()
+  return res.status(403).json({ erro: 'Sem acesso ao módulo financeiro' })
+}
+
 module.exports = {
   gerarToken,
   autenticar,
   apenasAdmin,
   apenasAdminOuLider,
+  apenasFinanceiro,
   verificarRole,
   verificarAcessoDepartamento
 }

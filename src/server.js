@@ -39,6 +39,8 @@ app.use('/escala',       require('./routes/escalaRoutes'))
 app.use('/agente',       require('./routes/agenteRoutes'))
 app.use('/evento',       require('./routes/eventoRoutes'))
 app.use('/aviso',        require('./routes/avisoRoutes'))
+app.use('/financeiro',   require('./routes/financeiroRoutes'))
+app.use('/congregacao',  require('./routes/congregacaoRoutes'))
 
 // ─── EventBus listeners ──────────────────────────────────────────────────────
 eventBus.on('escala_criada', (escala) => {
