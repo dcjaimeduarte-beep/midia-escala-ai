@@ -277,6 +277,7 @@ function migrate() {
   tryExec(`ALTER TABLE lancamentos_financeiro ADD COLUMN congregacao_id TEXT REFERENCES congregacoes(id) ON DELETE SET NULL`)
   tryExec(`ALTER TABLE usuarios    ADD COLUMN acesso_financeiro_global INTEGER NOT NULL DEFAULT 0`)
   tryExec(`ALTER TABLE usuarios    ADD COLUMN acesso_relatorio_financeiro INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE usuarios    ADD COLUMN data_nascimento TEXT DEFAULT ''`)
 
   // Garante que existe ao menos uma congregação sede
   const { n: nCong } = db.get('SELECT COUNT(*) as n FROM congregacoes') || { n: 0 }

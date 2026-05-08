@@ -149,7 +149,7 @@ router.put('/:id', autenticar, async (req, res) => {
   if (!podeEditar)
     return res.status(403).json({ erro: 'Sem permissão para alterar cadastros' })
 
-  const { nome, email, celular, senha, ativo, avatar, role, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, congregacao_id } = req.body
+  const { nome, email, celular, data_nascimento, senha, ativo, avatar, role, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, congregacao_id } = req.body
 
   if (role !== undefined) {
     if (req.usuario.role !== 'admin')
@@ -166,6 +166,7 @@ router.put('/:id', autenticar, async (req, res) => {
   if (nome) sql.run(`UPDATE usuarios SET nome = ? WHERE id = ?`, nome, req.params.id)
   if (email) sql.run(`UPDATE usuarios SET email = ? WHERE id = ?`, email, req.params.id)
   if (celular !== undefined) sql.run(`UPDATE usuarios SET celular = ? WHERE id = ?`, celular, req.params.id)
+  if (data_nascimento !== undefined) sql.run(`UPDATE usuarios SET data_nascimento = ? WHERE id = ?`, data_nascimento || '', req.params.id)
   if (avatar !== undefined) sql.run(`UPDATE usuarios SET avatar = ? WHERE id = ?`, avatar, req.params.id)
   if (ativo !== undefined && req.usuario.role === 'admin')
     sql.run(`UPDATE usuarios SET ativo = ? WHERE id = ?`, ativo ? 1 : 0, req.params.id)

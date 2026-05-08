@@ -1713,6 +1713,7 @@
       <div class="form-grupo"><label>Nome</label><input id="edit-usuario-nome" required/></div>
       <div class="form-grupo"><label>E-mail</label><input id="edit-usuario-email" type="email" required/></div>
       <div class="form-grupo"><label>Celular</label><input id="edit-usuario-celular" type="tel" placeholder="(11) 99999-9999"/></div>
+      <div class="form-grupo"><label>Data de nascimento</label><input id="edit-usuario-nascimento" type="date"/></div>
       <div class="form-grupo" id="edit-usuario-perfil-wrap">
         <label>Perfil e permissões</label>
         <select id="edit-usuario-perfil">
@@ -4231,6 +4232,7 @@ async function abrirModalEditarUsuario(id) {
     document.getElementById('edit-usuario-nome').value = u.nome || ''
     document.getElementById('edit-usuario-email').value = u.email || ''
     document.getElementById('edit-usuario-celular').value = u.celular || ''
+    document.getElementById('edit-usuario-nascimento').value = u.data_nascimento || ''
     document.getElementById('edit-usuario-senha').value = ''
     document.getElementById('edit-usuario-ativo').checked = u.ativo !== false
     document.getElementById('edit-usuario-erro').style.display = 'none'
@@ -4290,6 +4292,7 @@ async function salvarEditUsuario(ev) {
     nome: document.getElementById('edit-usuario-nome').value.trim(),
     email: document.getElementById('edit-usuario-email').value.trim(),
     celular: document.getElementById('edit-usuario-celular').value.trim(),
+    data_nascimento: document.getElementById('edit-usuario-nascimento').value || null,
     ativo: document.getElementById('edit-usuario-ativo').checked
   }
   const senha = document.getElementById('edit-usuario-senha').value
