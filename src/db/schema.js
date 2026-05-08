@@ -167,6 +167,51 @@ function migrate() {
   `)
 
   tryExec(`ALTER TABLE escalas ADD COLUMN evento_id TEXT`)
+  tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_financeiro INTEGER NOT NULL DEFAULT 0`)
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS categorias_financeiro (
+      id        TEXT PRIMARY KEY,
+      nome      TEXT NOT NULL,
+      tipo      TEXT NOT NULL CHECK(tipo IN ('entrada','saida')),
+      ativo     INTEGER NOT NULL DEFAULT 1,
+      criado_em TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS lancamentos_financeiro (
+      id           TEXT PRIMARY KEY,
+      data         TEXT NOT NULL,
+      evento_id    TEXT REFERENCES eventos(id) ON DELETE SET NULL,
+      categoria_id TEXT NOT NULL REFERENCES categorias_financeiro(id),
+      valor        REAL NOT NULL,
+      descricao    TEXT DEFAULT '',
+      tipo         TEXT NOT NULL CHECK(tipo IN ('entrada','saida')),
+      lancado_por  TEXT NOT NULL REFERENCES usuarios(id),
+      validado     INTEGER NOT NULL DEFAULT 0,
+      validado_por TEXT REFERENCES usuarios(id),
+      validado_em  TEXT,
+      criado_em    TEXT NOT NULL
+    );
+  `)
+
+  const { n: nCat } = db.get('SELECT COUNT(*) as n FROM categorias_financeiro') || { n: 0 }
+  if (!nCat) {
+    const agora = new Date().toISOString()
+    const cats = [
+      { nome: 'Dízimo',           tipo: 'entrada' },
+      { nome: 'Oferta',           tipo: 'entrada' },
+      { nome: 'Primícia',         tipo: 'entrada' },
+      { nome: 'Oferta Especial',  tipo: 'entrada' },
+      { nome: 'Despesa Geral',    tipo: 'saida'   },
+      { nome: 'Aluguel',          tipo: 'saida'   },
+      { nome: 'Utilidades',       tipo: 'saida'   },
+      { nome: 'Transporte',       tipo: 'saida'   },
+      { nome: 'Material',         tipo: 'saida'   },
+    ]
+    const { v4: uuidv4 } = require('uuid')
+    for (const c of cats) {
+      db.run('INSERT INTO categorias_financeiro (id,nome,tipo,ativo,criado_em) VALUES (?,?,?,1,?)', uuidv4(), c.nome, c.tipo, agora)
+    }
+  }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS escala_trocas (

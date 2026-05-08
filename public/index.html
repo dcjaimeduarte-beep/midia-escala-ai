@@ -8,6 +8,7 @@
   <link rel="apple-touch-icon" href="/docs/Foguinho%20vazado.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1102,6 +1103,145 @@
       .chat-wrapper { height: calc(100vh - 210px); }
 
       .nav-link { width: 100%; text-align: left; }
+
+      .fin-resumo-grid { grid-template-columns: 1fr 1fr; }
+      .fin-stat-valor { font-size: 1.05rem; }
+    }
+
+    /* ── FINANCEIRO ────────────────────────────────────────── */
+    .fin-tabs {
+      display: flex;
+      gap: 0.375rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .fin-tab {
+      padding: 0.45rem 0.85rem;
+      border-radius: var(--raio);
+      background: transparent;
+      border: 1px solid var(--borda);
+      color: var(--texto-mutado);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .fin-tab.ativo {
+      background: rgba(201,74,82,0.12);
+      border-color: rgba(201,74,82,0.3);
+      color: var(--primaria);
+    }
+    .fin-tab:hover:not(.ativo) {
+      background: rgba(255,255,255,0.04);
+      color: var(--texto);
+    }
+    .fin-resumo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .fin-stat-card {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio);
+      padding: 0.875rem 1rem;
+    }
+    .fin-stat-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--texto-mutado);
+      margin-bottom: 0.35rem;
+    }
+    .fin-stat-valor {
+      font-family: var(--fonte-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    .fin-stat-entrada    { color: var(--sucesso); }
+    .fin-stat-saida      { color: var(--erro); }
+    .fin-stat-saldo-pos  { color: var(--sucesso); }
+    .fin-stat-saldo-neg  { color: var(--erro); }
+    .fin-grupo {
+      margin-bottom: 1.25rem;
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio-lg);
+      overflow: hidden;
+    }
+    .fin-grupo-header {
+      padding: 0.65rem 1rem;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--borda);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .fin-grupo-nome { font-weight: 600; font-size: 0.85rem; }
+    .fin-grupo-resumo {
+      font-size: 0.75rem;
+      color: var(--texto-mutado);
+      display: flex;
+      gap: 0.75rem;
+    }
+    .fin-lancamento-row {
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      border-bottom: 1px solid var(--borda);
+      font-size: 0.8rem;
+    }
+    .fin-lancamento-row:last-child { border-bottom: none; }
+    .fin-lancamento-tipo {
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .fin-tipo-entrada { background: rgba(92,173,106,0.12); color: #8fcf98; border: 1px solid rgba(92,173,106,0.22); }
+    .fin-tipo-saida   { background: rgba(232,93,93,0.10); color: #f0a0a0; border: 1px solid rgba(232,93,93,0.20); }
+    .fin-lancamento-desc { flex: 1; min-width: 0; overflow: hidden; }
+    .fin-lancamento-cat  { color: var(--texto-mutado); font-size: 0.73rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fin-lancamento-valor { font-weight: 600; margin-left: auto; white-space: nowrap; flex-shrink: 0; }
+    .fin-lancamento-acoes { display: flex; gap: 0.25rem; flex-shrink: 0; }
+    .fin-lancamento-validado { color: var(--sucesso); font-size: 0.7rem; margin-left: 0.3rem; }
+    .fin-data-header {
+      padding: 0.45rem 1rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--texto-mutado);
+      background: rgba(255,255,255,0.015);
+      border-bottom: 1px solid var(--borda);
+    }
+    .fin-cat-row {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio);
+      padding: 0.65rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .fin-cat-nome { flex: 1; font-weight: 500; font-size: 0.85rem; }
+    .fin-cat-tipo { font-size: 0.72rem; color: var(--texto-mutado); }
+    .fin-cat-inativa { opacity: 0.45; }
+    .fin-relatorio-chart-wrapper {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio-lg);
+      padding: 1.1rem 1rem;
+      margin-bottom: 1rem;
     }
   </style>
 </head>
@@ -1219,6 +1359,7 @@
       <button class="nav-link" data-pagina="departamentos" onclick="navegar('departamentos')">🏛️ Departamentos</button>
       <button class="nav-link" data-pagina="comunicacoes" onclick="navegar('comunicacoes')">💬 Comunicações</button>
       <button class="nav-link" id="nav-cadastro" data-pagina="cadastros" onclick="navegar('cadastros')" style="display:none">⚙️ Cadastros</button>
+      <button class="nav-link" id="nav-financeiro" data-pagina="financeiro" onclick="navegar('financeiro')" style="display:none">💰 Financeiro</button>
       <button class="nav-link" data-pagina="agente"        onclick="navegar('agente')">🔥 Pastor IA</button>
     </nav>
 
@@ -1286,6 +1427,27 @@
         Mapa de cadastros, convites, departamentos e tipos de culto. Para <strong style="color:var(--texto)">membros</strong> use <strong>Equipe</strong>; para <strong style="color:var(--texto)">escalas</strong> use <strong>Escalas</strong> (editar data/evento ou trocar integrante).
       </p>
       <div id="cadastros-conteudo"><p class="carregando">Carregando…</p></div>
+    </div>
+
+    <!-- FINANCEIRO -->
+    <div id="pagina-financeiro" class="pagina" style="display:none">
+      <div class="pagina-actions">
+        <h2 class="pagina-titulo">💰 Financeiro</h2>
+        <button class="btn btn-primario" id="btn-novo-lancamento" onclick="abrirModalLancamento()" style="display:none">+ Lançamento</button>
+      </div>
+
+      <!-- Sub-tabs -->
+      <div class="fin-tabs">
+        <button class="fin-tab ativo" data-fintab="dashboard"   onclick="finTab('dashboard')">📊 Resumo do Dia</button>
+        <button class="fin-tab"       data-fintab="lancamentos" onclick="finTab('lancamentos')">📋 Lançamentos</button>
+        <button class="fin-tab"       data-fintab="relatorio"   onclick="finTab('relatorio')">📈 Relatório Mensal</button>
+        <button class="fin-tab" id="fin-tab-cat" data-fintab="categorias" onclick="finTab('categorias')" style="display:none">⚙️ Categorias</button>
+      </div>
+
+      <div id="fin-dashboard"   class="fin-panel"><p class="carregando">Carregando…</p></div>
+      <div id="fin-lancamentos" class="fin-panel" style="display:none"><p class="carregando">Carregando…</p></div>
+      <div id="fin-relatorio"   class="fin-panel" style="display:none"><p class="carregando">Carregando…</p></div>
+      <div id="fin-categorias"  class="fin-panel" style="display:none"><p class="carregando">Carregando…</p></div>
     </div>
 
     <!-- PASTOR IA -->
@@ -1481,6 +1643,10 @@
       <div class="form-grupo"><label style="text-transform:none;letter-spacing:0">
         <input type="checkbox" id="edit-usuario-ativo" style="width:auto;margin-right:0.5rem"/> Conta ativa
       </label></div>
+      <div class="form-grupo" id="edit-usuario-financeiro-wrap" style="display:none"><label style="text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="edit-usuario-financeiro" style="width:auto;margin-right:0.5rem"/> Acesso ao módulo financeiro
+      </label>
+      <p class="muted" style="font-size:0.75rem;margin:0.2rem 0 0;line-height:1.4">Permite lançar entradas e visualizar dashboards e relatórios.</p></div>
       <div class="form-grupo" id="edit-usuario-deptos-wrap">
         <label>Departamentos</label>
         <p class="muted" style="font-size:0.78rem;margin:0 0 0.5rem;line-height:1.45">
@@ -1662,6 +1828,74 @@
       <button type="button" class="btn btn-ghost" style="color:var(--erro)" onclick="rejeitarDoModalAprovarTroca()">Rejeitar</button>
       <button type="button" class="btn btn-primario" onclick="aprovarDoModalAprovarTroca()">Aprovar</button>
     </div>
+  </div>
+</div>
+
+<!-- LANÇAMENTO FINANCEIRO -->
+<div id="modal-lancamento" class="modal-overlay" onclick="if(event.target===this)fecharModalLancamento()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo" id="modal-lancamento-titulo">Novo Lançamento</h3>
+    <form id="form-lancamento" onsubmit="salvarLancamento(event)">
+      <input type="hidden" id="lanc-id"/>
+      <div class="form-grupo">
+        <label>Tipo</label>
+        <select id="lanc-tipo" required>
+          <option value="entrada">↑ Entrada</option>
+          <option value="saida">↓ Saída</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label>Categoria</label>
+        <select id="lanc-categoria" required></select>
+      </div>
+      <div class="form-grupo">
+        <label>Valor (R$)</label>
+        <input id="lanc-valor" type="number" step="0.01" min="0.01" required placeholder="0,00"/>
+      </div>
+      <div class="form-grupo">
+        <label>Data (DD/MM/AAAA)</label>
+        <input id="lanc-data" type="text" required placeholder="DD/MM/AAAA"/>
+      </div>
+      <div class="form-grupo">
+        <label>Evento / Culto (opcional)</label>
+        <select id="lanc-evento"><option value="">Sem evento</option></select>
+      </div>
+      <div class="form-grupo">
+        <label>Descrição (opcional)</label>
+        <input id="lanc-descricao" type="text" placeholder="Observação ou referência"/>
+      </div>
+      <p id="lanc-erro" class="erro-msg"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="fecharModalLancamento()">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- CATEGORIA FINANCEIRA -->
+<div id="modal-categoria" class="modal-overlay" onclick="if(event.target===this)fecharModalCategoria()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo" id="modal-categoria-titulo">Nova Categoria</h3>
+    <form id="form-categoria" onsubmit="salvarCategoria(event)">
+      <input type="hidden" id="cat-id"/>
+      <div class="form-grupo">
+        <label>Nome</label>
+        <input id="cat-nome" required/>
+      </div>
+      <div class="form-grupo">
+        <label>Tipo</label>
+        <select id="cat-tipo" required>
+          <option value="entrada">Entrada</option>
+          <option value="saida">Saída</option>
+        </select>
+      </div>
+      <p id="cat-erro" class="erro-msg"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="fecharModalCategoria()">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -2021,6 +2255,9 @@ function mostrarApp() {
   const navCad = document.getElementById('nav-cadastro')
   if (navCad) navCad.style.display = temPapelLiderancaNoApp() ? '' : 'none'
 
+  const navFin = document.getElementById('nav-financeiro')
+  if (navFin) navFin.style.display = (usuario?.role === 'admin' || usuario?.acesso_financeiro) ? '' : 'none'
+
   verificarSenhaObrigatoria()
 }
 
@@ -2084,6 +2321,7 @@ function navegar(pagina) {
     departamentos: carregarDepartamentos,
     comunicacoes:  carregarComunicacoes,
     cadastros:     carregarCadastros,
+    financeiro:    carregarFinanceiro,
     agente:        () => {}
   }
   loaders[pagina]?.()
@@ -3658,6 +3896,12 @@ async function abrirModalEditarUsuario(id) {
     document.getElementById('edit-usuario-ativo').checked = u.ativo !== false
     document.getElementById('edit-usuario-erro').style.display = 'none'
 
+    const finWrap = document.getElementById('edit-usuario-financeiro-wrap')
+    if (finWrap) {
+      finWrap.style.display = usuario?.role === 'admin' ? '' : 'none'
+      document.getElementById('edit-usuario-financeiro').checked = !!u.acesso_financeiro
+    }
+
     const wrapPerfil = document.getElementById('edit-usuario-perfil-wrap')
     const optAdmin = document.getElementById('edit-usuario-perfil-opt-admin')
     const ajudaPerfil = document.getElementById('edit-usuario-perfil-ajuda')
@@ -3700,6 +3944,10 @@ async function salvarEditUsuario(ev) {
   }
   const senha = document.getElementById('edit-usuario-senha').value
   if (senha) body.senha = senha
+  const finWrap = document.getElementById('edit-usuario-financeiro-wrap')
+  if (finWrap && finWrap.style.display !== 'none' && usuario?.role === 'admin') {
+    body.acesso_financeiro = document.getElementById('edit-usuario-financeiro').checked
+  }
 
   const wrapPerfil = document.getElementById('edit-usuario-perfil-wrap')
   const perfil =
@@ -4922,6 +5170,491 @@ async function validarFluxoAgora() {
     btnValidar.textContent = 'Validar fluxo agora'
     msgsEl.scrollTop = msgsEl.scrollHeight
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// FINANCEIRO
+// ═══════════════════════════════════════════════════════════
+let finAbaAtiva = 'dashboard'
+let finCategorias = []
+let finEventos = []
+let finLancamentosData = []
+let finRelatorioData = null
+
+function _finTemAcesso() {
+  return usuario?.role === 'admin' || !!usuario?.acesso_financeiro
+}
+
+function finTab(aba) {
+  finAbaAtiva = aba
+  document.querySelectorAll('.fin-tab').forEach(b => b.classList.toggle('ativo', b.dataset.fintab === aba))
+  document.querySelectorAll('.fin-panel').forEach(p => p.style.display = 'none')
+  document.getElementById(`fin-${aba}`).style.display = 'block'
+  const btnNovo = document.getElementById('btn-novo-lancamento')
+  if (btnNovo) btnNovo.style.display = aba === 'lancamentos' ? '' : 'none'
+  if (aba === 'dashboard')    carregarFinDashboard()
+  else if (aba === 'lancamentos') carregarFinLancamentos()
+  else if (aba === 'relatorio')   carregarFinRelatorio()
+  else if (aba === 'categorias')  carregarFinCategorias()
+}
+
+async function carregarFinanceiro() {
+  if (!_finTemAcesso()) return
+  const tabCat = document.getElementById('fin-tab-cat')
+  if (tabCat) tabCat.style.display = usuario?.role === 'admin' ? '' : 'none'
+  try { finCategorias = await api('GET', '/financeiro/categorias') } catch (_) { finCategorias = [] }
+  try { finEventos = await api('GET', '/evento/listar') } catch (_) { finEventos = [] }
+  finTab(finAbaAtiva)
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────
+
+function _dataHoje() {
+  const d = new Date()
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
+}
+function _ddmmToISO(s) {
+  if (!s) return ''
+  const p = String(s).split('/')
+  if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`
+  return s
+}
+function _fmtVal(v) {
+  return `R$ ${(v || 0).toFixed(2).replace('.', ',')}`
+}
+
+async function carregarFinDashboard() {
+  const el = document.getElementById('fin-dashboard')
+  if (!el) return
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+  try {
+    const data = await api('GET', `/financeiro/dashboard?data=${_dataHoje()}`)
+    el.innerHTML = _renderDashboard(data)
+  } catch (e) {
+    el.innerHTML = `<p class="muted">Não foi possível carregar: ${e.erro || 'Erro'}</p>`
+  }
+}
+
+function _renderDashboard(data) {
+  const { totais, grupos } = data
+  const saldoCls = totais.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
+    <span style="font-size:0.8rem;color:var(--texto-mutado)">Resumo do dia — ${data.data}</span>
+    <input type="date" value="${_ddmmToISO(data.data)}" onchange="carregarFinDashboardData(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
+  </div>
+  <div class="fin-resumo-grid">
+    <div class="fin-stat-card"><div class="fin-stat-label">Entradas</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(totais.entradas)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Saídas</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(totais.saidas)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Saldo</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(totais.saldo)}</div></div>
+  </div>`
+  if (!grupos.length) {
+    html += `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento para esta data.</p>`
+  } else {
+    for (const g of grupos) {
+      html += `<div class="fin-grupo">
+        <div class="fin-grupo-header">
+          <span class="fin-grupo-nome">${esc(g.evento_nome || 'Sem evento')}</span>
+          <span class="fin-grupo-resumo">
+            <span style="color:var(--sucesso)">+${_fmtVal(g.entradas)}</span>
+            <span style="color:var(--erro)">-${_fmtVal(g.saidas)}</span>
+          </span>
+        </div>`
+      for (const l of g.items) html += _renderLancRow(l, false)
+      html += `</div>`
+    }
+  }
+  return html
+}
+
+async function carregarFinDashboardData(isoVal) {
+  if (!isoVal) return
+  const [y, m, d] = isoVal.split('-')
+  const ddmm = `${d}/${m}/${y}`
+  const el = document.getElementById('fin-dashboard')
+  if (!el) return
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+  try {
+    const data = await api('GET', `/financeiro/dashboard?data=${ddmm}`)
+    el.innerHTML = _renderDashboard(data)
+  } catch (e) {
+    el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
+  }
+}
+
+// ── LANÇAMENTOS ────────────────────────────────────────────
+
+async function carregarFinLancamentos() {
+  const el = document.getElementById('fin-lancamentos')
+  if (!el) return
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+  const agora = new Date()
+  const mes = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`
+  try {
+    const rows = await api('GET', `/financeiro/lancamentos?mes=${mes}`)
+    finLancamentosData = rows
+    el.innerHTML = _renderLancamentos(rows, mes)
+  } catch (e) {
+    el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
+  }
+}
+
+function _renderLancamentos(rows, mes) {
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
+    <span style="font-size:0.8rem;color:var(--texto-mutado)">${rows.length} lançamento${rows.length !== 1 ? 's' : ''} no mês</span>
+    <input type="month" value="${mes}" onchange="filtrarFinLancamentos(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
+  </div>`
+  if (!rows.length) return html + `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento no mês.</p>`
+  html += `<div class="fin-grupo">`
+  for (const l of rows) html += _renderLancRow(l, true)
+  html += `</div>`
+  return html
+}
+
+async function filtrarFinLancamentos(mes) {
+  const el = document.getElementById('fin-lancamentos')
+  if (!el || !mes) return
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+  try {
+    const rows = await api('GET', `/financeiro/lancamentos?mes=${mes}`)
+    finLancamentosData = rows
+    el.innerHTML = _renderLancamentos(rows, mes)
+  } catch (e) {
+    el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
+  }
+}
+
+function _renderLancRow(l, comAcoes) {
+  const isAdmin = usuario?.role === 'admin'
+  const isOwner = l.lancado_por === usuario?.id
+  const validIcon = l.validado ? `<span class="fin-lancamento-validado" title="Validado por ${esc(l.validado_por || '')}">✓</span>` : ''
+  let acoes = ''
+  if (comAcoes) {
+    if (isAdmin || (!l.validado && isOwner))
+      acoes += `<button class="btn btn-ghost btn-sm" onclick="editarLancamento('${esc(l.id)}')" title="Editar">✏️</button>`
+    if (isAdmin && !l.validado)
+      acoes += `<button class="btn btn-ghost btn-sm" style="color:var(--sucesso)" onclick="validarLancamento('${esc(l.id)}')" title="Validar">✓</button>`
+    if (isAdmin && l.validado)
+      acoes += `<button class="btn btn-ghost btn-sm" style="color:var(--alerta);font-size:0.9rem" onclick="desvalidarLancamento('${esc(l.id)}')" title="Desvalidar">↩</button>`
+    if (isAdmin || (!l.validado && isOwner))
+      acoes += `<button class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirLancamento('${esc(l.id)}')" title="Excluir">🗑</button>`
+  }
+  return `<div class="fin-lancamento-row">
+    <span class="fin-lancamento-tipo ${l.tipo === 'entrada' ? 'fin-tipo-entrada' : 'fin-tipo-saida'}">${l.tipo === 'entrada' ? 'Entrada' : 'Saída'}</span>
+    <div class="fin-lancamento-desc">
+      <div>${esc(l.descricao || l.categoria_nome)}${validIcon}</div>
+      <div class="fin-lancamento-cat">${esc(l.categoria_nome)}${l.evento_nome ? ' · ' + esc(l.evento_nome) : ''}</div>
+    </div>
+    <span class="fin-lancamento-valor" style="color:${l.tipo === 'entrada' ? 'var(--sucesso)' : 'var(--erro)'}">${l.tipo === 'saida' ? '-' : '+'}${_fmtVal(l.valor)}</span>
+    ${comAcoes ? `<div class="fin-lancamento-acoes">${acoes}</div>` : ''}
+  </div>`
+}
+
+// ── RELATÓRIO MENSAL ────────────────────────────────────────
+
+async function carregarFinRelatorio() {
+  const el = document.getElementById('fin-relatorio')
+  if (!el) return
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+  const agora = new Date()
+  const mes = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`
+  try {
+    const data = await api('GET', `/financeiro/relatorio?mes=${mes}`)
+    finRelatorioData = data
+    el.innerHTML = _renderRelatorio(data)
+    _desenharGrafico(data)
+  } catch (e) {
+    el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
+  }
+}
+
+async function filtrarFinRelatorio(mes) {
+  const el = document.getElementById('fin-relatorio')
+  if (!el || !mes) return
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+  try {
+    const data = await api('GET', `/financeiro/relatorio?mes=${mes}`)
+    finRelatorioData = data
+    el.innerHTML = _renderRelatorio(data)
+    _desenharGrafico(data)
+  } catch (e) {
+    el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
+  }
+}
+
+function _renderRelatorio(data) {
+  const { mes, totais, por_categoria, por_data, lancamentos } = data
+  const saldoCls = totais.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'
+  const [ano, mesN] = mes.split('-')
+  const nomeMes = new Date(parseInt(ano), parseInt(mesN) - 1, 1).toLocaleString('pt-BR', { month: 'long' })
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
+    <span style="font-size:0.8rem;color:var(--texto-mutado)">${nomeMes} de ${ano}</span>
+    <input type="month" value="${mes}" onchange="filtrarFinRelatorio(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
+  </div>
+  <div class="fin-resumo-grid">
+    <div class="fin-stat-card"><div class="fin-stat-label">Entradas</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(totais.entradas)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Saídas</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(totais.saidas)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Saldo</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(totais.saldo)}</div></div>
+  </div>`
+
+  if (por_data.length) {
+    html += `<div class="fin-relatorio-chart-wrapper">
+      <p style="font-size:0.78rem;font-weight:600;margin-bottom:0.75rem;color:var(--texto-mutado)">Entradas × Saídas por dia</p>
+      <canvas id="fin-chart-barras" height="180"></canvas>
+    </div>`
+  }
+
+  if (por_categoria.length) {
+    const maxVal = Math.max(totais.entradas, totais.saidas, 1)
+    html += `<div class="fin-relatorio-chart-wrapper">
+      <p style="font-size:0.78rem;font-weight:600;margin-bottom:0.75rem;color:var(--texto-mutado)">Por categoria</p>`
+    for (const c of por_categoria) {
+      const barra = Math.min(100, Math.round((c.total / maxVal) * 100))
+      html += `<div style="margin-bottom:0.65rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;font-size:0.78rem">
+          <span>${esc(c.nome)} <span style="font-size:0.7rem;color:var(--texto-mutado)">${c.tipo === 'entrada' ? '↑' : '↓'}</span></span>
+          <span style="font-weight:600;color:${c.tipo === 'entrada' ? 'var(--sucesso)' : 'var(--erro)'}">${_fmtVal(c.total)}</span>
+        </div>
+        <div style="height:4px;border-radius:999px;background:rgba(255,255,255,0.06)">
+          <div style="height:4px;border-radius:999px;width:${barra}%;background:${c.tipo === 'entrada' ? 'var(--sucesso)' : 'var(--erro)'}"></div>
+        </div>
+      </div>`
+    }
+    html += `</div>`
+  }
+
+  if (lancamentos.length) {
+    html += `<div class="fin-grupo">`
+    let dataAtual = ''
+    for (const l of lancamentos) {
+      if (l.data !== dataAtual) {
+        dataAtual = l.data
+        html += `<div class="fin-data-header">${esc(l.data)}</div>`
+      }
+      html += _renderLancRow(l, false)
+    }
+    html += `</div>`
+  } else {
+    html += `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento no mês.</p>`
+  }
+  return html
+}
+
+function _desenharGrafico(data) {
+  setTimeout(() => {
+    const canvas = document.getElementById('fin-chart-barras')
+    if (!canvas || !window.Chart) return
+    if (canvas._chartInstance) { canvas._chartInstance.destroy() }
+    const { por_data } = data
+    const inst = new window.Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: por_data.map(d => d.data),
+        datasets: [
+          { label: 'Entradas', data: por_data.map(d => d.entradas), backgroundColor: 'rgba(92,173,106,0.55)', borderColor: 'rgba(92,173,106,0.9)', borderWidth: 1 },
+          { label: 'Saídas',   data: por_data.map(d => d.saidas),   backgroundColor: 'rgba(232,93,93,0.45)',  borderColor: 'rgba(232,93,93,0.9)',  borderWidth: 1 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#8d96a3', font: { size: 11 } } } },
+        scales: {
+          x: { ticks: { color: '#8d96a3', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: { ticks: { color: '#8d96a3', font: { size: 10 }, callback: v => 'R$' + v.toFixed(0) }, grid: { color: 'rgba(255,255,255,0.06)' } }
+        }
+      }
+    })
+    canvas._chartInstance = inst
+  }, 50)
+}
+
+// ── CATEGORIAS ─────────────────────────────────────────────
+
+async function carregarFinCategorias() {
+  const el = document.getElementById('fin-categorias')
+  if (!el) return
+  if (usuario?.role !== 'admin') {
+    el.innerHTML = `<p class="muted">Apenas administradores podem gerenciar categorias.</p>`
+    return
+  }
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+  try {
+    const cats = await api('GET', '/financeiro/categorias')
+    finCategorias = cats
+    let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem">
+      <button class="btn btn-primario" onclick="abrirModalCategoria()">+ Nova Categoria</button>
+    </div>`
+    if (!cats.length) {
+      html += `<p class="muted" style="text-align:center;padding:2rem 0">Nenhuma categoria.</p>`
+    } else {
+      for (const c of cats) {
+        html += `<div class="fin-cat-row${!c.ativo ? ' fin-cat-inativa' : ''}">
+          <span class="fin-cat-nome">${esc(c.nome)}</span>
+          <span class="fin-cat-tipo">${c.tipo === 'entrada' ? '↑ Entrada' : '↓ Saída'}</span>
+          ${!c.ativo ? `<span style="font-size:0.7rem;color:var(--texto-mutado);background:rgba(255,255,255,0.05);padding:0.1rem 0.4rem;border-radius:999px">inativa</span>` : ''}
+          <button class="btn btn-ghost btn-sm" onclick="editarCategoria('${esc(c.id)}')">✏️</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirCategoria('${esc(c.id)}')">🗑</button>
+        </div>`
+      }
+    }
+    el.innerHTML = html
+  } catch (e) {
+    el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
+  }
+}
+
+// ── MODAL LANÇAMENTO ────────────────────────────────────────
+
+function abrirModalLancamento(existente) {
+  document.getElementById('modal-lancamento-titulo').textContent = existente ? 'Editar Lançamento' : 'Novo Lançamento'
+  document.getElementById('lanc-id').value = existente?.id || ''
+  document.getElementById('lanc-erro').style.display = 'none'
+
+  const selCat = document.getElementById('lanc-categoria')
+  const selEv  = document.getElementById('lanc-evento')
+  const cats = finCategorias.filter(c => c.ativo || existente?.categoria_id === c.id)
+  selCat.innerHTML = cats.map(c => `<option value="${esc(c.id)}">${esc(c.nome)} (${c.tipo})</option>`).join('')
+  selEv.innerHTML = `<option value="">Sem evento</option>` +
+    finEventos.map(e => `<option value="${esc(e.id)}">${esc(e.nome)}</option>`).join('')
+
+  const optSaida = document.querySelector('#lanc-tipo option[value="saida"]')
+  if (optSaida) optSaida.style.display = usuario?.role === 'admin' ? '' : 'none'
+
+  if (existente) {
+    document.getElementById('lanc-tipo').value      = existente.tipo || 'entrada'
+    document.getElementById('lanc-valor').value     = existente.valor || ''
+    document.getElementById('lanc-data').value      = existente.data || ''
+    document.getElementById('lanc-descricao').value = existente.descricao || ''
+    selCat.value = existente.categoria_id || ''
+    selEv.value  = existente.evento_id    || ''
+  } else {
+    document.getElementById('lanc-tipo').value      = 'entrada'
+    document.getElementById('lanc-valor').value     = ''
+    document.getElementById('lanc-data').value      = _dataHoje()
+    document.getElementById('lanc-descricao').value = ''
+  }
+  document.getElementById('modal-lancamento').classList.add('aberto')
+}
+
+function fecharModalLancamento() {
+  document.getElementById('modal-lancamento').classList.remove('aberto')
+}
+
+async function salvarLancamento(ev) {
+  ev.preventDefault()
+  const err = document.getElementById('lanc-erro')
+  err.style.display = 'none'
+  const id = document.getElementById('lanc-id').value
+  const body = {
+    tipo:         document.getElementById('lanc-tipo').value,
+    categoria_id: document.getElementById('lanc-categoria').value,
+    valor:        parseFloat(document.getElementById('lanc-valor').value),
+    data:         document.getElementById('lanc-data').value,
+    evento_id:    document.getElementById('lanc-evento').value || null,
+    descricao:    document.getElementById('lanc-descricao').value.trim()
+  }
+  try {
+    if (id) await api('PUT', `/financeiro/lancamentos/${id}`, body)
+    else    await api('POST', '/financeiro/lancamentos', body)
+    fecharModalLancamento()
+    toast(id ? 'Lançamento atualizado.' : 'Lançamento registrado.', 'ok')
+    if (finAbaAtiva === 'lancamentos') carregarFinLancamentos()
+    else carregarFinDashboard()
+  } catch (e) {
+    err.textContent = e.erro || 'Não foi possível salvar.'
+    err.style.display = 'block'
+  }
+}
+
+async function editarLancamento(id) {
+  const lanc = finLancamentosData.find(l => l.id === id)
+  if (lanc) { abrirModalLancamento(lanc); return }
+  try {
+    const agora = new Date()
+    const mes = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`
+    const rows = await api('GET', `/financeiro/lancamentos?mes=${mes}`)
+    finLancamentosData = rows
+    const l = rows.find(r => r.id === id)
+    if (l) abrirModalLancamento(l)
+    else toast('Lançamento não encontrado.', 'err')
+  } catch (e) { toast(e.erro || 'Erro.', 'err') }
+}
+
+async function excluirLancamento(id) {
+  if (!confirm('Excluir este lançamento?')) return
+  try {
+    await api('DELETE', `/financeiro/lancamentos/${id}`)
+    toast('Lançamento excluído.', 'ok')
+    carregarFinLancamentos()
+  } catch (e) { toast(e.erro || 'Não foi possível excluir.', 'err') }
+}
+
+async function validarLancamento(id) {
+  try {
+    await api('POST', `/financeiro/lancamentos/${id}/validar`)
+    toast('Lançamento validado.', 'ok')
+    if (finAbaAtiva === 'lancamentos') carregarFinLancamentos()
+    else carregarFinDashboard()
+  } catch (e) { toast(e.erro || 'Erro ao validar.', 'err') }
+}
+
+async function desvalidarLancamento(id) {
+  try {
+    await api('POST', `/financeiro/lancamentos/${id}/desvalidar`)
+    toast('Validação revertida.', 'ok')
+    if (finAbaAtiva === 'lancamentos') carregarFinLancamentos()
+    else carregarFinDashboard()
+  } catch (e) { toast(e.erro || 'Erro.', 'err') }
+}
+
+// ── MODAL CATEGORIA ─────────────────────────────────────────
+
+function abrirModalCategoria(cat) {
+  document.getElementById('modal-categoria-titulo').textContent = cat ? 'Editar Categoria' : 'Nova Categoria'
+  document.getElementById('cat-id').value   = cat?.id   || ''
+  document.getElementById('cat-nome').value = cat?.nome || ''
+  document.getElementById('cat-tipo').value = cat?.tipo || 'entrada'
+  document.getElementById('cat-erro').style.display = 'none'
+  document.getElementById('modal-categoria').classList.add('aberto')
+}
+
+function fecharModalCategoria() {
+  document.getElementById('modal-categoria').classList.remove('aberto')
+}
+
+async function salvarCategoria(ev) {
+  ev.preventDefault()
+  const err = document.getElementById('cat-erro')
+  err.style.display = 'none'
+  const id = document.getElementById('cat-id').value
+  const body = {
+    nome: document.getElementById('cat-nome').value.trim(),
+    tipo: document.getElementById('cat-tipo').value
+  }
+  try {
+    if (id) await api('PUT', `/financeiro/categorias/${id}`, body)
+    else    await api('POST', '/financeiro/categorias', body)
+    fecharModalCategoria()
+    toast(id ? 'Categoria atualizada.' : 'Categoria criada.', 'ok')
+    carregarFinCategorias()
+  } catch (e) {
+    err.textContent = e.erro || 'Não foi possível salvar.'
+    err.style.display = 'block'
+  }
+}
+
+function editarCategoria(id) {
+  const cat = finCategorias.find(c => c.id === id)
+  abrirModalCategoria(cat)
+}
+
+async function excluirCategoria(id) {
+  if (!confirm('Excluir esta categoria? Ela não pode ter lançamentos vinculados.')) return
+  try {
+    await api('DELETE', `/financeiro/categorias/${id}`)
+    toast('Categoria excluída.', 'ok')
+    carregarFinCategorias()
+  } catch (e) { toast(e.erro || 'Não foi possível excluir.', 'err') }
 }
 
 // ═══════════════════════════════════════════════════════════

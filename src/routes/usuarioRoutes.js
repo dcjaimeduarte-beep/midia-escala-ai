@@ -47,12 +47,13 @@ function departamentosDoUsuario(usuarioId) {
 router.get('/listar', autenticar, (req, res) => {
   if (req.usuario.role === 'admin') {
     const usuarios = sql.all(
-      `SELECT id, nome, email, celular, role, ativo, avatar, criado_em, precisa_trocar_senha FROM usuarios ORDER BY nome`
+      `SELECT id, nome, email, celular, role, ativo, avatar, criado_em, precisa_trocar_senha, acesso_financeiro FROM usuarios ORDER BY nome`
     )
     const lista = usuarios.map((u) => ({
       ...u,
       ativo: !!u.ativo,
       precisa_trocar_senha: !!u.precisa_trocar_senha,
+      acesso_financeiro: !!u.acesso_financeiro,
       departamentos: departamentosDoUsuario(u.id).map((d) => ({
         id: d.id,
         nome: d.nome,
@@ -141,7 +142,7 @@ router.put('/:id', autenticar, async (req, res) => {
   if (!podeEditar)
     return res.status(403).json({ erro: 'Sem permissão para alterar cadastros' })
 
-  const { nome, email, celular, senha, ativo, avatar, role } = req.body
+  const { nome, email, celular, senha, ativo, avatar, role, acesso_financeiro } = req.body
 
   if (role !== undefined) {
     if (req.usuario.role !== 'admin')
@@ -165,13 +166,16 @@ router.put('/:id', autenticar, async (req, res) => {
     const hash = await bcrypt.hash(senha, 10)
     sql.run(`UPDATE usuarios SET senha = ? WHERE id = ?`, hash, req.params.id)
   }
+  if (acesso_financeiro !== undefined && admin)
+    sql.run(`UPDATE usuarios SET acesso_financeiro = ? WHERE id = ?`, acesso_financeiro ? 1 : 0, req.params.id)
 
   syncTudoParaMemoria()
-  const atual = sql.get(`SELECT id, nome, email, celular, role, ativo, avatar, criado_em, precisa_trocar_senha FROM usuarios WHERE id = ?`, req.params.id)
+  const atual = sql.get(`SELECT id, nome, email, celular, role, ativo, avatar, criado_em, precisa_trocar_senha, acesso_financeiro FROM usuarios WHERE id = ?`, req.params.id)
   res.json({
     ...atual,
     ativo: !!atual.ativo,
-    precisa_trocar_senha: !!atual.precisa_trocar_senha
+    precisa_trocar_senha: !!atual.precisa_trocar_senha,
+    acesso_financeiro: !!atual.acesso_financeiro
   })
 })
 
