@@ -1752,6 +1752,7 @@
     <form id="form-edit-escala" onsubmit="salvarEditEscala(event)">
       <input type="hidden" id="edit-escala-id"/>
       <input type="hidden" id="edit-escala-depto-base"/>
+      <div id="edit-escala-cong-info" style="display:none;font-size:0.75rem;color:var(--texto-mutado);margin:-0.25rem 0 0.75rem;padding:0.4rem 0.65rem;background:var(--fundo-elevado);border-radius:var(--raio);border:1px solid var(--borda)">⛪ <span id="edit-escala-cong-nome"></span></div>
       <div class="form-grupo"><label>Data do culto</label><input id="edit-escala-data" type="date" required/></div>
       <div class="form-grupo"><label>Tipo de culto / evento</label><select id="edit-escala-evento"><option value="">— Nenhum —</option></select></div>
       <div class="form-grupo"><label>Observação</label><input id="edit-escala-obs" placeholder="Opcional"/></div>
@@ -3199,6 +3200,8 @@ function agruparEscalasPorEvento(escalas) {
       mapa.set(chave, {
         data: e.data,
         evento_id: e.evento_id || null,
+        congregacao_nome: e.congregacao_nome || '',
+        congregacao_tipo: e.congregacao_tipo || '',
         itens: []
       })
     }
@@ -3231,6 +3234,7 @@ function _renderCardEscalaGrupo(grupo, isPassado) {
       </div>
       ${temMinhaEscala ? '<div style="margin-bottom:0.45rem"><span class="badge badge-vermelho">Tenho participação neste evento</span></div>' : ''}
       <div class="dash-escala-evento">${esc(nomeEvento(grupo.evento_id))}</div>
+      ${grupo.congregacao_nome ? `<div style="font-size:0.68rem;color:var(--texto-mutado);margin:-0.2rem 0 0.3rem">⛪ ${esc(grupo.congregacao_nome)}</div>` : ''}
       ${isPassado ? `<p style="font-size:0.72rem;color:var(--texto-mutado);margin:0.1rem 0 0.4rem;font-style:italic">Evento encerrado — clique para expandir detalhes</p>` : ''}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0.6rem;margin-top:0.55rem">
         ${grupo.itens
@@ -4301,6 +4305,14 @@ async function abrirModalEditarEscala(escalaId) {
     document.getElementById('edit-escala-depto-base').value = e.departamento_id || ''
     document.getElementById('edit-escala-data').value = dataBRparaInputDate(e.data)
     document.getElementById('edit-escala-obs').value = e.observacao || ''
+
+    const congInfo = document.getElementById('edit-escala-cong-info')
+    const congNome = document.getElementById('edit-escala-cong-nome')
+    if (congInfo && congNome) {
+      const nome = e.congregacao_nome || usuario?.congregacao?.nome
+      if (nome) { congNome.textContent = nome; congInfo.style.display = '' }
+      else congInfo.style.display = 'none'
+    }
     const wrapBase = document.getElementById('edit-escala-membros-base-wrap')
     const listBase = document.getElementById('edit-escala-membros-base-list')
     if (wrapBase && listBase) {

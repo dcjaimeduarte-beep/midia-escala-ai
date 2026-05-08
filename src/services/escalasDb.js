@@ -38,9 +38,11 @@ function mapTrocaRow(t) {
 
 function buscarEscalasComVoluntarios() {
   const rows = sql.all(
-    `SELECT e.*, d.nome as departamento_nome, d.icone as departamento_icone
+    `SELECT e.*, d.nome as departamento_nome, d.icone as departamento_icone,
+            cg.nome as congregacao_nome, cg.tipo as congregacao_tipo
      FROM escalas e
-     LEFT JOIN departamentos d ON d.id = e.departamento_id
+     LEFT JOIN departamentos d  ON d.id  = e.departamento_id
+     LEFT JOIN congregacoes cg  ON cg.id = e.congregacao_id
      ORDER BY e.criado_em DESC`
   )
   const volRows = sql.all(
@@ -57,6 +59,9 @@ function buscarEscalasComVoluntarios() {
     departamento_id: e.departamento_id,
     departamento_nome: e.departamento_nome || '',
     departamento_icone: e.departamento_icone || '',
+    congregacao_id: e.congregacao_id || null,
+    congregacao_nome: e.congregacao_nome || '',
+    congregacao_tipo: e.congregacao_tipo || '',
     evento_id: e.evento_id || null,
     observacao: e.observacao || '',
     criado_por: e.criado_por,
