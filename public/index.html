@@ -3844,6 +3844,39 @@ async function carregarCadastros() {
         </form>
       </div>
       ${tabelaEventos}
+
+      ${usuario?.role === 'admin' ? `
+      <p class="secao-label" style="margin-top:2rem">💾 Backup e Restauração</p>
+      <p class="muted" style="font-size:0.8rem;margin:-0.5rem 0 1rem;line-height:1.5">
+        Antes de cada atualização do sistema, faça o backup. Após o deploy (que zera o banco), restaure o arquivo baixado.
+      </p>
+      <div class="card" style="margin-bottom:1.5rem">
+        <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1.2rem">
+
+          <div>
+            <p style="font-weight:600;margin-bottom:0.4rem">📥 Fazer backup</p>
+            <p class="muted" style="font-size:0.8rem;margin-bottom:0.75rem">Baixa um arquivo <code>.json</code> com todos os usuários, congregações, escalas, lançamentos e mais.</p>
+            <button type="button" class="btn btn-primario btn-sm" onclick="_baixarBackup()">⬇️ Baixar backup agora</button>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--borda)"/>
+
+          <div>
+            <p style="font-weight:600;margin-bottom:0.4rem">📤 Restaurar backup</p>
+            <p class="muted" style="font-size:0.8rem;margin-bottom:0.75rem">
+              <strong style="color:var(--alerta)">⚠️ Atenção:</strong> apaga todos os dados atuais e substitui pelo conteúdo do arquivo. Use apenas após um deploy que zerou o banco.
+            </p>
+            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+              <input type="file" id="input-backup-file" accept=".json" style="font-size:0.82rem;color:var(--texto)" onchange="_previewBackup(this)"/>
+              <button type="button" id="btn-restaurar-backup" class="btn btn-sm" style="background:var(--alerta);color:#000;display:none" onclick="_restaurarBackup()">⬆️ Restaurar</button>
+            </div>
+            <p id="backup-preview-info" style="font-size:0.78rem;color:var(--texto-mutado);margin-top:0.4rem"></p>
+            <p id="backup-restaurar-erro" class="erro-msg" style="display:none"></p>
+          </div>
+
+        </div>
+      </div>
+      ` : ''}
     `
   } catch (err) {
     el.innerHTML = `<p class="carregando" style="color:var(--erro)">Erro ao carregar cadastros.</p>`
@@ -5705,6 +5738,73 @@ function _formatCurrency(num) {
   const intFormatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   return intFormatted + ',' + dec
 }
+
+// ── BACKUP / RESTAURAÇÃO ────────────────────────────────────────────────────
+
+async function _baixarBackup() {
+  try {
+    toast('Gerando backup…', 'info')
+    const t = localStorage.getItem('peniel_token')
+    const res = await fetch('/backup/exportar', { headers: { Authorization: `Bearer ${t}` } })
+    if (!res.ok) throw new Error(await res.text())
+    const blob = await res.blob()
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    const data = new Date().toISOString().slice(0, 10)
+    a.href = url; a.download = `backup-peniel-${data}.json`; a.click()
+    URL.revokeObjectURL(url)
+    toast('Backup baixado com sucesso!', 'ok')
+  } catch (e) {
+    toast('Erro ao gerar backup: ' + (e.message || e), 'err')
+  }
+}
+
+let _backupDados = null
+
+function _previewBackup(input) {
+  const info = document.getElementById('backup-preview-info')
+  const btn  = document.getElementById('btn-restaurar-backup')
+  const erro = document.getElementById('backup-restaurar-erro')
+  _backupDados = null
+  if (btn)  btn.style.display = 'none'
+  if (erro) erro.style.display = 'none'
+  const file = input.files?.[0]
+  if (!file) { if (info) info.textContent = ''; return }
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    try {
+      const dados = JSON.parse(e.target.result)
+      if (dados.app !== 'peniel-midia' || !dados.tabelas) throw new Error('Arquivo inválido')
+      _backupDados = dados
+      const total = Object.values(dados.tabelas).reduce((s, t) => s + (t?.length || 0), 0)
+      if (info) info.textContent = `✅ Arquivo válido — gerado em ${dados.gerado_em?.slice(0,10) || '?'} · ${total} registros no total`
+      if (btn)  btn.style.display = ''
+    } catch {
+      if (info) info.textContent = '❌ Arquivo inválido ou corrompido.'
+    }
+  }
+  reader.readAsText(file)
+}
+
+async function _restaurarBackup() {
+  if (!_backupDados) return
+  const total = Object.values(_backupDados.tabelas).reduce((s, t) => s + (t?.length || 0), 0)
+  const conf  = confirm(`⚠️ Isso apagará TODOS os dados atuais e substituirá por ${total} registros do backup.\n\nTem certeza?`)
+  if (!conf) return
+  const erro = document.getElementById('backup-restaurar-erro')
+  if (erro) erro.style.display = 'none'
+  try {
+    toast('Restaurando backup…', 'info')
+    await api('POST', '/backup/restaurar', _backupDados)
+    toast('Backup restaurado! Recarregando…', 'ok')
+    setTimeout(() => location.reload(), 1500)
+  } catch (e) {
+    if (erro) { erro.textContent = e.erro || e.message || 'Erro ao restaurar.'; erro.style.display = 'block' }
+    toast('Falha na restauração.', 'err')
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 
 function _exportLancamentosCSV() {
   const rows = finLancamentosData
