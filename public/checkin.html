@@ -81,7 +81,7 @@
     .campo { margin-bottom: 1rem; }
 
     /* ── Inputs — font-size 1rem (16px) OBRIGATÓRIO para não dar zoom no iOS ── */
-    input[type=text], select {
+    input[type=text], input[type=tel], select {
       width: 100%;
       background: rgba(255,255,255,0.05);
       border: 1px solid var(--borda);
@@ -95,8 +95,9 @@
       -webkit-appearance: none;  /* remove estilo nativo iOS */
       appearance: none;
     }
-    input[type=text]::placeholder { color: var(--texto-mutado); opacity: 1; }
-    input[type=text]:focus, select:focus { border-color: var(--primaria); }
+    input[type=text]::placeholder,
+    input[type=tel]::placeholder  { color: var(--texto-mutado); opacity: 1; }
+    input[type=text]:focus, input[type=tel]:focus, select:focus { border-color: var(--primaria); }
     select option { background: #1a1e27; }
 
     /* ── Botões de tipo ── */
