@@ -2618,7 +2618,7 @@ function inferirPerfilEquipeDeUsuario(u) {
 /** Alinhado à API: admin ou líder do departamento da escala. */
 function podeGerirEscalaNoCliente(departamentoId) {
   if (!usuario) return false
-  if (usuario.role === 'admin') return true
+  if (usuario.role === 'admin' || usuario.role === 'lider') return true
   if (!departamentoId) return false
   const deps = usuario.departamentos
   if (!Array.isArray(deps) || deps.length === 0) return false
