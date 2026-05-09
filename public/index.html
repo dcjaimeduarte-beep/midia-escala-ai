@@ -2590,10 +2590,10 @@ function temPapelLiderancaNoApp() {
   return eLiderEmAlgumDepartamentoNoCliente()
 }
 
-/** Pode criar escala: admin ou líder de algum departamento. */
+/** Pode criar escala: admin, líder global ou líder de algum departamento. */
 function podeCriarEscalaNoCliente() {
   if (!usuario) return false
-  if (usuario.role === 'admin') return true
+  if (usuario.role === 'admin' || usuario.role === 'lider') return true
   return eLiderEmAlgumDepartamentoNoCliente()
 }
 

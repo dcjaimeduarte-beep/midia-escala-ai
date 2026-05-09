@@ -61,16 +61,21 @@ function verificarAcessoDepartamento(req, res, next) {
 
   const deptoId = req.body?.departamento_id || req.params?.departamento_id || req.query?.departamento_id
 
-  const vinculo = db.get('SELECT * FROM usuario_departamento WHERE usuario_id = ?', req.usuario.id)
-  if (!vinculo) return res.status(403).json({ erro: 'Você não pertence a nenhum departamento' })
+  const vinculos = db.all('SELECT * FROM usuario_departamento WHERE usuario_id = ?', req.usuario.id)
+  if (!vinculos.length) return res.status(403).json({ erro: 'Você não pertence a nenhum departamento' })
 
-  const acesso = JSON.parse(vinculo.acesso_departamentos || '[]')
-  const permitidos = [vinculo.departamento_id, ...acesso]
+  const permitidos = new Set()
+  for (const v of vinculos) {
+    permitidos.add(v.departamento_id)
+    const extra = JSON.parse(v.acesso_departamentos || '[]')
+    extra.forEach((id) => permitidos.add(id))
+  }
 
-  if (deptoId && !permitidos.includes(deptoId))
+  if (deptoId && !permitidos.has(deptoId))
     return res.status(403).json({ erro: 'Sem acesso a este departamento' })
 
-  req.vinculo = { ...vinculo, acesso_departamentos: acesso }
+  const principal = (deptoId ? vinculos.find((v) => v.departamento_id === deptoId) : null) || vinculos[0]
+  req.vinculo = { ...principal, acesso_departamentos: JSON.parse(principal.acesso_departamentos || '[]') }
   next()
 }
 
