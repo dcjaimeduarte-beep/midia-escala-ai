@@ -16,6 +16,43 @@ function escalaPorId(id) {
   return buscarEscalasComVoluntarios().find((e) => e.id === id) || null
 }
 
+function upsertAvisoEscala(escala, autorId) {
+  if (!escala || !escala.departamento_id) return
+  const depto = sql.get(`SELECT nome FROM departamentos WHERE id = ?`, escala.departamento_id)
+  const evento = escala.evento_id
+    ? sql.get(`SELECT nome, hora_inicio, hora_fim FROM eventos WHERE id = ?`, escala.evento_id)
+    : null
+  const nomeEvento = evento
+    ? `${evento.nome}${evento.hora_inicio ? ` (${evento.hora_inicio}${evento.hora_fim ? '–' + evento.hora_fim : ''})` : ''}`
+    : ''
+  const vols = Array.isArray(escala.voluntarios) ? escala.voluntarios : []
+  const listaVols = vols.length
+    ? vols.map((v) => `• ${v.nome}${v.funcao ? ` · ${v.funcao}` : ''}`).join('\n')
+    : 'Nenhum integrante designado ainda.'
+  const titulo = `📅 Escala — ${escala.data}`
+  const corpo = [
+    `Data: *${escala.data}*${nomeEvento ? `  |  ${nomeEvento}` : ''}`,
+    `Departamento: ${depto?.nome || '—'}`,
+    '',
+    'Integrantes escalados:',
+    listaVols
+  ].join('\n')
+  const partes = String(escala.data || '').split('/')
+  const dataISO = partes.length === 3 ? `${partes[2]}-${partes[1]}-${partes[0]}` : ''
+  const agora = new Date().toISOString()
+  // Substitui aviso anterior da mesma escala (mesmo título + departamento) para não duplicar
+  sql.run(
+    `DELETE FROM avisos WHERE titulo = ? AND departamento_id = ?`,
+    titulo,
+    escala.departamento_id
+  )
+  sql.run(
+    `INSERT INTO avisos (id, titulo, corpo, departamento_id, autor_id, criado_em, data_inicio, hora_inicio, data_fim, hora_fim)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    uuid(), titulo, corpo, escala.departamento_id, autorId, agora, dataISO, '', dataISO, ''
+  )
+}
+
 function podeGerirEscalaDepartamento(req, departamentoId) {
   if (req.usuario.role === 'admin' || req.usuario.role === 'lider') return true
   if (req.usuario.acesso_escala_global) return true
@@ -54,6 +91,7 @@ router.post('/criar', autenticar, verificarAcessoDepartamento, (req, res) => {
     syncEscalasParaMemoria()
     const escala = escalaPorId(id)
     eventBus.emit('escala_criada', escala)
+    try { upsertAvisoEscala(escala, req.usuario.id) } catch (e) { console.error('[aviso/escala]', e) }
     res.status(201).json(escala)
   } catch (e) {
     console.error('[escala/criar]', e)
@@ -300,7 +338,11 @@ router.put('/:escalaId', autenticar, (req, res) => {
   try {
     atualizarEscalaNoBanco(req.params.escalaId, { data, evento_id, observacao, voluntarios })
     syncEscalasParaMemoria()
-    res.json(escalaPorId(req.params.escalaId))
+    const escalaAtualizada = escalaPorId(req.params.escalaId)
+    if (voluntarios !== undefined) {
+      try { upsertAvisoEscala(escalaAtualizada, req.usuario.id) } catch (e) { console.error('[aviso/escala]', e) }
+    }
+    res.json(escalaAtualizada)
   } catch (e) {
     const status = e.code === 'NOT_FOUND' ? 404 : 500
     res.status(status).json({ erro: e.message || 'Erro ao atualizar escala' })
