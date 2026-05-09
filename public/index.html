@@ -1428,6 +1428,7 @@
       <button class="nav-link" id="nav-cadastro"            data-pagina="cadastros"     onclick="navegar('cadastros')" style="display:none">⚙️ Cadastros</button>
       <button class="nav-link" id="nav-financeiro"          data-pagina="financeiro"    onclick="navegar('financeiro')" style="display:none">💰 Financeiro</button>
       <button class="nav-link"       id="nav-agente"        data-pagina="agente"        onclick="navegar('agente')">🔥 Pastor IA</button>
+      <button class="nav-link" id="nav-cultos" data-pagina="cultos" onclick="navegar('cultos'); carregarCultos()" style="display:none">⛪ Cultos</button>
     </nav>
 
     <div class="header-right">
@@ -1562,6 +1563,27 @@
           <button class="btn btn-primario" id="btn-enviar" onclick="enviarMensagem()">Enviar 🔥</button>
         </div>
       </div>
+    </div>
+
+    <!-- CULTOS / CHECK-IN -->
+    <div id="pagina-cultos" class="pagina" style="display:none">
+      <div class="pagina-actions">
+        <h2 class="pagina-titulo">⛪ Cultos</h2>
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <span style="font-size:0.72rem;color:var(--texto-mutado)"><span id="cultos-atualizado"></span></span>
+          <select id="cultos-intervalo" onchange="_alterarIntervaloCultos()" style="font-size:0.78rem;padding:0.25rem 0.5rem;background:rgba(255,255,255,0.04);border:1px solid var(--borda);border-radius:6px;color:var(--texto);cursor:pointer">
+            <option value="0">Manual</option>
+            <option value="5000">5s</option>
+            <option value="10000">10s</option>
+            <option value="15000" selected>15s</option>
+            <option value="30000">30s</option>
+            <option value="60000">1min</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="carregarCultos()" style="font-size:0.78rem">↻</button>
+          <button class="btn btn-primario" onclick="abrirModalNovoCulto()">+ Novo Culto</button>
+        </div>
+      </div>
+      <div id="cultos-conteudo"><p class="carregando">Carregando…</p></div>
     </div>
 
   </main>
@@ -3182,8 +3204,8 @@ async function carregarDashboard() {
           <strong style="color:var(--texto)">🔔 Atenção com as escalas</strong>
           <p class="muted" style="font-size:0.84rem;margin:0.45rem 0 0.65rem;line-height:1.5">
             ${proximasEmQueEstou.length
-              ? `Você está escalada(o) em <strong style="color:var(--texto)">${proximasEmQueEstou.length}</strong> escala(s) próxima(s).`
-              : `Há <strong style="color:var(--texto)">${proximas.length}</strong> escala(s) próxima(s) vinculadas aos seus departamentos.`}
+              ? `Você está escalada(o) em <strong style="color:var(--texto)">${new Set(proximasEmQueEstou.map(e => (e.data||'') + '__' + (e.evento_id||''))).size}</strong> culto(s) próximo(s).`
+              : `Há <strong style="color:var(--texto)">${proximosCultosComEscala.length}</strong> culto(s) próximo(s) com escala nos seus departamentos.`}
           </p>
           <button type="button" class="btn btn-primario btn-sm" onclick="navegar('escalas')">Abrir Escalas</button>
         </div>
@@ -3263,10 +3285,12 @@ async function notificarAlertasAposLogin() {
     const hoje = new Date().toISOString().split('T')[0]
     const proximas = lista.filter((e) => e?.data && dataEscalaParaISO(e.data) >= hoje)
     const minhas = proximas.filter((e) => escalaEhMinha(e))
+    const proximosCultos = agruparEscalasPorEvento(proximas)
+    const minhosCultos = new Set(minhas.map(e => (e.data||'') + '__' + (e.evento_id||''))).size
     if (minhas.length) {
-      toast(`🔔 Você está em ${minhas.length} escala(s) próxima(s).`, 'ok')
+      toast(`🔔 Você está em ${minhosCultos} culto(s) próximo(s).`, 'ok')
     } else if (proximas.length) {
-      toast(`🔔 Há ${proximas.length} escala(s) próxima(s) nos seus departamentos.`, 'ok')
+      toast(`🔔 Há ${proximosCultos.length} culto(s) próximo(s) nos seus departamentos.`, 'ok')
     }
     const trocasRecentes = proximas.reduce(
       (acc, e) => acc + (Array.isArray(e?.trocas) ? e.trocas.length : 0),
@@ -6816,6 +6840,376 @@ if (token && usuario) {
   tentarAbrirPopupEntrada()
 }
 exibirToastPendenteAposReload()
+</script>
+
+<!-- ═══════════════════════════════════════════════════
+     MÓDULO CULTOS — modals e scripts (adicionados sem
+     modificar nenhum código existente acima)
+════════════════════════════════════════════════════ -->
+
+<!-- Modal criar culto -->
+<div id="modal-novo-culto" class="modal-overlay" onclick="if(event.target===this)fecharModalNovoCulto()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo">Novo Culto</h3>
+    <div class="form-grupo">
+      <label>Data *</label>
+      <input type="date" id="culto-data-input"/>
+    </div>
+    <div class="form-grupo">
+      <label>Tipo de Culto</label>
+      <select id="culto-evento-select">
+        <option value="">— selecione (opcional) —</option>
+      </select>
+    </div>
+    <div class="form-grupo">
+      <label>Título / Tema</label>
+      <input type="text" id="culto-titulo-input" placeholder="Ex: Culto de Domingo, Noite de Louvor…"/>
+    </div>
+    <p id="culto-criar-erro" class="erro-msg"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="fecharModalNovoCulto()">Cancelar</button>
+      <button type="button" class="btn btn-primario" onclick="salvarNovoCulto()">Criar Culto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal detalhe do culto (QR + lista de presenças) -->
+<div id="modal-detalhe-culto" class="modal-overlay" onclick="if(event.target===this)fecharModalDetalheCulto()">
+  <div class="modal" style="max-width:520px" onclick="event.stopPropagation()">
+    <h3 class="modal-titulo" id="detalhe-culto-titulo">Culto</h3>
+    <div id="detalhe-culto-corpo"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="fecharModalDetalheCulto()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// CULTOS — funções do módulo
+// ══════════════════════════════════════════════════════════════
+
+// Estende mostrarApp para exibir/ocultar o nav de Cultos
+;(function () {
+  const _orig = window.mostrarApp
+  window.mostrarApp = function () {
+    _orig.apply(this, arguments)
+    const nav = document.getElementById('nav-cultos')
+    if (nav) nav.style.display = temPapelLiderancaNoApp() ? '' : 'none'
+  }
+})()
+
+let _cultosListTimer = null
+
+async function carregarCultos() {
+  const el = document.getElementById('cultos-conteudo')
+  if (!el) return
+  try {
+    const cultos = await api('GET', '/culto/listar')
+    if (!cultos.length) {
+      el.innerHTML = '<p class="muted" style="margin-top:1rem">Nenhum culto cadastrado. Clique em <strong>+ Novo Culto</strong> para começar.</p>'
+      return
+    }
+    const agora = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+    const elHora = document.getElementById('cultos-atualizado')
+    if (elHora) elHora.textContent = agora
+
+    el.innerHTML = cultos.map(c => {
+      const data = c.data ? formatarDataCulto(c.data) : '—'
+      const status = c.encerrado
+        ? `<span style="color:var(--texto-mutado);font-size:0.75rem">Encerrado</span>`
+        : `<span style="color:var(--sucesso);font-size:0.75rem">Aberto</span>`
+      const nome = c.titulo || c.evento_nome || 'Culto'
+      return `
+        <div class="card" style="margin-bottom:0.75rem;cursor:pointer" onclick="abrirDetalheCulto('${esc(c.id)}')">
+          <div class="card-body" style="padding:1rem 1.15rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
+            <div>
+              <div style="font-weight:600;font-size:0.95rem">${esc(nome)}</div>
+              <div style="font-size:0.8rem;color:var(--texto-mutado);margin-top:0.2rem">${data} ${status ? '· ' : ''}${status}</div>
+            </div>
+            <div style="display:flex;gap:1.25rem;text-align:center;flex-shrink:0">
+              <div>
+                <div style="font-size:1.1rem;font-weight:700">${c.total_presencas ?? 0}</div>
+                <div style="font-size:0.68rem;color:var(--texto-mutado)">Total</div>
+              </div>
+              <div>
+                <div style="font-size:1.1rem;font-weight:700;color:var(--acento)">${c.total_membros ?? 0}</div>
+                <div style="font-size:0.68rem;color:var(--texto-mutado)">Membros</div>
+              </div>
+              <div>
+                <div style="font-size:1.1rem;font-weight:700;color:var(--dourado)">${(c.total_visitantes ?? 0) + (c.total_convidados ?? 0)}</div>
+                <div style="font-size:0.68rem;color:var(--texto-mutado)">Visitas</div>
+              </div>
+            </div>
+          </div>
+        </div>`
+    }).join('')
+    // Inicia timer se ainda não estiver rodando
+    if (!_cultosListTimer) {
+      const ms = parseInt(document.getElementById('cultos-intervalo')?.value || '15000', 10)
+      if (ms > 0) {
+        _cultosListTimer = setInterval(() => {
+          if (document.getElementById('pagina-cultos')?.style.display !== 'none') {
+            carregarCultos()
+          } else {
+            clearInterval(_cultosListTimer)
+            _cultosListTimer = null
+          }
+        }, ms)
+      }
+    }
+  } catch (e) {
+    const el2 = document.getElementById('cultos-conteudo')
+    if (el2) el2.innerHTML = '<p class="muted">Erro ao carregar cultos.</p>'
+  }
+}
+
+function _alterarIntervaloCultos() {
+  if (_cultosListTimer) { clearInterval(_cultosListTimer); _cultosListTimer = null }
+  const ms = parseInt(document.getElementById('cultos-intervalo')?.value || '0', 10)
+  if (ms > 0) {
+    _cultosListTimer = setInterval(() => {
+      if (document.getElementById('pagina-cultos')?.style.display !== 'none') {
+        carregarCultos()
+      } else {
+        clearInterval(_cultosListTimer)
+        _cultosListTimer = null
+      }
+    }, ms)
+  }
+}
+
+function formatarDataCulto(iso) {
+  try {
+    const [ano, mes, dia] = iso.split('-')
+    const dias  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+    const d = new Date(iso + 'T12:00:00')
+    return `${dias[d.getDay()]}, ${dia}/${meses[Number(mes)-1]}`
+  } catch { return iso }
+}
+
+// ── Modal criar culto ──────────────────────────────────────────────────────
+function abrirModalNovoCulto() {
+  const hoje = new Date().toISOString().split('T')[0]
+  document.getElementById('culto-data-input').value   = hoje
+  document.getElementById('culto-titulo-input').value = ''
+  document.getElementById('culto-criar-erro').style.display = 'none'
+
+  const sel = document.getElementById('culto-evento-select')
+  sel.innerHTML = '<option value="">— selecione (opcional) —</option>'
+  ;(eventoCache || []).filter(e => e.ativo).forEach(e => {
+    const opt = document.createElement('option')
+    opt.value = e.id
+    opt.textContent = e.nome
+    sel.appendChild(opt)
+  })
+
+  document.getElementById('modal-novo-culto').classList.add('aberto')
+}
+
+function fecharModalNovoCulto() {
+  document.getElementById('modal-novo-culto').classList.remove('aberto')
+}
+
+async function salvarNovoCulto() {
+  const data     = document.getElementById('culto-data-input').value
+  const titulo   = document.getElementById('culto-titulo-input').value.trim()
+  const evento_id = document.getElementById('culto-evento-select').value
+  const erroEl   = document.getElementById('culto-criar-erro')
+  erroEl.style.display = 'none'
+
+  if (!data) { erroEl.textContent = 'Selecione a data.'; erroEl.style.display = 'block'; return }
+
+  try {
+    await api('POST', '/culto/criar', { data, titulo, evento_id: evento_id || null })
+    fecharModalNovoCulto()
+    toast('Culto criado!', 'ok')
+    carregarCultos()
+  } catch (e) {
+    erroEl.textContent = e.erro || 'Erro ao criar culto.'
+    erroEl.style.display = 'block'
+  }
+}
+
+// ── Modal detalhe / QR Code ────────────────────────────────────────────────
+let _cultoDetalheId = null
+let _cultoRefreshTimer = null
+
+function _renderListaPresencas(presencas) {
+  if (!presencas.length)
+    return `<p class="muted" style="font-size:0.83rem;margin-top:0.5rem">Nenhuma presença registrada ainda.</p>`
+  return presencas.map(p => {
+    const tipoBadge = p.tipo === 'membro'
+      ? `<span style="font-size:0.7rem;color:var(--acento)">Membro</span>`
+      : p.tipo === 'visitante_convidado'
+      ? `<span style="font-size:0.7rem;color:var(--dourado)">Convidado${p.convidado_por ? ` de ${esc(p.convidado_por)}` : ''}</span>`
+      : `<span style="font-size:0.7rem;color:var(--texto-mutado)">Visitante</span>`
+    const hora = p.registrado_em ? new Date(p.registrado_em).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : ''
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.45rem 0;border-bottom:1px solid var(--borda)">
+      <div>
+        <span style="font-size:0.88rem">${esc(p.nome)}</span>
+        <br/>${tipoBadge}
+      </div>
+      <span style="font-size:0.75rem;color:var(--texto-mutado)">${hora}</span>
+    </div>`
+  }).join('')
+}
+
+async function _recarregarPresencas(id) {
+  if (_cultoDetalheId !== id) return
+  try {
+    const presencas = await api('GET', `/culto/${id}/presencas`)
+    const totalM = presencas.filter(p => p.tipo === 'membro').length
+    const totalV = presencas.filter(p => p.tipo === 'visitante').length
+    const totalC = presencas.filter(p => p.tipo === 'visitante_convidado').length
+
+    const elTotal   = document.getElementById('dc-total')
+    const elMembros = document.getElementById('dc-membros')
+    const elVisitas = document.getElementById('dc-visitas')
+    const elLista   = document.getElementById('dc-lista')
+    const elHora    = document.getElementById('dc-atualizado')
+
+    if (elTotal)   elTotal.textContent   = presencas.length
+    if (elMembros) elMembros.textContent = totalM
+    if (elVisitas) elVisitas.textContent = totalV + totalC
+    if (elLista)   elLista.innerHTML     = _renderListaPresencas(presencas)
+    if (elHora)    elHora.textContent    = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+  } catch {}
+}
+
+async function abrirDetalheCulto(id) {
+  _cultoDetalheId = id
+  if (_cultoRefreshTimer) { clearInterval(_cultoRefreshTimer); _cultoRefreshTimer = null }
+
+  const corpo = document.getElementById('detalhe-culto-corpo')
+  document.getElementById('detalhe-culto-titulo').textContent = 'Carregando…'
+  corpo.innerHTML = '<p class="carregando">Carregando…</p>'
+  document.getElementById('modal-detalhe-culto').classList.add('aberto')
+
+  try {
+    const [culto, qr, presencas] = await Promise.all([
+      api('GET', `/culto/listar`).then(list => list.find(c => c.id === id)),
+      api('GET', `/culto/${id}/qrcode`),
+      api('GET', `/culto/${id}/presencas`)
+    ])
+
+    const nome = culto?.titulo || culto?.evento_nome || 'Culto'
+    document.getElementById('detalhe-culto-titulo').textContent = nome
+
+    const statusBadge = culto?.encerrado
+      ? `<span style="color:var(--texto-mutado)">🔒 Encerrado</span>`
+      : `<span style="color:var(--sucesso)">● Aberto</span>`
+
+    const totalM = presencas.filter(p => p.tipo === 'membro').length
+    const totalV = presencas.filter(p => p.tipo === 'visitante').length
+    const totalC = presencas.filter(p => p.tipo === 'visitante_convidado').length
+
+    const btnStatus = culto?.encerrado
+      ? `<button class="btn btn-ghost btn-sm" onclick="alterarStatusCulto('${id}', false)">Reabrir check-in</button>`
+      : `<button class="btn btn-ghost btn-sm" onclick="alterarStatusCulto('${id}', true)">Encerrar check-in</button>`
+
+    corpo.innerHTML = `
+      <div style="font-size:0.82rem;color:var(--texto-mutado);margin-bottom:0.75rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.4rem">
+        <span>${formatarDataCulto(culto?.data || '')} · ${statusBadge}</span>
+        ${btnStatus}
+      </div>
+
+      <!-- QR Code -->
+      <div style="text-align:center;margin-bottom:1.25rem">
+        <img src="${qr.qrcode}" alt="QR Code" style="width:200px;height:200px;border-radius:8px;background:#fff;padding:8px"/>
+        <div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.4rem;word-break:break-all">${qr.url}</div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:0.5rem" onclick="copiarLink('${qr.url}')">Copiar link</button>
+      </div>
+
+      <!-- Contadores -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.75rem;text-align:center">
+        <div class="card" style="padding:0.6rem">
+          <div id="dc-total"   style="font-size:1.3rem;font-weight:700">${presencas.length}</div>
+          <div style="font-size:0.7rem;color:var(--texto-mutado)">Total</div>
+        </div>
+        <div class="card" style="padding:0.6rem">
+          <div id="dc-membros" style="font-size:1.3rem;font-weight:700;color:var(--acento)">${totalM}</div>
+          <div style="font-size:0.7rem;color:var(--texto-mutado)">Membros</div>
+        </div>
+        <div class="card" style="padding:0.6rem">
+          <div id="dc-visitas" style="font-size:1.3rem;font-weight:700;color:var(--dourado)">${totalV + totalC}</div>
+          <div style="font-size:0.7rem;color:var(--texto-mutado)">Visitas</div>
+        </div>
+      </div>
+
+      <!-- Barra de atualização -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.6rem">
+        <span style="font-size:0.72rem;color:var(--texto-mutado)">Atualizado: <span id="dc-atualizado">${new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' })}</span></span>
+        <div style="display:flex;align-items:center;gap:0.4rem">
+          <select id="dc-intervalo" onchange="_alterarIntervalo('${id}')" style="font-size:0.72rem;padding:0.2rem 0.4rem;background:rgba(255,255,255,0.04);border:1px solid var(--borda);border-radius:6px;color:var(--texto);cursor:pointer">
+            <option value="0">Manual</option>
+            <option value="5000">5s</option>
+            <option value="10000">10s</option>
+            <option value="15000" selected>15s</option>
+            <option value="30000">30s</option>
+            <option value="60000">1min</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" style="font-size:0.72rem;padding:0.2rem 0.6rem" onclick="_recarregarPresencas('${id}')">↻ Atualizar</button>
+        </div>
+      </div>
+
+      <!-- Lista -->
+      <div id="dc-lista" style="max-height:220px;overflow-y:auto">
+        ${_renderListaPresencas(presencas)}
+      </div>
+
+      <!-- Excluir -->
+      <div style="margin-top:1rem;text-align:right">
+        <button class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirCulto('${id}')">Excluir culto</button>
+      </div>`
+
+    // Auto-refresh com intervalo configurável (padrão 15s)
+    _cultoRefreshTimer = setInterval(() => _recarregarPresencas(id), 15000)
+
+  } catch (e) {
+    corpo.innerHTML = '<p class="muted">Erro ao carregar detalhes.</p>'
+  }
+}
+
+function _alterarIntervalo(id) {
+  if (_cultoRefreshTimer) { clearInterval(_cultoRefreshTimer); _cultoRefreshTimer = null }
+  const ms = parseInt(document.getElementById('dc-intervalo')?.value || '0', 10)
+  if (ms > 0) _cultoRefreshTimer = setInterval(() => _recarregarPresencas(id), ms)
+}
+
+function fecharModalDetalheCulto() {
+  document.getElementById('modal-detalhe-culto').classList.remove('aberto')
+  _cultoDetalheId = null
+  if (_cultoRefreshTimer) { clearInterval(_cultoRefreshTimer); _cultoRefreshTimer = null }
+}
+
+async function alterarStatusCulto(id, encerrar) {
+  try {
+    await api('POST', `/culto/${id}/${encerrar ? 'encerrar' : 'reabrir'}`)
+    toast(encerrar ? 'Check-in encerrado.' : 'Check-in reaberto.', 'ok')
+    fecharModalDetalheCulto()
+    carregarCultos()
+  } catch (e) {
+    toast(e.erro || 'Erro ao alterar status.', 'err')
+  }
+}
+
+async function excluirCulto(id) {
+  if (!confirm('Excluir este culto e todas as presenças registradas? Esta ação não pode ser desfeita.')) return
+  try {
+    await api('DELETE', `/culto/${id}`)
+    toast('Culto excluído.', 'ok')
+    fecharModalDetalheCulto()
+    carregarCultos()
+  } catch (e) {
+    toast(e.erro || 'Erro ao excluir.', 'err')
+  }
+}
+
+function copiarLink(url) {
+  navigator.clipboard?.writeText(url).then(() => toast('Link copiado!', 'ok')).catch(() => toast('Não foi possível copiar.', 'err'))
+}
 </script>
 </body>
 </html>

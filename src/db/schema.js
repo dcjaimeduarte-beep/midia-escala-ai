@@ -280,6 +280,31 @@ function migrate() {
   tryExec(`ALTER TABLE usuarios    ADD COLUMN data_nascimento TEXT DEFAULT ''`)
   tryExec(`ALTER TABLE usuarios    ADD COLUMN acesso_escala_global INTEGER NOT NULL DEFAULT 0`)
 
+  // ── CULTOS (sessões de culto com check-in por QR Code) ───────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cultos (
+      id             TEXT PRIMARY KEY,
+      titulo         TEXT NOT NULL DEFAULT '',
+      evento_id      TEXT REFERENCES eventos(id) ON DELETE SET NULL,
+      congregacao_id TEXT REFERENCES congregacoes(id) ON DELETE SET NULL,
+      data           TEXT NOT NULL,
+      descricao      TEXT NOT NULL DEFAULT '',
+      encerrado      INTEGER NOT NULL DEFAULT 0,
+      criado_por     TEXT NOT NULL REFERENCES usuarios(id),
+      criado_em      TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS presencas (
+      id            TEXT PRIMARY KEY,
+      culto_id      TEXT NOT NULL REFERENCES cultos(id) ON DELETE CASCADE,
+      tipo          TEXT NOT NULL CHECK(tipo IN ('membro','visitante','visitante_convidado')),
+      nome          TEXT NOT NULL,
+      convidado_por TEXT NOT NULL DEFAULT '',
+      usuario_id    TEXT REFERENCES usuarios(id) ON DELETE SET NULL,
+      registrado_em TEXT NOT NULL
+    );
+  `)
+
   // Garante que existe ao menos uma congregação sede
   const { n: nCong } = db.get('SELECT COUNT(*) as n FROM congregacoes') || { n: 0 }
   if (!nCong) {

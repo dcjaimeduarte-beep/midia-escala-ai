@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <title>Check-in — Peniel</title>
+  <link rel="icon" href="/docs/Foguinho%20vazado.png" type="image/png"/>
+  <link rel="apple-touch-icon" href="/docs/Foguinho%20vazado.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primaria:     #c94a52;
+      --fundo:        #0c0e11;
+      --fundo-card:   #161a21;
+      --texto:        #e8eaed;
+      --texto-mutado: #8d96a3;
+      --borda:        rgba(255,255,255,0.08);
+      --sucesso:      #5cad6a;
+      --erro:         #e85d5d;
+      --raio:         12px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--fundo);
+      background-image: radial-gradient(ellipse 120% 60% at 50% -10%, rgba(201,74,82,0.10), transparent 55%);
+      color: var(--texto);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 5rem;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      /* remove flash azul/cinza em iOS/Android */
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .logo-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.75rem;
+    }
+    .logo-wrap img   { height: 48px; opacity: 0.9; }
+    .logo-wrap span  {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      font-size: 1.05rem; font-weight: 700;
+      letter-spacing: -0.02em; color: var(--texto);
+    }
+
+    .card {
+      background: var(--fundo-card);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio);
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .culto-info      { margin-bottom: 1.5rem; text-align: center; }
+    .culto-titulo    {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      font-size: 1.2rem; font-weight: 700;
+      color: var(--texto); margin-bottom: 0.3rem;
+    }
+    .culto-data      { font-size: 0.875rem; color: var(--texto-mutado); }
+
+    label {
+      display: block;
+      font-size: 0.875rem; font-weight: 500;
+      color: var(--texto-mutado); margin-bottom: 0.4rem;
+    }
+
+    .campo { margin-bottom: 1rem; }
+
+    /* ── Inputs — font-size 1rem (16px) OBRIGATÓRIO para não dar zoom no iOS ── */
+    input[type=text], select {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--borda);
+      border-radius: 8px;
+      color: var(--texto);
+      font-family: inherit;
+      font-size: 1rem;       /* ≥16px — evita zoom automático no iOS Safari */
+      padding: 0.75rem 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;  /* remove estilo nativo iOS */
+      appearance: none;
+    }
+    input[type=text]::placeholder { color: var(--texto-mutado); opacity: 1; }
+    input[type=text]:focus, select:focus { border-color: var(--primaria); }
+    select option { background: #1a1e27; }
+
+    /* ── Botões de tipo ── */
+    .tipo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .tipo-btn {
+      border: 1px solid var(--borda);
+      background: rgba(255,255,255,0.03);
+      color: var(--texto-mutado);
+      border-radius: 8px;
+      padding: 0.75rem 0.25rem;
+      min-height: 56px;        /* alvo de toque mínimo */
+      font-family: inherit;
+      font-size: 0.8125rem; font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      line-height: 1.35;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      touch-action: manipulation;   /* remove delay de 300ms */
+      -webkit-user-select: none; user-select: none;
+    }
+    .tipo-btn:active          { opacity: 0.75; }
+    .tipo-btn.ativo {
+      border-color: var(--primaria);
+      background: rgba(201,74,82,0.12);
+      color: var(--texto);
+    }
+
+    /* ── Botão confirmar ── */
+    .btn-submit {
+      width: 100%;
+      background: var(--primaria);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 1rem; font-weight: 600;
+      padding: 0.9rem;
+      min-height: 52px;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      margin-top: 0.5rem;
+      touch-action: manipulation;
+      -webkit-user-select: none; user-select: none;
+    }
+    .btn-submit:active:not(:disabled) { background: #a63d44; }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .erro-msg {
+      color: var(--erro);
+      font-size: 0.85rem;
+      margin-top: 0.75rem;
+      text-align: center;
+      display: none;
+    }
+
+    /* ── Tela sucesso ── */
+    #tela-sucesso {
+      display: none; flex-direction: column;
+      align-items: center; text-align: center;
+      gap: 1rem; padding: 2rem 1rem;
+    }
+    .icone-ok {
+      width: 64px; height: 64px;
+      background: rgba(92,173,106,0.15);
+      border: 2px solid var(--sucesso);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.75rem;
+    }
+    #tela-sucesso h2 {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      font-size: 1.25rem; font-weight: 700;
+    }
+    #tela-sucesso p { color: var(--texto-mutado); font-size: 0.9rem; line-height: 1.55; }
+
+    /* ── Tela encerrado ── */
+    #tela-encerrado {
+      display: none; flex-direction: column;
+      align-items: center; text-align: center;
+      gap: 1rem; padding: 2rem 1rem;
+    }
+    #tela-encerrado .icone { font-size: 2.5rem; }
+    #tela-encerrado h2 {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      font-size: 1.1rem;
+    }
+    #tela-encerrado p { color: var(--texto-mutado); font-size: 0.875rem; }
+
+    #tela-carregando { color: var(--texto-mutado); font-size: 0.9rem; margin-top: 3rem; }
+
+    #campo-convidado { display: none; }
+
+    /* ── Autocomplete ── */
+    .ac-wrap  { position: relative; }
+    .ac-lista {
+      position: absolute;
+      top: calc(100% + 4px); left: 0; right: 0;
+      background: #1d2129;
+      border: 1px solid var(--borda);
+      border-radius: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      z-index: 100;
+      display: none;
+    }
+    .ac-item {
+      padding: 0.75rem 0.9rem;   /* alvo de toque maior */
+      font-size: 1rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--borda);
+      touch-action: manipulation;
+    }
+    .ac-item:last-child   { border-bottom: none; }
+    .ac-item:active       { background: rgba(255,255,255,0.08); }
+  </style>
+</head>
+<body>
+
+<div class="logo-wrap">
+  <img src="/docs/Foguinho%20vazado.png" alt="Peniel"/>
+  <span>Igreja Peniel</span>
+</div>
+
+<div id="tela-carregando">Carregando culto…</div>
+
+<div class="card" id="tela-form" style="display:none">
+  <div class="culto-info">
+    <div class="culto-titulo" id="culto-titulo">—</div>
+    <div class="culto-data"   id="culto-data">—</div>
+  </div>
+
+  <div class="campo">
+    <label>Como você veio? *</label>
+    <div class="tipo-grid">
+      <button type="button" class="tipo-btn" data-tipo="membro"
+              onclick="selecionarTipo('membro')">Membro<br/>da Casa</button>
+      <button type="button" class="tipo-btn" data-tipo="visitante"
+              onclick="selecionarTipo('visitante')">Visitante</button>
+      <button type="button" class="tipo-btn" data-tipo="visitante_convidado"
+              onclick="selecionarTipo('visitante_convidado')">Convidado<br/>de alguém</button>
+    </div>
+  </div>
+
+  <div class="campo" id="campo-nome">
+    <label for="inp-nome">Seu nome *</label>
+    <div class="ac-wrap">
+      <input type="text" id="inp-nome" placeholder="Digite seu nome…"
+             autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false"
+             oninput="onNomeInput()" onfocus="onNomeFocus()" onblur="onNomeBlur()"/>
+      <div class="ac-lista" id="ac-lista"></div>
+    </div>
+  </div>
+
+  <div class="campo" id="campo-convidado">
+    <label for="inp-convidado">Quem te convidou?</label>
+    <div class="ac-wrap">
+      <input type="text" id="inp-convidado" placeholder="Nome do membro que te trouxe…"
+             autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false"
+             oninput="onConvidadoInput()" onfocus="onConvidadoFocus()" onblur="onConvidadoBlur()"/>
+      <div class="ac-lista" id="ac-lista-conv"></div>
+    </div>
+  </div>
+
+  <button type="button" class="btn-submit" id="btn-confirmar" onclick="confirmarPresenca()">
+    Confirmar presença
+  </button>
+  <div class="erro-msg" id="erro-msg"></div>
+</div>
+
+<div class="card" id="tela-sucesso">
+  <div class="icone-ok">✓</div>
+  <h2>Presença registrada!</h2>
+  <p id="sucesso-msg">Bem-vindo(a)! Que Deus te abençoe neste culto.</p>
+</div>
+
+<div class="card" id="tela-encerrado">
+  <div class="icone">🔒</div>
+  <h2 id="encerrado-titulo">Check-in encerrado</h2>
+  <p  id="encerrado-msg">O check-in para este culto foi encerrado pelo organizador.</p>
+</div>
+
+<script>
+  const cultoId  = location.pathname.split('/').filter(Boolean).pop()
+  let membros    = []
+  let tipoSel    = ''
+  let usuarioSel = null
+
+  // Controle de autocomplete — evita fechar antes do toque registrar
+  let _acNomeTocando    = false
+  let _acConvTocando    = false
+
+  async function init() {
+    try {
+      const [info, lista] = await Promise.all([
+        fetch(`/checkin/${cultoId}/info`).then(r => r.json()),
+        fetch(`/checkin/${cultoId}/membros`).then(r => r.json())
+      ])
+      if (info.erro) throw new Error(info.erro)
+      membros = Array.isArray(lista) ? lista : []
+      document.getElementById('tela-carregando').style.display = 'none'
+      if (info.encerrado) { document.getElementById('tela-encerrado').style.display = 'flex'; return }
+      document.getElementById('culto-titulo').textContent = info.titulo || info.evento_nome || 'Culto'
+      document.getElementById('culto-data').textContent   = info.data ? formatarData(info.data) : ''
+      document.getElementById('tela-form').style.display  = 'block'
+    } catch {
+      document.getElementById('tela-carregando').style.display = 'none'
+      document.getElementById('encerrado-titulo').textContent  = 'Culto não encontrado'
+      document.getElementById('encerrado-msg').textContent     = 'Este link de check-in é inválido ou expirou.'
+      document.getElementById('tela-encerrado').style.display  = 'flex'
+    }
+  }
+
+  function formatarData(iso) {
+    try {
+      const [ano, mes, dia] = iso.split('-')
+      const dias  = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado']
+      const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+      const d = new Date(iso + 'T12:00:00')
+      return `${dias[d.getDay()]}, ${dia} de ${meses[Number(mes)-1]} de ${ano}`
+    } catch { return iso }
+  }
+
+  function selecionarTipo(tipo) {
+    tipoSel = tipo
+    document.querySelectorAll('.tipo-btn').forEach(b =>
+      b.classList.toggle('ativo', b.dataset.tipo === tipo)
+    )
+    document.getElementById('campo-convidado').style.display =
+      tipo === 'visitante_convidado' ? 'block' : 'none'
+    if (tipo !== 'visitante_convidado') document.getElementById('inp-convidado').value = ''
+    if (tipo !== 'membro') usuarioSel = null
+  }
+
+  // ── Autocomplete helpers ───────────────────────────────────────────────────
+  function filtrarMembros(q) {
+    return membros.filter(m => m.nome.toLowerCase().includes(q.toLowerCase())).slice(0, 8)
+  }
+
+  function renderAc(lista, itens, onSelect) {
+    if (!itens.length) { lista.style.display = 'none'; return }
+    lista.innerHTML = itens.map(m =>
+      `<div class="ac-item"
+            onpointerdown="event.preventDefault();${onSelect}('${m.id}','${m.nome.replace(/'/g,"\\'")}')"
+       >${m.nome}</div>`
+    ).join('')
+    lista.style.display = 'block'
+  }
+
+  // ── Nome ──────────────────────────────────────────────────────────────────
+  function onNomeInput() {
+    usuarioSel = null
+    const q = document.getElementById('inp-nome').value
+    const lista = document.getElementById('ac-lista')
+    if (tipoSel !== 'membro' || q.length < 2) { lista.style.display = 'none'; return }
+    renderAc(lista, filtrarMembros(q), 'selecionarMembro')
+  }
+  function onNomeFocus() { onNomeInput() }
+  function onNomeBlur()  {
+    // delay maior para iOS processar o pointerdown antes de fechar
+    setTimeout(() => document.getElementById('ac-lista').style.display = 'none', 300)
+  }
+  function selecionarMembro(id, nome) {
+    document.getElementById('inp-nome').value = nome
+    usuarioSel = id
+    document.getElementById('ac-lista').style.display = 'none'
+  }
+
+  // ── Convidado por ─────────────────────────────────────────────────────────
+  function onConvidadoInput() {
+    const q = document.getElementById('inp-convidado').value
+    const lista = document.getElementById('ac-lista-conv')
+    if (q.length < 2) { lista.style.display = 'none'; return }
+    renderAc(lista, filtrarMembros(q), 'selecionarConvidador')
+  }
+  function onConvidadoFocus() { onConvidadoInput() }
+  function onConvidadoBlur()  {
+    setTimeout(() => document.getElementById('ac-lista-conv').style.display = 'none', 300)
+  }
+  function selecionarConvidador(id, nome) {
+    document.getElementById('inp-convidado').value = nome
+    document.getElementById('ac-lista-conv').style.display = 'none'
+  }
+
+  // ── Envio ──────────────────────────────────────────────────────────────────
+  async function confirmarPresenca() {
+    const erroEl = document.getElementById('erro-msg')
+    erroEl.style.display = 'none'
+    const nome = document.getElementById('inp-nome').value.trim()
+    if (!tipoSel) { mostrarErro('Selecione como você veio.'); return }
+    if (!nome)    { mostrarErro('Digite seu nome.'); return }
+
+    const convidado_por = document.getElementById('inp-convidado').value.trim()
+    const btn = document.getElementById('btn-confirmar')
+    btn.disabled = true
+    btn.textContent = 'Registrando…'
+
+    try {
+      const r = await fetch(`/checkin/${cultoId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome,
+          tipo: tipoSel,
+          convidado_por: tipoSel === 'visitante_convidado' ? convidado_por : '',
+          usuario_id:    tipoSel === 'membro' ? (usuarioSel || null) : null
+        })
+      })
+      const data = await r.json()
+      if (!r.ok) {
+        mostrarErro(data.erro || 'Erro ao registrar.')
+        btn.disabled = false; btn.textContent = 'Confirmar presença'
+        return
+      }
+      document.getElementById('tela-form').style.display = 'none'
+      document.getElementById('sucesso-msg').textContent =
+        tipoSel === 'membro'
+          ? `Olá, ${nome}! Sua presença foi registrada.`
+          : tipoSel === 'visitante_convidado' && convidado_por
+          ? `Bem-vindo(a), ${nome}! Que bênção estar aqui com ${convidado_por}.`
+          : `Bem-vindo(a), ${nome}! Que Deus te abençoe neste culto.`
+      document.getElementById('tela-sucesso').style.display = 'flex'
+    } catch {
+      mostrarErro('Erro de conexão. Tente novamente.')
+      btn.disabled = false; btn.textContent = 'Confirmar presença'
+    }
+  }
+
+  function mostrarErro(msg) {
+    const el = document.getElementById('erro-msg')
+    el.textContent  = msg
+    el.style.display = 'block'
+  }
+
+  init()
+</script>
+</body>
+</html>
