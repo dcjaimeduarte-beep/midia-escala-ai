@@ -38,8 +38,9 @@ function upsertAvisoEscala(escala, autorId) {
     listaVols
   ].join('\n')
   const partes = String(escala.data || '').split('/')
-  const dataISO = partes.length === 3 ? `${partes[2]}-${partes[1]}-${partes[0]}` : ''
+  const dataEscalaISO = partes.length === 3 ? `${partes[2]}-${partes[1]}-${partes[0]}` : ''
   const agora = new Date().toISOString()
+  const hoje = agora.slice(0, 10) // YYYY-MM-DD de hoje — aviso visível imediatamente
   // Substitui aviso anterior da mesma escala (mesmo título + departamento) para não duplicar
   sql.run(
     `DELETE FROM avisos WHERE titulo = ? AND departamento_id = ?`,
@@ -49,7 +50,7 @@ function upsertAvisoEscala(escala, autorId) {
   sql.run(
     `INSERT INTO avisos (id, titulo, corpo, departamento_id, autor_id, criado_em, data_inicio, hora_inicio, data_fim, hora_fim)
      VALUES (?,?,?,?,?,?,?,?,?,?)`,
-    uuid(), titulo, corpo, escala.departamento_id, autorId, agora, dataISO, '', dataISO, ''
+    uuid(), titulo, corpo, escala.departamento_id, autorId, agora, hoje, '', dataEscalaISO, ''
   )
 }
 
