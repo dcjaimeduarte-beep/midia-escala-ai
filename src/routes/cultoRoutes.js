@@ -11,7 +11,7 @@ function getAppUrl(req) {
 
 // ── PROTEGIDOS (admin / lider) ─────────────────────────────────────────────
 
-router.get('/listar', autenticar, apenasAdminOuLider, (req, res) => {
+router.get('/listar', autenticar, (req, res) => {
   const cultos = sql.all(`
     SELECT
       c.*,
@@ -86,7 +86,7 @@ router.delete('/:id', autenticar, apenasAdminOuLider, (req, res) => {
   res.json({ ok: true })
 })
 
-router.get('/:id/qrcode', autenticar, apenasAdminOuLider, async (req, res) => {
+router.get('/:id/qrcode', autenticar, async (req, res) => {
   const culto = sql.get(`SELECT * FROM cultos WHERE id = ?`, req.params.id)
   if (!culto) return res.status(404).json({ erro: 'Culto não encontrado' })
 
@@ -103,7 +103,7 @@ router.get('/:id/qrcode', autenticar, apenasAdminOuLider, async (req, res) => {
   }
 })
 
-router.get('/:id/presencas', autenticar, apenasAdminOuLider, (req, res) => {
+router.get('/:id/presencas', autenticar, (req, res) => {
   if (!sql.get(`SELECT id FROM cultos WHERE id = ?`, req.params.id))
     return res.status(404).json({ erro: 'Culto não encontrado' })
   const presencas = sql.all(

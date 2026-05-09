@@ -1580,7 +1580,7 @@
             <option value="60000">1min</option>
           </select>
           <button class="btn btn-ghost btn-sm" onclick="carregarCultos()" style="font-size:0.78rem">↻</button>
-          <button class="btn btn-primario" onclick="abrirModalNovoCulto()">+ Novo Culto</button>
+          <button class="btn btn-primario" id="btn-novo-culto-topo" onclick="abrirModalNovoCulto()" style="display:none">+ Novo Culto</button>
         </div>
       </div>
       <div id="cultos-conteudo"><p class="carregando">Carregando…</p></div>
@@ -6895,7 +6895,9 @@ exibirToastPendenteAposReload()
   window.mostrarApp = function () {
     _orig.apply(this, arguments)
     const nav = document.getElementById('nav-cultos')
-    if (nav) nav.style.display = temPapelLiderancaNoApp() ? '' : 'none'
+    if (nav) nav.style.display = usuario ? '' : 'none'
+    const btnNovoCulto = document.getElementById('btn-novo-culto-topo')
+    if (btnNovoCulto) btnNovoCulto.style.display = temPapelLiderancaNoApp() ? '' : 'none'
   }
 })()
 
@@ -7045,13 +7047,15 @@ function _renderListaPresencas(presencas) {
       : p.tipo === 'visitante_convidado'
       ? `<span style="font-size:0.7rem;color:var(--dourado)">Convidado${p.convidado_por ? ` de ${esc(p.convidado_por)}` : ''}</span>`
       : `<span style="font-size:0.7rem;color:var(--texto-mutado)">Visitante</span>`
-    const hora = p.registrado_em ? new Date(p.registrado_em).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : ''
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.45rem 0;border-bottom:1px solid var(--borda)">
+    const hora    = p.registrado_em ? new Date(p.registrado_em).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : ''
+    const extras  = [p.celular, p.bairro].filter(Boolean).join(' · ')
+    return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:0.5rem 0;border-bottom:1px solid var(--borda)">
       <div>
-        <span style="font-size:0.88rem">${esc(p.nome)}</span>
+        <span style="font-size:0.88rem;font-weight:500">${esc(p.nome)}</span>
         <br/>${tipoBadge}
+        ${extras ? `<br/><span style="font-size:0.7rem;color:var(--texto-mutado)">${esc(extras)}</span>` : ''}
       </div>
-      <span style="font-size:0.75rem;color:var(--texto-mutado)">${hora}</span>
+      <span style="font-size:0.75rem;color:var(--texto-mutado);flex-shrink:0;margin-left:0.5rem">${hora}</span>
     </div>`
   }).join('')
 }
@@ -7105,7 +7109,8 @@ async function abrirDetalheCulto(id) {
     const totalV = presencas.filter(p => p.tipo === 'visitante').length
     const totalC = presencas.filter(p => p.tipo === 'visitante_convidado').length
 
-    const btnStatus = culto?.encerrado
+    const ehLider = temPapelLiderancaNoApp()
+    const btnStatus = !ehLider ? '' : culto?.encerrado
       ? `<button class="btn btn-ghost btn-sm" onclick="alterarStatusCulto('${id}', false)">Reabrir check-in</button>`
       : `<button class="btn btn-ghost btn-sm" onclick="alterarStatusCulto('${id}', true)">Encerrar check-in</button>`
 
@@ -7159,10 +7164,10 @@ async function abrirDetalheCulto(id) {
         ${_renderListaPresencas(presencas)}
       </div>
 
-      <!-- Excluir -->
-      <div style="margin-top:1rem;text-align:right">
+      <!-- Excluir (só liderança) -->
+      ${ehLider ? `<div style="margin-top:1rem;text-align:right">
         <button class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirCulto('${id}')">Excluir culto</button>
-      </div>`
+      </div>` : ''}`
 
     // Auto-refresh com intervalo configurável (padrão 15s)
     _cultoRefreshTimer = setInterval(() => _recarregarPresencas(id), 15000)
