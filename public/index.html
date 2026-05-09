@@ -4537,7 +4537,7 @@ async function abrirModalEditarEscala(escalaId) {
       deptoCache = Array.isArray(d) ? d : []
     }
     const permitidos =
-      usuario?.role === 'admin'
+      (usuario?.role === 'admin' || usuario?.role === 'lider' || usuario?.acesso_escala_global)
         ? deptoCache
         : deptoCache.filter((d) =>
             (usuario?.departamentos || []).some(
