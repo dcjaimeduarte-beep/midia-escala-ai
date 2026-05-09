@@ -4808,7 +4808,21 @@ async function sincronizarUsuarioServidor() {
         departamentos: data.departamentos || usuario?.departamentos || []
       }
       localStorage.setItem('peniel_usuario', JSON.stringify(usuario))
-      if (document.getElementById('tela-app')?.style.display !== 'none') mostrarApp()
+      if (document.getElementById('tela-app')?.style.display !== 'none') {
+        mostrarApp()
+        // Re-renderiza a página activa para reflectir permissões actualizadas (ex.: role_depto do utilizador)
+        const paginaAtiva = [...document.querySelectorAll('.pagina')]
+          .find((el) => el.style.display === 'block')
+          ?.id?.replace('pagina-', '')
+        const loaders = {
+          escalas: carregarEscalas,
+          equipe: carregarEquipe,
+          departamentos: carregarDepartamentos,
+          comunicacoes: carregarComunicacoes,
+          cadastros: carregarCadastros,
+        }
+        loaders[paginaAtiva]?.()
+      }
     }
   } catch (e) {
     if (e.erro === 'Token inválido ou expirado' || e.erro === 'Usuário inválido ou inativo') logout()
@@ -6788,10 +6802,15 @@ async function excluirCategoria(id) {
 // ═══════════════════════════════════════════════════════════
 if (token && usuario) {
   mostrarApp()
-  navegar('dashboard')
   verificarSenhaObrigatoria()
-  sincronizarUsuarioServidor()
-  tentarAbrirPopupEntrada()
+  // Aguarda sync antes de renderizar para garantir departamentos actualizados
+  sincronizarUsuarioServidor().then(() => {
+    navegar('dashboard')
+    tentarAbrirPopupEntrada()
+  }).catch(() => {
+    navegar('dashboard')
+    tentarAbrirPopupEntrada()
+  })
 } else {
   mostrarLogin()
   tentarAbrirPopupEntrada()
