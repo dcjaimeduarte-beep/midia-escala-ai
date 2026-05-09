@@ -18,6 +18,7 @@ function escalaPorId(id) {
 
 function podeGerirEscalaDepartamento(req, departamentoId) {
   if (req.usuario.role === 'admin' || req.usuario.role === 'lider') return true
+  if (req.usuario.acesso_escala_global) return true
   const v = sql.get(
     `SELECT role_depto FROM usuario_departamento WHERE usuario_id = ? AND departamento_id = ?`,
     req.usuario.id,

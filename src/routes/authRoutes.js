@@ -42,6 +42,7 @@ function usuarioPublico(row) {
     acesso_financeiro: !!rest.acesso_financeiro,
     acesso_relatorio_financeiro: !!rest.acesso_relatorio_financeiro,
     acesso_financeiro_global: !!rest.acesso_financeiro_global,
+    acesso_escala_global: !!rest.acesso_escala_global,
     congregacao: cong || null
   }
 }

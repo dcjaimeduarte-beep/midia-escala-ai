@@ -278,6 +278,7 @@ function migrate() {
   tryExec(`ALTER TABLE usuarios    ADD COLUMN acesso_financeiro_global INTEGER NOT NULL DEFAULT 0`)
   tryExec(`ALTER TABLE usuarios    ADD COLUMN acesso_relatorio_financeiro INTEGER NOT NULL DEFAULT 0`)
   tryExec(`ALTER TABLE usuarios    ADD COLUMN data_nascimento TEXT DEFAULT ''`)
+  tryExec(`ALTER TABLE usuarios    ADD COLUMN acesso_escala_global INTEGER NOT NULL DEFAULT 0`)
 
   // Garante que existe ao menos uma congregação sede
   const { n: nCong } = db.get('SELECT COUNT(*) as n FROM congregacoes') || { n: 0 }

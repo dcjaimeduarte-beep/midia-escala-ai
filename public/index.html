@@ -1746,6 +1746,13 @@
         </label>
       </div>
       </div>
+      <div class="form-grupo" id="edit-usuario-escala-wrap" style="display:none">
+        <label style="text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+          <input type="checkbox" id="edit-usuario-escala-global" style="width:auto"/>
+          🎬 Piloto de escalas
+        </label>
+        <p class="muted" style="font-size:0.75rem;margin:0.25rem 0 0;line-height:1.4">Pode criar, editar e excluir escalas em qualquer departamento, independente de ser líder ou membro do setor.</p>
+      </div>
       <div class="form-grupo" id="edit-usuario-cong-wrap" style="display:none">
         <label>Congregação</label>
         <select id="edit-usuario-cong"><option value="">Sem congregação</option></select>
@@ -2590,10 +2597,11 @@ function temPapelLiderancaNoApp() {
   return eLiderEmAlgumDepartamentoNoCliente()
 }
 
-/** Pode criar escala: admin, líder global ou líder de algum departamento. */
+/** Pode criar escala: admin, líder global, piloto ou líder de algum departamento. */
 function podeCriarEscalaNoCliente() {
   if (!usuario) return false
   if (usuario.role === 'admin' || usuario.role === 'lider') return true
+  if (usuario.acesso_escala_global) return true
   return eLiderEmAlgumDepartamentoNoCliente()
 }
 
@@ -2619,6 +2627,7 @@ function inferirPerfilEquipeDeUsuario(u) {
 function podeGerirEscalaNoCliente(departamentoId) {
   if (!usuario) return false
   if (usuario.role === 'admin' || usuario.role === 'lider') return true
+  if (usuario.acesso_escala_global) return true
   if (!departamentoId) return false
   const deps = usuario.departamentos
   if (!Array.isArray(deps) || deps.length === 0) return false
@@ -4245,6 +4254,11 @@ async function abrirModalEditarUsuario(id) {
       document.getElementById('edit-usuario-financeiro-global').checked = !!u.acesso_financeiro_global
       _toggleFinCheckboxes()
     }
+    const escalaWrap = document.getElementById('edit-usuario-escala-wrap')
+    if (escalaWrap) {
+      escalaWrap.style.display = usuario?.role === 'admin' ? '' : 'none'
+      document.getElementById('edit-usuario-escala-global').checked = !!u.acesso_escala_global
+    }
 
     const congWrap = document.getElementById('edit-usuario-cong-wrap')
     const selCong  = document.getElementById('edit-usuario-cong')
@@ -4302,6 +4316,10 @@ async function salvarEditUsuario(ev) {
     body.acesso_financeiro = document.getElementById('edit-usuario-financeiro').checked
     body.acesso_relatorio_financeiro = document.getElementById('edit-usuario-financeiro-relatorio').checked
     body.acesso_financeiro_global = document.getElementById('edit-usuario-financeiro-global').checked
+  }
+  const escalaWrap = document.getElementById('edit-usuario-escala-wrap')
+  if (escalaWrap && escalaWrap.style.display !== 'none' && usuario?.role === 'admin') {
+    body.acesso_escala_global = document.getElementById('edit-usuario-escala-global').checked
   }
 
   const congWrap = document.getElementById('edit-usuario-cong-wrap')
@@ -4741,6 +4759,10 @@ async function carregarEquipe() {
                   }
                   ${u.acesso_financeiro && usuario?.role === 'admin'
                     ? `<span class="badge" style="margin:1px 2px;background:rgba(22,163,74,.15);color:#16a34a;border:1px solid rgba(22,163,74,.3);cursor:pointer" onclick="abrirModalEditarUsuario('${esc(u.id)}')" title="Clique para editar acesso financeiro">💰 Financeiro${u.acesso_relatorio_financeiro ? ' + 📊' : ''}</span>`
+                    : ''
+                  }
+                  ${u.acesso_escala_global && usuario?.role === 'admin'
+                    ? `<span class="badge" style="margin:1px 2px;background:rgba(99,102,241,.15);color:#6366f1;border:1px solid rgba(99,102,241,.3);cursor:pointer" onclick="abrirModalEditarUsuario('${esc(u.id)}')" title="Piloto — gere escalas em todos os departamentos">🎬 Piloto</span>`
                     : ''
                   }
                 </td>

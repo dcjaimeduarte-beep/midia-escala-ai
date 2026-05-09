@@ -149,7 +149,7 @@ router.put('/:id', autenticar, async (req, res) => {
   if (!podeEditar)
     return res.status(403).json({ erro: 'Sem permissão para alterar cadastros' })
 
-  const { nome, email, celular, data_nascimento, senha, ativo, avatar, role, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, congregacao_id } = req.body
+  const { nome, email, celular, data_nascimento, senha, ativo, avatar, role, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, acesso_escala_global, congregacao_id } = req.body
 
   if (role !== undefined) {
     if (req.usuario.role !== 'admin')
@@ -180,18 +180,21 @@ router.put('/:id', autenticar, async (req, res) => {
     sql.run(`UPDATE usuarios SET acesso_relatorio_financeiro = ? WHERE id = ?`, acesso_relatorio_financeiro ? 1 : 0, req.params.id)
   if (acesso_financeiro_global !== undefined && admin)
     sql.run(`UPDATE usuarios SET acesso_financeiro_global = ? WHERE id = ?`, acesso_financeiro_global ? 1 : 0, req.params.id)
+  if (acesso_escala_global !== undefined && admin)
+    sql.run(`UPDATE usuarios SET acesso_escala_global = ? WHERE id = ?`, acesso_escala_global ? 1 : 0, req.params.id)
   if (congregacao_id !== undefined && admin)
     sql.run(`UPDATE usuarios SET congregacao_id = ? WHERE id = ?`, congregacao_id || null, req.params.id)
 
   syncTudoParaMemoria()
-  const atual = sql.get(`SELECT id, nome, email, celular, role, ativo, avatar, criado_em, precisa_trocar_senha, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global FROM usuarios WHERE id = ?`, req.params.id)
+  const atual = sql.get(`SELECT id, nome, email, celular, role, ativo, avatar, criado_em, precisa_trocar_senha, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, acesso_escala_global FROM usuarios WHERE id = ?`, req.params.id)
   res.json({
     ...atual,
     ativo: !!atual.ativo,
     precisa_trocar_senha: !!atual.precisa_trocar_senha,
     acesso_financeiro: !!atual.acesso_financeiro,
     acesso_relatorio_financeiro: !!atual.acesso_relatorio_financeiro,
-    acesso_financeiro_global: !!atual.acesso_financeiro_global
+    acesso_financeiro_global: !!atual.acesso_financeiro_global,
+    acesso_escala_global: !!atual.acesso_escala_global
   })
 })
 
@@ -243,12 +246,9 @@ router.post('/vincular', autenticar, (req, res) => {
   const depto = sql.get(`SELECT * FROM departamentos WHERE id = ?`, departamento_id)
   if (!depto) return res.status(404).json({ erro: 'Departamento não encontrado' })
 
-  if (req.usuario.role !== 'admin') {
+  if (req.usuario.role !== 'admin' && req.usuario.role !== 'lider') {
     const vinculoLider = sql.get(
-      `
-      SELECT * FROM usuario_departamento
-      WHERE usuario_id = ? AND departamento_id = ? AND role_depto = 'lider'
-    `,
+      `SELECT * FROM usuario_departamento WHERE usuario_id = ? AND departamento_id = ? AND role_depto = 'lider'`,
       req.usuario.id,
       departamento_id
     )
