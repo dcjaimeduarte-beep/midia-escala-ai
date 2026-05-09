@@ -33,7 +33,7 @@ router.post('/:id', (req, res) => {
   if (!culto) return res.status(404).json({ erro: 'Culto não encontrado' })
   if (culto.encerrado) return res.status(400).json({ erro: 'Este culto já foi encerrado' })
 
-  const { nome, tipo, convidado_por, usuario_id, celular, bairro } = req.body
+  const { nome, tipo, convidado_por, usuario_id, celular, bairro, igreja } = req.body
   if (!nome?.trim()) return res.status(400).json({ erro: 'Nome é obrigatório' })
   if (!['membro', 'visitante', 'visitante_convidado'].includes(tipo))
     return res.status(400).json({ erro: 'Tipo inválido' })
@@ -41,8 +41,8 @@ router.post('/:id', (req, res) => {
   const id    = uuid()
   const agora = new Date().toISOString()
   sql.run(
-    `INSERT INTO presencas (id, culto_id, tipo, nome, convidado_por, usuario_id, celular, bairro, registrado_em)
-     VALUES (?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO presencas (id, culto_id, tipo, nome, convidado_por, usuario_id, celular, bairro, igreja, registrado_em)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`,
     id,
     culto.id,
     tipo,
@@ -51,6 +51,7 @@ router.post('/:id', (req, res) => {
     usuario_id || null,
     celular?.trim() || '',
     bairro?.trim()  || '',
+    igreja?.trim()  || '',
     agora
   )
   res.status(201).json({ ok: true, id })

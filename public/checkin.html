@@ -280,6 +280,12 @@
            autocomplete="address-level3" autocapitalize="words" autocorrect="off"/>
   </div>
 
+  <div class="campo">
+    <label for="inp-igreja">Igreja que frequenta</label>
+    <input type="text" id="inp-igreja" placeholder="Ex: Assembleia de Deus, Igreja Batista…"
+           autocomplete="off" autocapitalize="words" autocorrect="off"/>
+  </div>
+
   <button type="button" class="btn-submit" id="btn-confirmar" onclick="confirmarPresenca()">
     Confirmar presença
   </button>
@@ -423,7 +429,8 @@
           convidado_por: tipoSel === 'visitante_convidado' ? convidado_por : '',
           usuario_id:    tipoSel === 'membro' ? (usuarioSel || null) : null,
           celular: document.getElementById('inp-celular').value.trim(),
-          bairro:  document.getElementById('inp-bairro').value.trim()
+          bairro:  document.getElementById('inp-bairro').value.trim(),
+          igreja:  document.getElementById('inp-igreja').value.trim()
         })
       })
       const data = await r.json()

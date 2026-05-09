@@ -307,6 +307,7 @@ function migrate() {
 
   tryExec(`ALTER TABLE presencas ADD COLUMN celular TEXT NOT NULL DEFAULT ''`)
   tryExec(`ALTER TABLE presencas ADD COLUMN bairro  TEXT NOT NULL DEFAULT ''`)
+  tryExec(`ALTER TABLE presencas ADD COLUMN igreja  TEXT NOT NULL DEFAULT ''`)
 
   // Garante que existe ao menos uma congregação sede
   const { n: nCong } = db.get('SELECT COUNT(*) as n FROM congregacoes') || { n: 0 }

@@ -7048,7 +7048,7 @@ function _renderListaPresencas(presencas) {
       ? `<span style="font-size:0.7rem;color:var(--dourado)">Convidado${p.convidado_por ? ` de ${esc(p.convidado_por)}` : ''}</span>`
       : `<span style="font-size:0.7rem;color:var(--texto-mutado)">Visitante</span>`
     const hora    = p.registrado_em ? new Date(p.registrado_em).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : ''
-    const extras  = [p.celular, p.bairro].filter(Boolean).join(' · ')
+    const extras  = [p.celular, p.bairro, p.igreja].filter(Boolean).join(' · ')
     return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:0.5rem 0;border-bottom:1px solid var(--borda)">
       <div>
         <span style="font-size:0.88rem;font-weight:500">${esc(p.nome)}</span>
