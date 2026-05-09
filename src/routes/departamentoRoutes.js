@@ -69,7 +69,7 @@ router.get('/listar', autenticar, (req, res) => {
       })()
     }))
 
-  if (req.usuario.role === 'admin') {
+  if (req.usuario.role === 'admin' || req.usuario.role === 'lider' || req.usuario.acesso_escala_global) {
     const todos = req.query.todos === '1'
     const rows = todos
       ? sql.all(`SELECT * FROM departamentos ORDER BY ativo DESC, nome`)
