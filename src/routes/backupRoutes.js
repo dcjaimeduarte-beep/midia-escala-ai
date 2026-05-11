@@ -85,8 +85,8 @@ router.put('/config', autenticar, apenasAdmin, (req, res) => {
 })
 
 // ── BACKUP AUTOMÁTICO — executar agora ───────────────────────────────────────
-router.post('/agora', autenticar, apenasAdmin, (req, res) => {
-  const result = gerarBackup()
+router.post('/agora', autenticar, apenasAdmin, async (req, res) => {
+  const result = await gerarBackup()
   if (result.ok) res.json(result)
   else res.status(500).json(result)
 })
