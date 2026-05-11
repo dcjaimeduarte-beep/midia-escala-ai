@@ -3963,8 +3963,16 @@ async function carregarCadastros() {
 
         </div>
       </div>
+
+      <p class="secao-label" style="margin-top:2rem">⏰ Backup Automático</p>
+      <div class="card" style="margin-bottom:1.5rem" id="card-backup-auto">
+        <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem" id="backup-auto-corpo">
+          <p class="muted" style="font-size:0.8rem;margin:0">Carregando configuração…</p>
+        </div>
+      </div>
       ` : ''}
     `
+    if (usuario?.role === 'admin') carregarBackupAuto()
   } catch (err) {
     el.innerHTML = `<p class="carregando" style="color:var(--erro)">Erro ao carregar cadastros.</p>`
     console.error(err)
@@ -7705,6 +7713,129 @@ async function excluirPerfil() {
     carregarCadastros()
   } catch (e) {
     toast(e.erro || 'Erro ao excluir.', 'err')
+  }
+}
+
+// ── BACKUP AUTOMÁTICO ──────────────────────────────────────────────────────────
+async function carregarBackupAuto() {
+  const corpo = document.getElementById('backup-auto-corpo')
+  if (!corpo) return
+  let cfg = { ativo: false, hora: '02:00', pasta: '', manter_dias: 7 }
+  let arquivos = []
+  try {
+    cfg      = await api('GET', '/backup/config')
+    arquivos = await api('GET', '/backup/listar').catch(() => [])
+  } catch {}
+
+  const fmtBytes = b => b > 1048576 ? `${(b/1048576).toFixed(1)} MB` : `${(b/1024).toFixed(0)} KB`
+  const fmtData  = s => new Date(s).toLocaleString('pt-BR')
+
+  corpo.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:0.9rem">
+
+      <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;text-transform:none;letter-spacing:0;font-size:0.9rem">
+        <input type="checkbox" id="bkp-ativo" style="width:auto" ${cfg.ativo ? 'checked' : ''}
+          onchange="_salvarConfigBackup()"/>
+        Ativar backup automático
+      </label>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+        <div class="form-grupo" style="margin:0">
+          <label>Horário diário</label>
+          <input type="time" id="bkp-hora" value="${esc(cfg.hora || '02:00')}"
+            style="padding:0.4rem 0.6rem;font-size:0.85rem"/>
+        </div>
+        <div class="form-grupo" style="margin:0">
+          <label>Manter últimos (dias) <span style="font-weight:400;color:var(--texto-mutado)">0 = sem limite</span></label>
+          <input type="number" id="bkp-dias" min="0" max="365" value="${cfg.manter_dias ?? 7}"
+            style="padding:0.4rem 0.6rem;font-size:0.85rem"/>
+        </div>
+      </div>
+
+      <div class="form-grupo" style="margin:0">
+        <label>📁 Pasta de destino <span style="font-weight:400;color:var(--texto-mutado)">(caminho completo no servidor — opcional)</span></label>
+        <input type="text" id="bkp-pasta" value="${esc(cfg.pasta || '')}"
+          placeholder="Ex: C:\\Backups\\PenielMidia ou /home/user/backups"
+          style="font-size:0.83rem"/>
+      </div>
+
+      <div style="border-top:1px solid var(--borda);padding-top:0.75rem;display:flex;flex-direction:column;gap:0.65rem">
+        <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;text-transform:none;letter-spacing:0;font-size:0.9rem">
+          <input type="checkbox" id="bkp-email-ativo" style="width:auto" ${cfg.enviar_email ? 'checked' : ''}/>
+          📧 Enviar backup por e-mail também
+        </label>
+        <div class="form-grupo" style="margin:0">
+          <label>E-mail de destino</label>
+          <input type="email" id="bkp-email-dest" value="${esc(cfg.email_destino || '')}"
+            placeholder="seu@email.com" style="font-size:0.83rem"/>
+        </div>
+        <p class="muted" style="font-size:0.75rem;margin:0">O arquivo JSON será anexado ao e-mail. Funciona mesmo quando o computador estiver desligado no horário (se o servidor estiver na nuvem).</p>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="_salvarConfigBackup()">💾 Salvar configuração</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+        <button type="button" class="btn btn-primario btn-sm" onclick="_rodarBackupAgora()">▶ Fazer backup agora</button>
+        <span id="bkp-status" style="font-size:0.78rem;color:var(--texto-mutado)"></span>
+      </div>
+
+      ${arquivos.length ? `
+      <div>
+        <p style="font-weight:600;font-size:0.85rem;margin:0 0 0.5rem">📂 Arquivos salvos (${arquivos.length})</p>
+        <div style="display:flex;flex-direction:column;gap:0.3rem;max-height:220px;overflow-y:auto">
+          ${arquivos.map(a => `
+            <div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;background:var(--fundo);border-radius:6px;border:1px solid var(--borda);font-size:0.78rem">
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(a.nome)}">${esc(a.nome)}</span>
+              <span style="color:var(--texto-mutado);white-space:nowrap">${fmtBytes(a.tamanho)}</span>
+              <span style="color:var(--texto-mutado);white-space:nowrap">${fmtData(a.gerado_em)}</span>
+              <button type="button" class="btn btn-ghost btn-sm" style="padding:0.1rem 0.45rem;color:var(--erro)"
+                onclick="_excluirArquivoBackup('${esc(a.nome)}')">✕</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>` : `<p class="muted" style="font-size:0.8rem;margin:0">Nenhum backup salvo ainda na pasta configurada.</p>`}
+    </div>
+  `
+}
+
+async function _salvarConfigBackup() {
+  const ativo         = document.getElementById('bkp-ativo')?.checked ?? false
+  const hora          = document.getElementById('bkp-hora')?.value || '02:00'
+  const pasta         = document.getElementById('bkp-pasta')?.value?.trim() || ''
+  const manter_dias   = Number(document.getElementById('bkp-dias')?.value) || 7
+  const enviar_email  = document.getElementById('bkp-email-ativo')?.checked ?? false
+  const email_destino = document.getElementById('bkp-email-dest')?.value?.trim() || ''
+  try {
+    await api('PUT', '/backup/config', { ativo, hora, pasta, manter_dias, enviar_email, email_destino })
+    const st = document.getElementById('bkp-status')
+    if (st) { st.textContent = '✔ Configuração salva.'; setTimeout(() => { st.textContent = '' }, 2500) }
+  } catch (e) {
+    toast(e.erro || 'Erro ao salvar configuração.', 'err')
+  }
+}
+
+async function _rodarBackupAgora() {
+  const st = document.getElementById('bkp-status')
+  if (st) st.textContent = 'Gerando backup…'
+  try {
+    const r = await api('POST', '/backup/agora')
+    toast(`Backup salvo: ${r.arquivo}`, 'ok')
+    carregarBackupAuto()
+  } catch (e) {
+    toast(e.erro || 'Erro ao gerar backup.', 'err')
+    if (st) st.textContent = ''
+  }
+}
+
+async function _excluirArquivoBackup(nome) {
+  if (!confirm(`Excluir "${nome}"?`)) return
+  try {
+    await api('DELETE', `/backup/arquivo/${encodeURIComponent(nome)}`)
+    carregarBackupAuto()
+  } catch (e) {
+    toast(e.erro || 'Erro ao excluir arquivo.', 'err')
   }
 }
 </script>

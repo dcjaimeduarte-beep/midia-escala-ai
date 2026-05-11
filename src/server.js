@@ -4,6 +4,7 @@ const path = require('path')
 const eventBus = require('./events/eventBus')
 const { bootstrap } = require('./db/bootstrap')
 const { garantirConexaoWhatsApp } = require('./services/whatsapp')
+const { iniciarAgendador }        = require('./services/backupScheduler')
 
 const app = express()
 if (process.env.NODE_ENV === 'production') {
@@ -61,6 +62,7 @@ bootstrap()
   .then(() => {
     // Inicializa conexão WhatsApp em background para já exibir QR/pairing quando aplicável.
     garantirConexaoWhatsApp()
+    iniciarAgendador()
     app.listen(PORT, () => {
       console.log(`🔥 Peniel Mídia — servidor rodando em http://localhost:${PORT}`)
     })

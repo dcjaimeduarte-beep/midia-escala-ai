@@ -118,4 +118,41 @@ Equipe Peniel Mídia`
   return _enviar({ para, assunto, texto })
 }
 
-module.exports = { enviarBoasVindas, enviarComunicadoAviso }
+async function enviarBackupEmail({ para, nomeArquivo, conteudoJson }) {
+  const assunto = `Peniel Mídia — backup automático ${nomeArquivo}`
+  const texto   = `Backup automático do sistema Peniel Mídia.\n\nArquivo: ${nomeArquivo}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\nO backup está anexado a este e-mail.`
+  const b64     = Buffer.from(conteudoJson, 'utf8').toString('base64')
+
+  if (process.env.RESEND_API_KEY) {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: process.env.SMTP_FROM || 'Peniel Mídia <onboarding@resend.dev>',
+        to: [para], subject: assunto, text: texto,
+        attachments: [{ filename: nomeArquivo, content: b64 }]
+      })
+    })
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(`Resend: ${e?.message || res.status}`) }
+    return { enviado: true }
+  }
+
+  if (process.env.SMTP_HOST) {
+    const nodemailer = require('nodemailer')
+    const secure = process.env.SMTP_SECURE === '1' || String(process.env.SMTP_SECURE || '').toLowerCase() === 'true'
+    const t = nodemailer.createTransport({
+      host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT || 587), secure,
+      auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS || '' } : undefined
+    })
+    await t.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER, to: para,
+      subject: assunto, text: texto,
+      attachments: [{ filename: nomeArquivo, content: Buffer.from(conteudoJson, 'utf8'), contentType: 'application/json' }]
+    })
+    return { enviado: true }
+  }
+
+  return { enviado: false, motivo: 'sem_provedor' }
+}
+
+module.exports = { enviarBoasVindas, enviarComunicadoAviso, enviarBackupEmail }
