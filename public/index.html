@@ -6561,16 +6561,21 @@ function _popularEventosModal(escalaIdSelecionado) {
   const selEv = document.getElementById('lanc-escala')
   if (!selEv) return
 
-  // Deduplica por (data + evento_id) → uma linha por culto, sem departamentos
-  // Só mostra escalas a partir de hoje
+  // Mostra escalas dos últimos 60 dias e futuras; se editando, garante que o culto já vinculado apareça
   const hoje = _ddmmToISO(_dataHoje())
+  const limite = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10)
+  const escalaSelecionada = escalaIdSelecionado
+    ? (finEscalas || []).find(e => e.id === escalaIdSelecionado)
+    : null
   const visto = new Set()
   const cultos = []
   const todas = [...(finEscalas || [])].sort((a, b) =>
     _ddmmToISO(a.data).localeCompare(_ddmmToISO(b.data))
   )
   for (const e of todas) {
-    if (_ddmmToISO(e.data) < hoje) continue
+    const dataISO = _ddmmToISO(e.data)
+    const ehSelecionado = escalaSelecionada && e.id === escalaSelecionada.id
+    if (dataISO < limite && !ehSelecionado) continue
     const chave = `${e.data}|${e.evento_id || ''}`
     if (visto.has(chave)) continue
     visto.add(chave)
@@ -6580,7 +6585,8 @@ function _popularEventosModal(escalaIdSelecionado) {
   let opts = '<option value="">Sem culto vinculado</option>'
   for (const e of cultos) {
     const evNome = finEventos.find(ev => ev.id === e.evento_id)?.nome || 'Culto'
-    opts += `<option value="${esc(e.id)}" data-data="${esc(e.data)}">${esc(e.data)} — ${esc(evNome)}</option>`
+    const passado = _ddmmToISO(e.data) < hoje ? ` (passado)` : ''
+    opts += `<option value="${esc(e.id)}" data-data="${esc(e.data)}">${esc(e.data)} — ${esc(evNome)}${passado}</option>`
   }
   selEv.innerHTML = opts
 
@@ -6686,13 +6692,14 @@ function _popularEventosModalLote() {
   const selEv = document.getElementById('lote-escala')
   if (!selEv) return
   const hoje = _ddmmToISO(_dataHoje())
+  const limite = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10)
   const visto = new Set()
   const cultos = []
   const todas = [...(finEscalas || [])].sort((a, b) =>
     _ddmmToISO(a.data).localeCompare(_ddmmToISO(b.data))
   )
   for (const e of todas) {
-    if (_ddmmToISO(e.data) < hoje) continue
+    if (_ddmmToISO(e.data) < limite) continue
     const chave = `${e.data}|${e.evento_id || ''}`
     if (visto.has(chave)) continue
     visto.add(chave)
@@ -6701,7 +6708,8 @@ function _popularEventosModalLote() {
   let opts = '<option value="">Sem culto vinculado</option>'
   for (const e of cultos) {
     const evNome = (finEventos || []).find(ev => ev.id === e.evento_id)?.nome || 'Culto'
-    opts += `<option value="${esc(e.id)}" data-data="${esc(e.data)}">${esc(e.data)} — ${esc(evNome)}</option>`
+    const passado = _ddmmToISO(e.data) < hoje ? ` (passado)` : ''
+    opts += `<option value="${esc(e.id)}" data-data="${esc(e.data)}">${esc(e.data)} — ${esc(evNome)}${passado}</option>`
   }
   selEv.innerHTML = opts
 }
@@ -7817,14 +7825,22 @@ async function _salvarConfigBackup() {
 }
 
 async function _rodarBackupAgora() {
+  const pasta  = document.getElementById('bkp-pasta')?.value?.trim()  || ''
+  const email  = document.getElementById('bkp-email-ativo')?.checked  ?? false
+  const emailD = document.getElementById('bkp-email-dest')?.value?.trim() || ''
+  if (!pasta && !(email && emailD)) {
+    toast('Configure a pasta de destino ou o e-mail antes de gerar o backup.', 'err')
+    return
+  }
   const st = document.getElementById('bkp-status')
   if (st) st.textContent = 'Gerando backup…'
   try {
     const r = await api('POST', '/backup/agora')
+    if (st) st.textContent = ''
     toast(`Backup salvo: ${r.arquivo}`, 'ok')
     carregarBackupAuto()
   } catch (e) {
-    toast(e.erro || 'Erro ao gerar backup.', 'err')
+    toast(e.erro || e.message || 'Erro ao gerar backup.', 'err')
     if (st) st.textContent = ''
   }
 }
