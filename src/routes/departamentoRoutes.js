@@ -23,15 +23,17 @@ router.post('/criar', autenticar, apenasAdminOuLider, (req, res) => {
 
   const id = uuid()
   const agora = new Date().toISOString()
+  const perfilMidia = sql.get(`SELECT id FROM perfis WHERE nome = 'Mídia'`)
   sql.run(
-    `INSERT INTO departamentos (id, nome, descricao, icone, cor, mensagem_pastoral, ativo, criado_em) VALUES (?,?,?,?,?,?,1,?)`,
+    `INSERT INTO departamentos (id, nome, descricao, icone, cor, mensagem_pastoral, ativo, criado_em, perfil_id) VALUES (?,?,?,?,?,?,1,?,?)`,
     id,
     nome,
     descricao || '',
     icone || '📁',
     cor || '#D4161B',
     '',
-    agora
+    agora,
+    perfilMidia?.id || null
   )
   syncDepartamentosParaMemoria()
   const dep = sql.get('SELECT * FROM departamentos WHERE id = ?', id)
@@ -72,8 +74,16 @@ router.get('/listar', autenticar, (req, res) => {
   if (req.usuario.role === 'admin' || req.usuario.role === 'lider' || req.usuario.acesso_escala_global) {
     const todos = req.query.todos === '1'
     const rows = todos
-      ? sql.all(`SELECT * FROM departamentos ORDER BY ativo DESC, nome`)
-      : sql.all(`SELECT * FROM departamentos WHERE ativo = 1 ORDER BY nome`)
+      ? sql.all(
+          `SELECT d.*, p.nome AS perfil_nome FROM departamentos d
+           LEFT JOIN perfis p ON p.id = d.perfil_id
+           ORDER BY d.ativo DESC, d.nome`
+        )
+      : sql.all(
+          `SELECT d.*, p.nome AS perfil_nome FROM departamentos d
+           LEFT JOIN perfis p ON p.id = d.perfil_id
+           WHERE d.ativo = 1 ORDER BY d.nome`
+        )
     return res.json(mapLista(rows))
   }
 
@@ -91,7 +101,11 @@ router.get('/listar', autenticar, (req, res) => {
   }
   const permitidos = Array.from(permitidosSet)
   const rows = sql
-    .all(`SELECT * FROM departamentos WHERE ativo = 1 ORDER BY nome`)
+    .all(
+      `SELECT d.*, p.nome AS perfil_nome FROM departamentos d
+       LEFT JOIN perfis p ON p.id = d.perfil_id
+       WHERE d.ativo = 1 ORDER BY d.nome`
+    )
     .filter((d) => permitidos.includes(d.id))
 
   const lista = rows.map((dep) => ({
@@ -114,7 +128,11 @@ router.get('/listar', autenticar, (req, res) => {
 
 // GET /departamento/:id — detalhes + membros
 router.get('/:id', autenticar, verificarAcessoDepartamento, (req, res) => {
-  const dep = sql.get('SELECT * FROM departamentos WHERE id = ?', req.params.id)
+  const dep = sql.get(
+    `SELECT d.*, p.nome AS perfil_nome FROM departamentos d
+     LEFT JOIN perfis p ON p.id = d.perfil_id WHERE d.id = ?`,
+    req.params.id
+  )
   if (!dep) return res.status(404).json({ erro: 'Departamento não encontrado' })
 
   const vinculos = sql.all(
@@ -149,7 +167,7 @@ router.put('/:id', autenticar, apenasAdminOuLider, (req, res) => {
     return res.status(403).json({ erro: 'Sem permissão para alterar este departamento' })
   }
 
-  const { nome, descricao, icone, cor, ativo, mensagem_pastoral } = req.body
+  const { nome, descricao, icone, cor, ativo, mensagem_pastoral, perfil_id } = req.body
   if (nome !== undefined) sql.run(`UPDATE departamentos SET nome = ? WHERE id = ?`, nome, req.params.id)
   if (descricao !== undefined)
     sql.run(`UPDATE departamentos SET descricao = ? WHERE id = ?`, descricao, req.params.id)
@@ -158,9 +176,19 @@ router.put('/:id', autenticar, apenasAdminOuLider, (req, res) => {
   if (mensagem_pastoral !== undefined)
     sql.run(`UPDATE departamentos SET mensagem_pastoral = ? WHERE id = ?`, String(mensagem_pastoral), req.params.id)
   if (ativo !== undefined) sql.run(`UPDATE departamentos SET ativo = ? WHERE id = ?`, ativo ? 1 : 0, req.params.id)
+  if (perfil_id !== undefined && req.usuario.role === 'admin') {
+    if (perfil_id === null || perfil_id === '')
+      sql.run(`UPDATE departamentos SET perfil_id = NULL WHERE id = ?`, req.params.id)
+    else if (sql.get(`SELECT id FROM perfis WHERE id = ?`, perfil_id))
+      sql.run(`UPDATE departamentos SET perfil_id = ? WHERE id = ?`, perfil_id, req.params.id)
+  }
 
   syncDepartamentosParaMemoria()
-  const atualizado = sql.get('SELECT * FROM departamentos WHERE id = ?', req.params.id)
+  const atualizado = sql.get(
+    `SELECT d.*, p.nome AS perfil_nome FROM departamentos d
+     LEFT JOIN perfis p ON p.id = d.perfil_id WHERE d.id = ?`,
+    req.params.id
+  )
   res.json({ ...atualizado, ativo: !!atualizado.ativo })
 })
 

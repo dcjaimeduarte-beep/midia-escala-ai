@@ -308,6 +308,7 @@ function migrate() {
   tryExec(`ALTER TABLE presencas ADD COLUMN celular TEXT NOT NULL DEFAULT ''`)
   tryExec(`ALTER TABLE presencas ADD COLUMN bairro  TEXT NOT NULL DEFAULT ''`)
   tryExec(`ALTER TABLE presencas ADD COLUMN igreja  TEXT NOT NULL DEFAULT ''`)
+  tryExec(`ALTER TABLE usuarios  ADD COLUMN acesso_cultos INTEGER NOT NULL DEFAULT 0`)
 
   // Garante departamento Obreiros (financeiro + introdução / check-in)
   const { n: nObreiros } = db.get(`SELECT COUNT(*) as n FROM departamentos WHERE nome = 'Obreiros'`) || { n: 0 }
@@ -315,9 +316,12 @@ function migrate() {
     const { v4: uuidv4 } = require('uuid')
     db.run(
       `INSERT INTO departamentos (id, nome, descricao, icone, cor, mensagem_pastoral, ativo, criado_em) VALUES (?,?,?,?,?,?,1,?)`,
-      uuidv4(), 'Obreiros', 'Financeiro e Introdução', '🤝', '#1A5276', '', new Date().toISOString()
+      uuidv4(), 'Obreiros', 'Financeiro e Introdução', '🙏', '#1A5276', '', new Date().toISOString()
     )
     console.log('✅ Departamento Obreiros criado')
+  } else {
+    // Atualiza ícone para bancos já existentes que tinham o ícone antigo
+    db.run(`UPDATE departamentos SET icone = '🙏' WHERE nome = 'Obreiros' AND icone = '🤝'`)
   }
 
   // Garante que existe ao menos uma congregação sede
@@ -332,6 +336,142 @@ function migrate() {
     db.run(`UPDATE escalas  SET congregacao_id = ? WHERE congregacao_id IS NULL`, sedeId)
     db.run(`UPDATE lancamentos_financeiro SET congregacao_id = ? WHERE congregacao_id IS NULL`, sedeId)
   }
+
+  // ── PERFIS DE ACESSO ─────────────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS perfis (
+      id                          TEXT PRIMARY KEY,
+      nome                        TEXT NOT NULL,
+      acesso_financeiro           INTEGER NOT NULL DEFAULT 0,
+      acesso_relatorio_financeiro INTEGER NOT NULL DEFAULT 0,
+      acesso_financeiro_global    INTEGER NOT NULL DEFAULT 0,
+      acesso_escala_global        INTEGER NOT NULL DEFAULT 0,
+      acesso_cultos               INTEGER NOT NULL DEFAULT 0,
+      criado_em                   TEXT NOT NULL
+    );
+  `)
+  tryExec(`ALTER TABLE usuarios ADD COLUMN perfil_id TEXT REFERENCES perfis(id) ON DELETE SET NULL`)
+  tryExec(
+    `ALTER TABLE departamentos ADD COLUMN perfil_id TEXT REFERENCES perfis(id) ON DELETE SET NULL`
+  )
 }
 
-module.exports = { initSchema, seedDepartamentos, migrate }
+/** Perfis macro (flags padrão). “Cultos” legado é removido em sincronizarPerfisMacro. */
+const PERFIS_MACRO = [
+  {
+    nome: 'Financeiro',
+    acesso_financeiro: 1,
+    acesso_relatorio_financeiro: 1,
+    acesso_financeiro_global: 0,
+    acesso_escala_global: 0,
+    acesso_cultos: 0
+  },
+  {
+    nome: 'Obreiro',
+    acesso_financeiro: 1,
+    acesso_relatorio_financeiro: 0,
+    acesso_financeiro_global: 0,
+    acesso_escala_global: 0,
+    acesso_cultos: 1
+  },
+  {
+    nome: 'Mídia',
+    acesso_financeiro: 0,
+    acesso_relatorio_financeiro: 0,
+    acesso_financeiro_global: 0,
+    acesso_escala_global: 0,
+    acesso_cultos: 0
+  }
+]
+
+const NOMES_DEPTO_MIDIA = ['Projeção', 'Ao Vivo', 'Stories', 'Iluminação', 'Fotos', 'Engajamento']
+
+/**
+ * Cria/atualiza os 3 perfis macro, remove “Cultos”, garante Tesouraria,
+ * liga cada departamento ao perfil adequado. Idempotente — chamar após seedDepartamentos().
+ */
+function sincronizarPerfisMacro() {
+  const { v4: uuidv4 } = require('uuid')
+  const agora = new Date().toISOString()
+
+  for (const p of PERFIS_MACRO) {
+    const row = db.get('SELECT id FROM perfis WHERE nome = ?', p.nome)
+    if (!row) {
+      db.run(
+        `INSERT INTO perfis (id,nome,acesso_financeiro,acesso_relatorio_financeiro,acesso_financeiro_global,acesso_escala_global,acesso_cultos,criado_em) VALUES (?,?,?,?,?,?,?,?)`,
+        uuidv4(),
+        p.nome,
+        p.acesso_financeiro,
+        p.acesso_relatorio_financeiro,
+        p.acesso_financeiro_global,
+        p.acesso_escala_global,
+        p.acesso_cultos,
+        agora
+      )
+    } else {
+      db.run(
+        `UPDATE perfis SET acesso_financeiro=?, acesso_relatorio_financeiro=?, acesso_financeiro_global=?, acesso_escala_global=?, acesso_cultos=? WHERE nome=?`,
+        p.acesso_financeiro,
+        p.acesso_relatorio_financeiro,
+        p.acesso_financeiro_global,
+        p.acesso_escala_global,
+        p.acesso_cultos,
+        p.nome
+      )
+    }
+  }
+
+  const cultos = db.get(`SELECT id FROM perfis WHERE nome = 'Cultos'`)
+  const obreiro = db.get(`SELECT id FROM perfis WHERE nome = 'Obreiro'`)
+  if (cultos && obreiro && cultos.id !== obreiro.id) {
+    db.run(`UPDATE usuarios SET perfil_id = ? WHERE perfil_id = ?`, obreiro.id, cultos.id)
+    db.run(`UPDATE departamentos SET perfil_id = ? WHERE perfil_id = ?`, obreiro.id, cultos.id)
+    db.run(`DELETE FROM perfis WHERE id = ?`, cultos.id)
+  } else if (cultos && !obreiro) {
+    db.run(
+      `UPDATE perfis SET nome='Obreiro', acesso_financeiro=1, acesso_relatorio_financeiro=0, acesso_financeiro_global=0, acesso_escala_global=0, acesso_cultos=1 WHERE id=?`,
+      cultos.id
+    )
+  }
+
+  const midiaSemAcento = db.get(`SELECT id FROM perfis WHERE nome = 'Midia'`)
+  const jaMidia = db.get(`SELECT id FROM perfis WHERE nome = 'Mídia'`)
+  if (midiaSemAcento && !jaMidia) {
+    db.run(`UPDATE perfis SET nome = 'Mídia' WHERE id = ?`, midiaSemAcento.id)
+  }
+
+  const fin = db.get(`SELECT id FROM perfis WHERE nome = 'Financeiro'`)
+  const obr = db.get(`SELECT id FROM perfis WHERE nome = 'Obreiro'`)
+  const mid = db.get(`SELECT id FROM perfis WHERE nome = 'Mídia'`)
+
+  let tes = db.get(`SELECT id FROM departamentos WHERE nome = 'Tesouraria'`)
+  if (!tes && fin) {
+    const tid = uuidv4()
+    db.run(
+      `INSERT INTO departamentos (id, nome, descricao, icone, cor, mensagem_pastoral, ativo, criado_em, perfil_id) VALUES (?,?,?,?,?,?,1,?,?)`,
+      tid,
+      'Tesouraria',
+      'Dízimos, ofertas e lançamentos financeiros',
+      '💰',
+      '#1E8449',
+      '',
+      agora,
+      fin.id
+    )
+  } else if (tes && fin) {
+    db.run(`UPDATE departamentos SET perfil_id = ? WHERE nome = 'Tesouraria'`, fin.id)
+  }
+
+  if (obr) db.run(`UPDATE departamentos SET perfil_id = ? WHERE nome = 'Obreiros'`, obr.id)
+
+  if (mid && NOMES_DEPTO_MIDIA.length) {
+    const ph = NOMES_DEPTO_MIDIA.map(() => '?').join(',')
+    db.run(`UPDATE departamentos SET perfil_id = ? WHERE nome IN (${ph})`, mid.id, ...NOMES_DEPTO_MIDIA)
+    db.run(
+      `UPDATE departamentos SET perfil_id = ? WHERE perfil_id IS NULL AND nome NOT IN ('Obreiros','Tesouraria')`,
+      mid.id
+    )
+  }
+}
+
+module.exports = { initSchema, seedDepartamentos, migrate, sincronizarPerfisMacro }

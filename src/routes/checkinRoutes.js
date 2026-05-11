@@ -4,6 +4,56 @@ const path = require('path')
 const { v4: uuid } = require('uuid')
 const sql = require('../db/database')
 
+// Busca visitante pelo celular para auto-preenchimento (sem auth) — deve vir ANTES de /:id
+router.get('/visitante', (req, res) => {
+  const digitos = (req.query.celular || '').replace(/\D/g, '')
+  if (digitos.length < 8) return res.json({ encontrado: false })
+  const sufixo = `%${digitos.slice(-8)}`
+
+  const ultimo = sql.get(
+    `SELECT nome, celular, bairro, igreja, convidado_por, tipo
+     FROM presencas WHERE celular LIKE ? AND celular != ''
+     ORDER BY registrado_em DESC LIMIT 1`,
+    sufixo
+  )
+  if (!ultimo) return res.json({ encontrado: false })
+
+  const { total } = sql.get(
+    `SELECT COUNT(*) AS total FROM presencas WHERE celular LIKE ? AND celular != ''`,
+    sufixo
+  ) || { total: 0 }
+
+  res.json({ encontrado: true, dados: ultimo, totalVisitas: Number(total) })
+})
+
+// Busca visitante por nome (case-insensitive) — deve vir ANTES de /:id
+router.get('/buscar-nome', (req, res) => {
+  const termo = (req.query.nome || '').trim()
+  if (termo.length < 2) return res.json([])
+
+  const resultados = sql.all(
+    `SELECT p.nome, p.celular, p.bairro, p.igreja, p.tipo,
+       (SELECT COUNT(*) FROM presencas px
+        WHERE LOWER(TRIM(px.nome)) = LOWER(TRIM(p.nome))) AS total_visitas
+     FROM presencas p
+     WHERE LOWER(TRIM(p.nome)) LIKE '%' || LOWER(TRIM(?)) || '%'
+       AND p.id = (
+         SELECT p2.id FROM presencas p2
+         WHERE LOWER(TRIM(p2.nome)) = LOWER(TRIM(p.nome))
+         ORDER BY
+           CASE WHEN p2.celular != '' THEN 0 ELSE 1 END,
+           CASE WHEN p2.bairro  != '' THEN 0 ELSE 1 END,
+           CASE WHEN p2.igreja  != '' THEN 0 ELSE 1 END,
+           p2.registrado_em DESC
+         LIMIT 1
+       )
+     ORDER BY p.registrado_em DESC
+     LIMIT 8`,
+    termo
+  )
+  res.json(resultados)
+})
+
 // Serve a página de check-in para qualquer /:id
 router.get('/:id', (req, res) => {
   res.sendFile(path.join(__dirname, '../../public/checkin.html'))

@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs')
 const { v4: uuid } = require('uuid')
 const db = require('./database')
-const { initSchema, seedDepartamentos, migrate } = require('./schema')
+const { initSchema, seedDepartamentos, migrate, sincronizarPerfisMacro } = require('./schema')
 
 /** Mantém `src/models/db.js` alinhado aos usuários do SQLite (rotas antigas ainda usam memória). */
 function syncUsuariosParaMemoria() {
@@ -38,7 +38,8 @@ function syncDepartamentosParaMemoria() {
     icone: r.icone || '📁',
     cor: r.cor || '#D4161B',
     ativo: !!r.ativo,
-    criado_em: r.criado_em
+    criado_em: r.criado_em,
+    perfil_id: r.perfil_id || null
   }))
 }
 
@@ -118,6 +119,7 @@ async function bootstrap() {
   initSchema()
   migrate()
   seedDepartamentos()
+  sincronizarPerfisMacro()
   await seedUsuarioPadrao()
   syncTudoParaMemoria()
 }

@@ -3,7 +3,7 @@ const router = express.Router()
 const { v4: uuid } = require('uuid')
 const QRCode = require('qrcode')
 const sql = require('../db/database')
-const { autenticar, apenasAdminOuLider } = require('../auth/middleware')
+const { autenticar, apenasAdmin, apenasAdminOuLider, apenasAcessoCultosOuLider } = require('../auth/middleware')
 
 function getAppUrl(req) {
   return process.env.APP_URL || `${req.protocol}://${req.get('host')}`
@@ -29,7 +29,7 @@ router.get('/listar', autenticar, (req, res) => {
   res.json(cultos.map(c => ({ ...c, encerrado: !!c.encerrado })))
 })
 
-router.post('/criar', autenticar, apenasAdminOuLider, (req, res) => {
+router.post('/criar', autenticar, apenasAcessoCultosOuLider, (req, res) => {
   const { titulo, evento_id, data, descricao } = req.body
   if (!data) return res.status(400).json({ erro: 'data é obrigatória' })
 
@@ -51,7 +51,7 @@ router.post('/criar', autenticar, apenasAdminOuLider, (req, res) => {
   res.status(201).json({ ...culto, encerrado: !!culto.encerrado })
 })
 
-router.put('/:id', autenticar, apenasAdminOuLider, (req, res) => {
+router.put('/:id', autenticar, apenasAcessoCultosOuLider, (req, res) => {
   const culto = sql.get(`SELECT * FROM cultos WHERE id = ?`, req.params.id)
   if (!culto) return res.status(404).json({ erro: 'Culto não encontrado' })
 
@@ -65,14 +65,14 @@ router.put('/:id', autenticar, apenasAdminOuLider, (req, res) => {
   res.json({ ...atual, encerrado: !!atual.encerrado })
 })
 
-router.post('/:id/encerrar', autenticar, apenasAdminOuLider, (req, res) => {
+router.post('/:id/encerrar', autenticar, apenasAcessoCultosOuLider, (req, res) => {
   if (!sql.get(`SELECT id FROM cultos WHERE id = ?`, req.params.id))
     return res.status(404).json({ erro: 'Culto não encontrado' })
   sql.run(`UPDATE cultos SET encerrado = 1 WHERE id = ?`, req.params.id)
   res.json({ ok: true })
 })
 
-router.post('/:id/reabrir', autenticar, apenasAdminOuLider, (req, res) => {
+router.post('/:id/reabrir', autenticar, apenasAdmin, (req, res) => {
   if (!sql.get(`SELECT id FROM cultos WHERE id = ?`, req.params.id))
     return res.status(404).json({ erro: 'Culto não encontrado' })
   sql.run(`UPDATE cultos SET encerrado = 0 WHERE id = ?`, req.params.id)
@@ -107,10 +107,33 @@ router.get('/:id/presencas', autenticar, (req, res) => {
   if (!sql.get(`SELECT id FROM cultos WHERE id = ?`, req.params.id))
     return res.status(404).json({ erro: 'Culto não encontrado' })
   const presencas = sql.all(
-    `SELECT * FROM presencas WHERE culto_id = ? ORDER BY registrado_em ASC`,
+    `SELECT p.*,
+       CASE WHEN p.celular = '' THEN 0
+            ELSE (SELECT COUNT(*) FROM presencas p2 WHERE p2.celular = p.celular AND p2.celular != '')
+       END AS total_visitas
+     FROM presencas p WHERE p.culto_id = ?
+     ORDER BY p.registrado_em ASC`,
     req.params.id
   )
   res.json(presencas)
+})
+
+// Histórico de visitas de um visitante pelo celular (autenticado)
+router.get('/visitante-historico', autenticar, (req, res) => {
+  const celular = (req.query.celular || '').trim()
+  if (!celular) return res.json([])
+  const digitos = celular.replace(/\D/g, '')
+  const sufixo = `%${digitos.slice(-8)}`
+  const historico = sql.all(
+    `SELECT c.id AS culto_id, c.titulo, c.data, e.nome AS evento_nome, p.tipo, p.registrado_em
+     FROM presencas p
+     JOIN cultos c ON c.id = p.culto_id
+     LEFT JOIN eventos e ON c.evento_id = e.id
+     WHERE p.celular LIKE ? AND p.celular != ''
+     ORDER BY c.data DESC, p.registrado_em DESC`,
+    sufixo
+  )
+  res.json(historico)
 })
 
 module.exports = router

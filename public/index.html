@@ -1112,6 +1112,26 @@
 
       .fin-resumo-grid { grid-template-columns: 1fr 1fr; }
       .fin-stat-valor { font-size: 1.05rem; }
+
+      /* Financeiro — filtro de período empilha em tela pequena */
+      #fin-periodo-bar { flex-direction: column; align-items: flex-start; gap: 0.35rem; }
+      #fin-periodo-bar input[type=date] { width: 100%; }
+
+      /* Modal Lançamento em Lote — grids fixos viram coluna única */
+      #modal-lancamento-lote .modal { max-width: 100% !important; }
+    }
+
+    @media (max-width: 480px) {
+      /* Grid 120px/flex/130px do lote quebra em mobile pequeno */
+      #modal-lancamento-lote [style*="120px 1fr 130px"] {
+        grid-template-columns: 1fr 1fr !important;
+      }
+      /* Linha data+culto do lote vira coluna */
+      #modal-lancamento-lote [style*="1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+      }
+      /* Abas financeiro — fonte menor para caber */
+      .fin-tab { font-size: 0.75rem; padding: 0.4rem 0.5rem; }
     }
 
     /* ── FINANCEIRO ────────────────────────────────────────── */
@@ -1580,7 +1600,7 @@
             <option value="60000">1min</option>
           </select>
           <button class="btn btn-ghost btn-sm" onclick="carregarCultos()" style="font-size:0.78rem">↻</button>
-          <button class="btn btn-primario" id="btn-novo-culto-topo" onclick="abrirModalNovoCulto()" style="display:none">+ Novo Culto</button>
+          <button class="btn btn-primario" id="btn-novo-culto-topo" onclick="abrirModalNovoCulto()" style="display:none">+ Novo Check-in</button>
         </div>
       </div>
       <div id="cultos-conteudo"><p class="carregando">Carregando…</p></div>
@@ -1767,6 +1787,13 @@
           <span style="font-size:0.83rem">Acesso financeiro global <span style="color:var(--texto-mutado);font-size:0.75rem">(vê e filtra todas as congregações)</span></span>
         </label>
       </div>
+      </div>
+      <div class="form-grupo" id="edit-usuario-cultos-wrap" style="display:none">
+        <label style="text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+          <input type="checkbox" id="edit-usuario-cultos" style="width:auto"/>
+          🙏 Acesso ao módulo de Cultos
+        </label>
+        <p class="muted" style="font-size:0.75rem;margin:0.25rem 0 0;line-height:1.4">Pode criar, encerrar e gerenciar cultos / check-in (Obreiros de check-in).</p>
       </div>
       <div class="form-grupo" id="edit-usuario-escala-wrap" style="display:none">
         <label style="text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:0.5rem;cursor:pointer">
@@ -1997,8 +2024,8 @@
         <input id="lanc-data" type="text" required placeholder="DD/MM/AAAA"/>
       </div>
       <div class="form-grupo">
-        <label>Descrição (opcional)</label>
-        <input id="lanc-descricao" type="text" placeholder="Observação ou referência"/>
+        <label>Obreiro *</label>
+        <input id="lanc-descricao" type="text" placeholder="Nome do obreiro responsável" required/>
       </div>
       <p id="lanc-erro" class="erro-msg"></p>
       <div class="modal-actions">
@@ -2051,8 +2078,8 @@
       </div>
       <div style="display:grid;grid-template-columns:1fr auto;gap:0.5rem;align-items:flex-end;margin-top:0.5rem">
         <div class="form-grupo" style="margin:0">
-          <label>Descrição (opcional)</label>
-          <input id="lote-descricao" type="text" placeholder="Observação"
+          <label>Obreiro *</label>
+          <input id="lote-descricao" type="text" placeholder="Nome do obreiro responsável"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();_loteAdicionarItem()}"/>
         </div>
         <button type="button" class="btn btn-primario" onclick="_loteAdicionarItem()" style="white-space:nowrap;height:38px">+ Adicionar</button>
@@ -2479,15 +2506,19 @@ function mostrarApp() {
     else congEl.style.display = 'none'
   }
 
-  const somenteFinanceiro = _apenasFinanceiro()
+  // Usuário restrito = não é admin/líder e não tem departamentos (só tem flags de acesso especial)
+  const isAdminOuLider = usuario?.role === 'admin' || temPapelLiderancaNoApp()
+  const temDepartamentos = !!(usuario?.departamentos?.length)
+  const isRestrito = !!(usuario && !isAdminOuLider && !temDepartamentos)
+
   const paginasMedia = ['nav-escalas','nav-equipe','nav-departamentos','nav-comunicacoes','nav-cadastro','nav-agente','nav-dashboard']
   for (const id of paginasMedia) {
     const el = document.getElementById(id)
-    if (el) el.style.display = somenteFinanceiro ? 'none' : ''
+    if (el) el.style.display = isRestrito ? 'none' : ''
   }
-  // Cadastros: só liderança (já estava restrito)
+  // Cadastros: só liderança
   const navCad = document.getElementById('nav-cadastro')
-  if (navCad && !somenteFinanceiro) navCad.style.display = temPapelLiderancaNoApp() ? '' : 'none'
+  if (navCad && !isRestrito) navCad.style.display = temPapelLiderancaNoApp() ? '' : 'none'
 
   const navFin = document.getElementById('nav-financeiro')
   if (navFin) navFin.style.display = (usuario?.role === 'admin' || usuario?.acesso_financeiro) ? '' : 'none'
@@ -2542,7 +2573,9 @@ function irEquipeParaVincular() {
 // ═══════════════════════════════════════════════════════════
 function navegar(pagina) {
   const restritas = ['escalas','equipe','departamentos','comunicacoes','cadastros','agente','dashboard']
-  if (_apenasFinanceiro() && restritas.includes(pagina)) pagina = 'financeiro'
+  const _isAdminOuLider = usuario?.role === 'admin' || temPapelLiderancaNoApp()
+  const _isRestrito = !!(usuario && !_isAdminOuLider && !(usuario?.departamentos?.length))
+  if (_isRestrito && restritas.includes(pagina)) pagina = usuario?.acesso_cultos ? 'cultos' : 'financeiro'
 
   document.querySelectorAll('.nav-link').forEach(el =>
     el.classList.toggle('ativo', el.dataset.pagina === pagina)
@@ -2559,6 +2592,7 @@ function navegar(pagina) {
     comunicacoes:  carregarComunicacoes,
     cadastros:     carregarCadastros,
     financeiro:    carregarFinanceiro,
+    cultos:        carregarCultos,
     agente:        () => {}
   }
   loaders[pagina]?.()
@@ -3818,7 +3852,7 @@ async function carregarCadastros() {
         <form id="form-convidar" onsubmit="handleConvidarAdmin(event)" class="card-body" style="padding:1.25rem">
           <div class="form-grupo"><label>Nome completo</label><input id="conv-nome" required placeholder="Nome do voluntário"/></div>
           <div class="form-grupo"><label>E-mail</label><input id="conv-email" type="email" required placeholder="email@exemplo.com"/></div>
-          <div class="form-grupo"><label>Celular</label><input id="conv-celular" type="tel" placeholder="(11) 99999-9999"/></div>
+          <div class="form-grupo"><label>Celular</label><input id="conv-celular" type="tel" placeholder="(XX) XXXXX-XXXX" oninput="mascaraTelApp(this)" maxlength="15"/></div>
           <div class="form-grupo"><label>Congregação</label><select id="conv-cong"><option value="">Selecione…</option>${optCongs}</select></div>
           <div class="form-grupo"><label style="text-transform:none;letter-spacing:0">
             <input type="checkbox" id="conv-apenas-financeiro" style="width:auto;margin-right:0.5rem" onchange="_toggleConvFinanceiro(this.checked)"/>
@@ -4278,6 +4312,11 @@ async function abrirModalEditarUsuario(id) {
       document.getElementById('edit-usuario-financeiro-global').checked = !!u.acesso_financeiro_global
       _toggleFinCheckboxes()
     }
+    const cultosWrap = document.getElementById('edit-usuario-cultos-wrap')
+    if (cultosWrap) {
+      cultosWrap.style.display = usuario?.role === 'admin' ? '' : 'none'
+      document.getElementById('edit-usuario-cultos').checked = !!u.acesso_cultos
+    }
     const escalaWrap = document.getElementById('edit-usuario-escala-wrap')
     if (escalaWrap) {
       escalaWrap.style.display = usuario?.role === 'admin' ? '' : 'none'
@@ -4340,6 +4379,10 @@ async function salvarEditUsuario(ev) {
     body.acesso_financeiro = document.getElementById('edit-usuario-financeiro').checked
     body.acesso_relatorio_financeiro = document.getElementById('edit-usuario-financeiro-relatorio').checked
     body.acesso_financeiro_global = document.getElementById('edit-usuario-financeiro-global').checked
+  }
+  const cultosWrap2 = document.getElementById('edit-usuario-cultos-wrap')
+  if (cultosWrap2 && cultosWrap2.style.display !== 'none' && usuario?.role === 'admin') {
+    body.acesso_cultos = document.getElementById('edit-usuario-cultos').checked
   }
   const escalaWrap = document.getElementById('edit-usuario-escala-wrap')
   if (escalaWrap && escalaWrap.style.display !== 'none' && usuario?.role === 'admin') {
@@ -6850,7 +6893,7 @@ exibirToastPendenteAposReload()
 <!-- Modal criar culto -->
 <div id="modal-novo-culto" class="modal-overlay" onclick="if(event.target===this)fecharModalNovoCulto()">
   <div class="modal" onclick="event.stopPropagation()">
-    <h3 class="modal-titulo">Novo Culto</h3>
+    <h3 class="modal-titulo">Novo Check-in</h3>
     <div class="form-grupo">
       <label>Data *</label>
       <input type="date" id="culto-data-input"/>
@@ -6868,14 +6911,14 @@ exibirToastPendenteAposReload()
     <p id="culto-criar-erro" class="erro-msg"></p>
     <div class="modal-actions">
       <button type="button" class="btn btn-ghost" onclick="fecharModalNovoCulto()">Cancelar</button>
-      <button type="button" class="btn btn-primario" onclick="salvarNovoCulto()">Criar Culto</button>
+      <button type="button" class="btn btn-primario" onclick="salvarNovoCulto()">Criar Check-in</button>
     </div>
   </div>
 </div>
 
 <!-- Modal detalhe do culto (QR + lista de presenças) -->
-<div id="modal-detalhe-culto" class="modal-overlay" onclick="if(event.target===this)fecharModalDetalheCulto()">
-  <div class="modal" style="max-width:520px" onclick="event.stopPropagation()">
+<div id="modal-detalhe-culto" class="modal-overlay">
+  <div class="modal" style="max-width:520px">
     <h3 class="modal-titulo" id="detalhe-culto-titulo">Culto</h3>
     <div id="detalhe-culto-corpo"></div>
     <div class="modal-actions">
@@ -6894,10 +6937,11 @@ exibirToastPendenteAposReload()
   const _orig = window.mostrarApp
   window.mostrarApp = function () {
     _orig.apply(this, arguments)
+    const temAcessoCultos = !!(usuario && (temPapelLiderancaNoApp() || usuario.acesso_cultos))
     const nav = document.getElementById('nav-cultos')
-    if (nav) nav.style.display = usuario ? '' : 'none'
+    if (nav) nav.style.display = temAcessoCultos ? '' : 'none'
     const btnNovoCulto = document.getElementById('btn-novo-culto-topo')
-    if (btnNovoCulto) btnNovoCulto.style.display = temPapelLiderancaNoApp() ? '' : 'none'
+    if (btnNovoCulto) btnNovoCulto.style.display = temAcessoCultos ? '' : 'none'
   }
 })()
 
@@ -6909,7 +6953,7 @@ async function carregarCultos() {
   try {
     const cultos = await api('GET', '/culto/listar')
     if (!cultos.length) {
-      el.innerHTML = '<p class="muted" style="margin-top:1rem">Nenhum culto cadastrado. Clique em <strong>+ Novo Culto</strong> para começar.</p>'
+      el.innerHTML = '<p class="muted" style="margin-top:1rem">Nenhum culto cadastrado. Clique em <strong>+ Novo Check-in</strong> para começar.</p>'
       return
     }
     const agora = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
@@ -6992,11 +7036,16 @@ function formatarDataCulto(iso) {
 }
 
 // ── Modal criar culto ──────────────────────────────────────────────────────
-function abrirModalNovoCulto() {
+async function abrirModalNovoCulto() {
   const hoje = new Date().toISOString().split('T')[0]
   document.getElementById('culto-data-input').value   = hoje
   document.getElementById('culto-titulo-input').value = ''
   document.getElementById('culto-criar-erro').style.display = 'none'
+
+  // Garante que eventoCache está preenchido (pode não ter sido carregado para usuários acesso_cultos)
+  if (!eventoCache?.length) {
+    try { eventoCache = await api('GET', '/evento/listar') } catch { eventoCache = [] }
+  }
 
   const sel = document.getElementById('culto-evento-select')
   sel.innerHTML = '<option value="">— selecione (opcional) —</option>'
@@ -7035,8 +7084,10 @@ async function salvarNovoCulto() {
 }
 
 // ── Modal detalhe / QR Code ────────────────────────────────────────────────
-let _cultoDetalheId = null
+let _cultoDetalheId   = null
 let _cultoRefreshTimer = null
+let _filtroPresencas  = null  // null = todos; 'membro' | 'visitante' | 'visitante_convidado'
+let _presencasCache   = []
 
 function _renderListaPresencas(presencas) {
   if (!presencas.length)
@@ -7049,15 +7100,58 @@ function _renderListaPresencas(presencas) {
       : `<span style="font-size:0.7rem;color:var(--texto-mutado)">Visitante</span>`
     const hora    = p.registrado_em ? new Date(p.registrado_em).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : ''
     const extras  = [p.celular, p.bairro, p.igreja].filter(Boolean).join(' · ')
+    const total   = Number(p.total_visitas) || 0
+    const vezBadge = (total > 1 && p.celular)
+      ? ` <span title="Clique para ver histórico" style="font-size:0.66rem;background:rgba(201,74,82,0.15);color:var(--primaria);border-radius:4px;padding:0.1rem 0.35rem;cursor:pointer;vertical-align:middle"
+               onclick="_verHistoricoVisitante('${p.celular.replace(/'/g,"\\'")}','${p.nome.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">🔄 ${total}ª vez</span>`
+      : ''
     return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:0.5rem 0;border-bottom:1px solid var(--borda)">
       <div>
-        <span style="font-size:0.88rem;font-weight:500">${esc(p.nome)}</span>
+        <span style="font-size:0.88rem;font-weight:500">${esc(p.nome)}</span>${vezBadge}
         <br/>${tipoBadge}
         ${extras ? `<br/><span style="font-size:0.7rem;color:var(--texto-mutado)">${esc(extras)}</span>` : ''}
       </div>
       <span style="font-size:0.75rem;color:var(--texto-mutado);flex-shrink:0;margin-left:0.5rem">${hora}</span>
     </div>`
   }).join('')
+}
+
+async function _verHistoricoVisitante(celular, nome) {
+  let painel = document.getElementById('hist-painel')
+  if (!painel) {
+    const lista = document.getElementById('dc-lista')
+    if (!lista) return
+    painel = document.createElement('div')
+    painel.id = 'hist-painel'
+    painel.style.cssText = 'margin-top:0.75rem;background:rgba(255,255,255,0.04);border:1px solid var(--borda);border-radius:8px;padding:0.75rem;font-size:0.8rem'
+    lista.after(painel)
+  }
+  painel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+      <strong style="font-size:0.82rem">${esc(nome)} — histórico</strong>
+      <button onclick="document.getElementById('hist-painel').remove()"
+              style="background:none;border:none;color:var(--texto-mutado);cursor:pointer;font-size:1.1rem;line-height:1;padding:0">×</button>
+    </div>
+    <div id="hist-lista" style="color:var(--texto-mutado)">Carregando…</div>`
+  painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  try {
+    const historico = await api('GET', `/culto/visitante-historico?celular=${encodeURIComponent(celular)}`)
+    const el = document.getElementById('hist-lista')
+    if (!el) return
+    if (!historico.length) { el.textContent = 'Nenhuma outra visita registrada.'; return }
+    el.innerHTML = historico.map(h => {
+      const data   = h.data ? formatarDataCulto(h.data) : '—'
+      const titulo = h.titulo || h.evento_nome || 'Culto'
+      const tipo   = h.tipo === 'membro' ? 'Membro' : h.tipo === 'visitante_convidado' ? 'Convidado' : 'Visitante'
+      return `<div style="padding:0.3rem 0;border-bottom:1px solid var(--borda)">
+        <span style="font-weight:500;color:var(--texto)">${esc(titulo)}</span>
+        <span style="color:var(--texto-mutado)"> · ${esc(data)} · ${tipo}</span>
+      </div>`
+    }).join('')
+  } catch {
+    const el = document.getElementById('hist-lista')
+    if (el) el.textContent = 'Erro ao carregar histórico.'
+  }
 }
 
 async function _recarregarPresencas(id) {
@@ -7070,16 +7164,33 @@ async function _recarregarPresencas(id) {
 
     const elTotal   = document.getElementById('dc-total')
     const elMembros = document.getElementById('dc-membros')
-    const elVisitas = document.getElementById('dc-visitas')
     const elLista   = document.getElementById('dc-lista')
     const elHora    = document.getElementById('dc-atualizado')
 
+    _presencasCache = presencas
     if (elTotal)   elTotal.textContent   = presencas.length
     if (elMembros) elMembros.textContent = totalM
-    if (elVisitas) elVisitas.textContent = totalV + totalC
-    if (elLista)   elLista.innerHTML     = _renderListaPresencas(presencas)
+    const elVisitantes = document.getElementById('dc-visitantes')
+    const elConvidados = document.getElementById('dc-convidados')
+    if (elVisitantes) elVisitantes.textContent = totalV
+    if (elConvidados) elConvidados.textContent = totalC
+    if (elLista) {
+      const filtradas = _filtroPresencas ? presencas.filter(p => p.tipo === _filtroPresencas) : presencas
+      elLista.innerHTML = _renderListaPresencas(filtradas)
+    }
     if (elHora)    elHora.textContent    = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
   } catch {}
+}
+
+function _filtrarPresencas(tipo) {
+  _filtroPresencas = tipo
+  const filtradas = tipo ? _presencasCache.filter(p => p.tipo === tipo) : _presencasCache
+  const elLista = document.getElementById('dc-lista')
+  if (elLista) elLista.innerHTML = _renderListaPresencas(filtradas)
+  document.querySelectorAll('.dc-filtro-card').forEach(el => {
+    const ativo = el.dataset.filtro === (tipo || 'all')
+    el.style.borderColor = ativo ? 'var(--primaria)' : ''
+  })
 }
 
 async function abrirDetalheCulto(id) {
@@ -7098,6 +7209,9 @@ async function abrirDetalheCulto(id) {
       api('GET', `/culto/${id}/presencas`)
     ])
 
+    _filtroPresencas = null
+    _presencasCache  = presencas
+
     const nome = culto?.titulo || culto?.evento_nome || 'Culto'
     document.getElementById('detalhe-culto-titulo').textContent = nome
 
@@ -7109,10 +7223,11 @@ async function abrirDetalheCulto(id) {
     const totalV = presencas.filter(p => p.tipo === 'visitante').length
     const totalC = presencas.filter(p => p.tipo === 'visitante_convidado').length
 
-    const ehLider = temPapelLiderancaNoApp()
-    const btnStatus = !ehLider ? '' : culto?.encerrado
-      ? `<button class="btn btn-ghost btn-sm" onclick="alterarStatusCulto('${id}', false)">Reabrir check-in</button>`
-      : `<button class="btn btn-ghost btn-sm" onclick="alterarStatusCulto('${id}', true)">Encerrar check-in</button>`
+    const ehLider  = temPapelLiderancaNoApp() || !!usuario?.acesso_cultos
+    const ehAdmin  = usuario?.role === 'admin'
+    const btnStatus = culto?.encerrado
+      ? (ehAdmin ? `<button class="btn btn-ghost btn-sm" onclick="alterarStatusCulto('${id}', false)">Reabrir check-in</button>` : '')
+      : (ehLider  ? `<button class="btn btn-ghost btn-sm" onclick="alterarStatusCulto('${id}', true)">Encerrar check-in</button>`  : '')
 
     corpo.innerHTML = `
       <div style="font-size:0.82rem;color:var(--texto-mutado);margin-bottom:0.75rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.4rem">
@@ -7130,25 +7245,43 @@ async function abrirDetalheCulto(id) {
         <button class="btn btn-ghost btn-sm" style="margin-top:0.5rem" onclick="copiarLink('${qr.url}')">Copiar link</button>
       </div>
 
-      <!-- Cadastro manual -->
-      <details style="margin-bottom:1rem;border:1px solid var(--borda);border-radius:8px;padding:0.75rem">
+      <!-- Cadastro manual (oculto se culto encerrado e não-admin) -->
+      <details style="margin-bottom:1rem;border:1px solid var(--borda);border-radius:8px;padding:0.75rem"${culto?.encerrado && !ehAdmin ? ' hidden' : ''}>
         <summary style="cursor:pointer;font-size:0.85rem;font-weight:600;list-style:none;display:flex;align-items:center;gap:0.4rem">
           ✏️ Cadastrar presença manualmente
         </summary>
         <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.5rem">
           <div class="form-grupo" style="margin:0">
-            <label>Como veio</label>
-            <select id="manual-tipo">
-              <option value="membro">Membro da Casa</option>
-              <option value="visitante">Visitante</option>
-              <option value="visitante_convidado">Convidado de alguém</option>
-            </select>
+            <label>Como veio *</label>
+            <input type="hidden" id="manual-tipo" value=""/>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-top:0.3rem">
+              <button type="button" class="manual-tipo-btn" data-tipo="membro"
+                      onclick="_manualSelecionarTipo('membro')"
+                      style="border:1px solid var(--borda);background:rgba(255,255,255,0.03);color:var(--texto-mutado);border-radius:8px;padding:0.65rem 0.25rem;font-family:inherit;font-size:0.78rem;font-weight:500;cursor:pointer;text-align:center;line-height:1.35">
+                Membro<br>da Casa
+              </button>
+              <button type="button" class="manual-tipo-btn" data-tipo="visitante"
+                      onclick="_manualSelecionarTipo('visitante')"
+                      style="border:1px solid var(--borda);background:rgba(255,255,255,0.03);color:var(--texto-mutado);border-radius:8px;padding:0.65rem 0.25rem;font-family:inherit;font-size:0.78rem;font-weight:500;cursor:pointer;text-align:center;line-height:1.35">
+                Visitante
+              </button>
+              <button type="button" class="manual-tipo-btn" data-tipo="visitante_convidado"
+                      onclick="_manualSelecionarTipo('visitante_convidado')"
+                      style="border:1px solid var(--borda);background:rgba(255,255,255,0.03);color:var(--texto-mutado);border-radius:8px;padding:0.65rem 0.25rem;font-family:inherit;font-size:0.78rem;font-weight:500;cursor:pointer;text-align:center;line-height:1.35">
+                Convidado<br>de alguém
+              </button>
+            </div>
           </div>
           <div class="form-grupo" style="margin:0">
             <label>Nome *</label>
-            <input type="text" id="manual-nome" placeholder="Nome completo"/>
+            <input type="text" id="manual-nome" placeholder="Nome completo"
+                   oninput="_manualResetBusca()"/>
+            <button type="button" id="btn-manual-buscar" onclick="_manualBuscarHistorico()"
+                    style="margin-top:0.4rem;width:100%;padding:0.45rem 0.6rem;background:rgba(255,255,255,0.04);border:1px solid var(--borda);border-radius:7px;color:var(--texto-mutado);font-size:0.78rem;cursor:pointer;font-family:inherit;opacity:0.35;transition:opacity 0.2s,border-color 0.2s,color 0.2s,background 0.2s">
+              🔍 Já esteve aqui antes — verificar
+            </button>
           </div>
-          <div class="form-grupo" style="margin:0" id="manual-wrap-convidado" style="display:none">
+          <div class="form-grupo" id="manual-wrap-convidado" style="margin:0;display:none">
             <label>Quem convidou</label>
             <input type="text" id="manual-convidado" placeholder="Nome do membro que trouxe"/>
           </div>
@@ -7169,19 +7302,23 @@ async function abrirDetalheCulto(id) {
         </div>
       </details>
 
-      <!-- Contadores -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.75rem;text-align:center">
-        <div class="card" style="padding:0.6rem">
-          <div id="dc-total"   style="font-size:1.3rem;font-weight:700">${presencas.length}</div>
-          <div style="font-size:0.7rem;color:var(--texto-mutado)">Total</div>
+      <!-- Contadores (clique para filtrar a lista) -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.35rem;margin-bottom:0.75rem;text-align:center">
+        <div class="card dc-filtro-card" data-filtro="all" style="padding:0.5rem;cursor:pointer;transition:border-color 0.15s" onclick="_filtrarPresencas(null)">
+          <div id="dc-total" style="font-size:1.2rem;font-weight:700">${presencas.length}</div>
+          <div style="font-size:0.65rem;color:var(--texto-mutado)">Todos</div>
         </div>
-        <div class="card" style="padding:0.6rem">
-          <div id="dc-membros" style="font-size:1.3rem;font-weight:700;color:var(--acento)">${totalM}</div>
-          <div style="font-size:0.7rem;color:var(--texto-mutado)">Membros</div>
+        <div class="card dc-filtro-card" data-filtro="membro" style="padding:0.5rem;cursor:pointer;transition:border-color 0.15s" onclick="_filtrarPresencas('membro')">
+          <div id="dc-membros" style="font-size:1.2rem;font-weight:700;color:var(--acento)">${totalM}</div>
+          <div style="font-size:0.65rem;color:var(--texto-mutado)">Membros</div>
         </div>
-        <div class="card" style="padding:0.6rem">
-          <div id="dc-visitas" style="font-size:1.3rem;font-weight:700;color:var(--dourado)">${totalV + totalC}</div>
-          <div style="font-size:0.7rem;color:var(--texto-mutado)">Visitas</div>
+        <div class="card dc-filtro-card" data-filtro="visitante" style="padding:0.5rem;cursor:pointer;transition:border-color 0.15s" onclick="_filtrarPresencas('visitante')">
+          <div id="dc-visitantes" style="font-size:1.2rem;font-weight:700;color:var(--dourado)">${totalV}</div>
+          <div style="font-size:0.65rem;color:var(--texto-mutado)">Visitantes</div>
+        </div>
+        <div class="card dc-filtro-card" data-filtro="visitante_convidado" style="padding:0.5rem;cursor:pointer;transition:border-color 0.15s" onclick="_filtrarPresencas('visitante_convidado')">
+          <div id="dc-convidados" style="font-size:1.2rem;font-weight:700;color:#8b7cf8">${totalC}</div>
+          <div style="font-size:0.65rem;color:var(--texto-mutado)">Convidados</div>
         </div>
       </div>
 
@@ -7269,10 +7406,83 @@ function _toggleQr() {
 
 function mascaraTelApp(input) {
   let v = input.value.replace(/\D/g, '').slice(0, 11)
-  if (v.length > 6) v = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`
+  if (v.length > 7) v = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`
   else if (v.length > 2) v = `(${v.slice(0,2)}) ${v.slice(2)}`
   else if (v.length > 0) v = `(${v}`
   input.value = v
+}
+
+function _manualSelecionarTipo(tipo) {
+  const input = document.getElementById('manual-tipo')
+  if (input) input.value = tipo
+  document.querySelectorAll('.manual-tipo-btn').forEach(b => {
+    const ativo = b.dataset.tipo === tipo
+    b.style.borderColor = ativo ? 'var(--primaria)' : 'var(--borda)'
+    b.style.background  = ativo ? 'rgba(201,74,82,0.12)' : 'rgba(255,255,255,0.03)'
+    b.style.color       = ativo ? 'var(--primaria)' : 'var(--texto-mutado)'
+  })
+  const wrapConv = document.getElementById('manual-wrap-convidado')
+  if (wrapConv) wrapConv.style.display = tipo === 'visitante_convidado' ? '' : 'none'
+}
+
+function _manualResetBusca() {
+  const btnBusc = document.getElementById('btn-manual-buscar')
+  const nome    = (document.getElementById('manual-nome')?.value || '').trim()
+  const ativo   = nome.length >= 2
+  if (btnBusc) {
+    btnBusc.disabled    = false
+    btnBusc.textContent = '🔍 Já esteve aqui antes — verificar'
+    btnBusc.style.opacity     = ativo ? '1'                     : '0.35'
+    btnBusc.style.color       = ativo ? 'var(--primaria)'       : 'var(--texto-mutado)'
+    btnBusc.style.borderColor = ativo ? 'var(--primaria)'       : 'var(--borda)'
+    btnBusc.style.background  = ativo ? 'rgba(201,74,82,0.10)' : 'rgba(255,255,255,0.04)'
+  }
+  const erroEl = document.getElementById('manual-erro')
+  if (erroEl) erroEl.style.display = 'none'
+}
+
+async function _manualBuscarHistorico() {
+  const nome    = (document.getElementById('manual-nome')?.value || '').trim()
+  const btnBusc = document.getElementById('btn-manual-buscar')
+  const erroEl  = document.getElementById('manual-erro')
+  if (nome.length < 2) {
+    if (erroEl) { erroEl.textContent = 'Digite ao menos 2 letras do nome.'; erroEl.style.display = 'block' }
+    return
+  }
+  if (erroEl) erroEl.style.display = 'none'
+  if (btnBusc) { btnBusc.disabled = true; btnBusc.textContent = '🔍 Buscando…' }
+  try {
+    const res   = await fetch(`/checkin/buscar-nome?nome=${encodeURIComponent(nome)}`)
+    const lista = await res.json()
+    if (Array.isArray(lista) && lista.length) {
+      const nomeLower = nome.toLowerCase()
+      const match = lista.find(v => v.nome.trim().toLowerCase() === nomeLower)
+                 || (lista.length === 1 ? lista[0] : null)
+      if (match) {
+        // Preenche os campos com dados do histórico
+        const nomeEl    = document.getElementById('manual-nome')
+        const celularEl = document.getElementById('manual-celular')
+        const bairroEl  = document.getElementById('manual-bairro')
+        const igrejaEl  = document.getElementById('manual-igreja')
+        if (nomeEl)    nomeEl.value    = match.nome
+        if (celularEl && !celularEl.value.trim()) celularEl.value = match.celular || ''
+        if (bairroEl  && !bairroEl.value.trim())  bairroEl.value  = match.bairro  || ''
+        if (igrejaEl  && !igrejaEl.value.trim())  igrejaEl.value  = match.igreja  || ''
+        if (match.tipo && !document.getElementById('manual-tipo')?.value)
+          _manualSelecionarTipo(match.tipo)
+        const total   = Number(match.total_visitas) || 1
+        const vezes   = total === 1 ? '1ª vez' : `${total}ª vez`
+        const primeiro = match.nome.trim().split(/\s+/)[0]
+        if (erroEl) erroEl.style.display = 'none'
+        if (btnBusc) { btnBusc.style.borderColor = 'var(--sucesso)'; btnBusc.style.color = 'var(--sucesso)'; btnBusc.textContent = `✓ ${primeiro} — ${vezes} conosco. Dados preenchidos!` }
+        return
+      }
+    }
+    if (erroEl) { erroEl.textContent = 'Nenhum cadastro encontrado com esse nome.'; erroEl.style.display = 'block' }
+    if (btnBusc) { btnBusc.disabled = false; btnBusc.textContent = '🔍 Já esteve aqui antes — verificar' }
+  } catch {
+    if (btnBusc) { btnBusc.disabled = false; btnBusc.textContent = '🔍 Já esteve aqui antes — verificar' }
+  }
 }
 
 async function salvarPresencaManual(cultoId) {
@@ -7280,6 +7490,7 @@ async function salvarPresencaManual(cultoId) {
   const tipo  = document.getElementById('manual-tipo')?.value
   const erroEl = document.getElementById('manual-erro')
   erroEl.style.display = 'none'
+  if (!tipo) { erroEl.textContent = 'Selecione como a pessoa veio.'; erroEl.style.display = 'block'; return }
   if (!nome) { erroEl.textContent = 'Nome é obrigatório.'; erroEl.style.display = 'block'; return }
 
   try {
@@ -7291,10 +7502,20 @@ async function salvarPresencaManual(cultoId) {
       bairro:        document.getElementById('manual-bairro')?.value.trim()    || '',
       igreja:        document.getElementById('manual-igreja')?.value.trim()    || ''
     })
-    // Limpa campos
+    // Limpa todos os campos e reseta estado do formulário
     ;['manual-nome','manual-convidado','manual-celular','manual-bairro','manual-igreja'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = ''
     })
+    const tipoEl = document.getElementById('manual-tipo')
+    if (tipoEl) tipoEl.value = ''
+    document.querySelectorAll('.manual-tipo-btn').forEach(b => {
+      b.style.borderColor = 'var(--borda)'
+      b.style.background  = 'rgba(255,255,255,0.03)'
+      b.style.color       = 'var(--texto-mutado)'
+    })
+    const wrapConv = document.getElementById('manual-wrap-convidado')
+    if (wrapConv) wrapConv.style.display = 'none'
+    _manualResetBusca()
     toast('Presença registrada!', 'ok')
     _recarregarPresencas(cultoId)
   } catch (e) {
