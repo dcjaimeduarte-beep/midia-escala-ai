@@ -309,6 +309,17 @@ function migrate() {
   tryExec(`ALTER TABLE presencas ADD COLUMN bairro  TEXT NOT NULL DEFAULT ''`)
   tryExec(`ALTER TABLE presencas ADD COLUMN igreja  TEXT NOT NULL DEFAULT ''`)
 
+  // Garante departamento Obreiros (financeiro + introdução / check-in)
+  const { n: nObreiros } = db.get(`SELECT COUNT(*) as n FROM departamentos WHERE nome = 'Obreiros'`) || { n: 0 }
+  if (!nObreiros) {
+    const { v4: uuidv4 } = require('uuid')
+    db.run(
+      `INSERT INTO departamentos (id, nome, descricao, icone, cor, mensagem_pastoral, ativo, criado_em) VALUES (?,?,?,?,?,?,1,?)`,
+      uuidv4(), 'Obreiros', 'Financeiro e Introdução', '🤝', '#1A5276', '', new Date().toISOString()
+    )
+    console.log('✅ Departamento Obreiros criado')
+  }
+
   // Garante que existe ao menos uma congregação sede
   const { n: nCong } = db.get('SELECT COUNT(*) as n FROM congregacoes') || { n: 0 }
   if (!nCong) {

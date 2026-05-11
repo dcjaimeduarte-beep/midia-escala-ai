@@ -1367,7 +1367,7 @@
         </div>
         <div class="form-grupo">
           <label>Celular (opcional)</label>
-          <input id="cad-celular" type="tel" placeholder="WhatsApp / SMS" autocomplete="tel"/>
+          <input id="cad-celular" type="tel" placeholder="(XX) XXXXX-XXXX" autocomplete="tel" oninput="mascaraTelApp(this)" maxlength="15"/>
         </div>
         <div class="form-grupo">
           <label>Departamento (opcional)</label>
@@ -1734,7 +1734,7 @@
       <input type="hidden" id="edit-usuario-id"/>
       <div class="form-grupo"><label>Nome</label><input id="edit-usuario-nome" required/></div>
       <div class="form-grupo"><label>E-mail</label><input id="edit-usuario-email" type="email" required/></div>
-      <div class="form-grupo"><label>Celular</label><input id="edit-usuario-celular" type="tel" placeholder="(11) 99999-9999"/></div>
+      <div class="form-grupo"><label>Celular</label><input id="edit-usuario-celular" type="tel" placeholder="(XX) XXXXX-XXXX" oninput="mascaraTelApp(this)" maxlength="15"/></div>
       <div class="form-grupo"><label>Data de nascimento</label><input id="edit-usuario-nascimento" type="date"/></div>
       <div class="form-grupo" id="edit-usuario-perfil-wrap">
         <label>Perfil e permissões</label>
@@ -7120,12 +7120,54 @@ async function abrirDetalheCulto(id) {
         ${btnStatus}
       </div>
 
-      <!-- QR Code -->
-      <div style="text-align:center;margin-bottom:1.25rem">
+      <!-- QR Code (com toggle) -->
+      <div style="text-align:center;margin-bottom:1rem">
+        <button class="btn btn-ghost btn-sm" onclick="_toggleQr()" id="btn-toggle-qr">🔳 Ocultar QR Code</button>
+      </div>
+      <div id="qr-wrap" style="text-align:center;margin-bottom:1.25rem">
         <img src="${qr.qrcode}" alt="QR Code" style="width:200px;height:200px;border-radius:8px;background:#fff;padding:8px"/>
         <div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.4rem;word-break:break-all">${qr.url}</div>
         <button class="btn btn-ghost btn-sm" style="margin-top:0.5rem" onclick="copiarLink('${qr.url}')">Copiar link</button>
       </div>
+
+      <!-- Cadastro manual -->
+      <details style="margin-bottom:1rem;border:1px solid var(--borda);border-radius:8px;padding:0.75rem">
+        <summary style="cursor:pointer;font-size:0.85rem;font-weight:600;list-style:none;display:flex;align-items:center;gap:0.4rem">
+          ✏️ Cadastrar presença manualmente
+        </summary>
+        <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.5rem">
+          <div class="form-grupo" style="margin:0">
+            <label>Como veio</label>
+            <select id="manual-tipo">
+              <option value="membro">Membro da Casa</option>
+              <option value="visitante">Visitante</option>
+              <option value="visitante_convidado">Convidado de alguém</option>
+            </select>
+          </div>
+          <div class="form-grupo" style="margin:0">
+            <label>Nome *</label>
+            <input type="text" id="manual-nome" placeholder="Nome completo"/>
+          </div>
+          <div class="form-grupo" style="margin:0" id="manual-wrap-convidado" style="display:none">
+            <label>Quem convidou</label>
+            <input type="text" id="manual-convidado" placeholder="Nome do membro que trouxe"/>
+          </div>
+          <div class="form-grupo" style="margin:0">
+            <label>Celular</label>
+            <input type="tel" id="manual-celular" placeholder="(XX) XXXXX-XXXX" oninput="mascaraTelApp(this)" maxlength="15"/>
+          </div>
+          <div class="form-grupo" style="margin:0">
+            <label>Bairro</label>
+            <input type="text" id="manual-bairro" placeholder="Bairro onde mora"/>
+          </div>
+          <div class="form-grupo" style="margin:0">
+            <label>Igreja que frequenta</label>
+            <input type="text" id="manual-igreja" placeholder="Ex: Assembleia de Deus…"/>
+          </div>
+          <p id="manual-erro" style="color:var(--erro);font-size:0.8rem;display:none"></p>
+          <button class="btn btn-primario btn-sm" onclick="salvarPresencaManual('${id}')">Registrar presença</button>
+        </div>
+      </details>
 
       <!-- Contadores -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.75rem;text-align:center">
@@ -7160,7 +7202,7 @@ async function abrirDetalheCulto(id) {
       </div>
 
       <!-- Lista -->
-      <div id="dc-lista" style="max-height:220px;overflow-y:auto">
+      <div id="dc-lista" style="max-height:320px;overflow-y:auto;padding-right:2px;scrollbar-width:thin;scrollbar-color:var(--borda-forte) transparent">
         ${_renderListaPresencas(presencas)}
       </div>
 
@@ -7214,6 +7256,51 @@ async function excluirCulto(id) {
 
 function copiarLink(url) {
   navigator.clipboard?.writeText(url).then(() => toast('Link copiado!', 'ok')).catch(() => toast('Não foi possível copiar.', 'err'))
+}
+
+function _toggleQr() {
+  const wrap = document.getElementById('qr-wrap')
+  const btn  = document.getElementById('btn-toggle-qr')
+  if (!wrap) return
+  const visivel = wrap.style.display !== 'none'
+  wrap.style.display = visivel ? 'none' : 'block'
+  btn.textContent = visivel ? '🔳 Mostrar QR Code' : '🔳 Ocultar QR Code'
+}
+
+function mascaraTelApp(input) {
+  let v = input.value.replace(/\D/g, '').slice(0, 11)
+  if (v.length > 6) v = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`
+  else if (v.length > 2) v = `(${v.slice(0,2)}) ${v.slice(2)}`
+  else if (v.length > 0) v = `(${v}`
+  input.value = v
+}
+
+async function salvarPresencaManual(cultoId) {
+  const nome  = document.getElementById('manual-nome')?.value.trim()
+  const tipo  = document.getElementById('manual-tipo')?.value
+  const erroEl = document.getElementById('manual-erro')
+  erroEl.style.display = 'none'
+  if (!nome) { erroEl.textContent = 'Nome é obrigatório.'; erroEl.style.display = 'block'; return }
+
+  try {
+    await api('POST', `/checkin/${cultoId}`, {
+      nome,
+      tipo,
+      convidado_por: document.getElementById('manual-convidado')?.value.trim() || '',
+      celular:       document.getElementById('manual-celular')?.value.trim()   || '',
+      bairro:        document.getElementById('manual-bairro')?.value.trim()    || '',
+      igreja:        document.getElementById('manual-igreja')?.value.trim()    || ''
+    })
+    // Limpa campos
+    ;['manual-nome','manual-convidado','manual-celular','manual-bairro','manual-igreja'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = ''
+    })
+    toast('Presença registrada!', 'ok')
+    _recarregarPresencas(cultoId)
+  } catch (e) {
+    erroEl.textContent = e.erro || 'Erro ao registrar.'
+    erroEl.style.display = 'block'
+  }
 }
 </script>
 </body>
