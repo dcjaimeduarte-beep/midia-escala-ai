@@ -2139,6 +2139,7 @@ let eventoCache = []  // tipos de culto/evento
 let filtroEquipeStatus = 'ativos'
 let filtroEquipeNome = ''
 let _equipeCache = []
+let _equipeStatusCount = 0
 let loginEscolhaPendente = null
 let popupEntradaTimer = null
 let trocasPendentesCache = []
@@ -4735,12 +4736,13 @@ function _filtrarEquipeNome(valor) {
   let visivel = 0
   tbody.querySelectorAll('tr').forEach(tr => {
     const nome = (tr.querySelector('td strong')?.textContent || '').toLowerCase()
-    const mostrar = !filtroEquipeNome || nome.includes(filtroEquipeNome)
+    const seq  = (tr.dataset.seq || '')
+    const mostrar = !filtroEquipeNome || nome.includes(filtroEquipeNome) || seq === filtroEquipeNome
     tr.style.display = mostrar ? '' : 'none'
     if (mostrar) visivel++
   })
   const count = document.getElementById('equipe-count')
-  if (count) count.textContent = `${visivel} de ${_equipeCache.length}`
+  if (count) count.textContent = `${visivel} de ${_equipeStatusCount}`
 }
 
 async function carregarEquipe() {
@@ -4752,12 +4754,17 @@ async function carregarEquipe() {
     const usuariosBase = Array.isArray(lista) ? lista : []
     _equipeCache = usuariosBase
 
+    // Sequência estável baseada na ordem completa (alfabética) do servidor
+    const seqMap = {}
+    usuariosBase.forEach((u, i) => { seqMap[u.id] = i + 1 })
+
     const usuarios =
       filtroEquipeStatus === 'todos'
         ? usuariosBase
         : usuariosBase.filter((u) =>
             filtroEquipeStatus === 'ativos' ? u.ativo !== false : u.ativo === false
           )
+    _equipeStatusCount = usuarios.length
 
     if (!usuariosBase.length) {
       el.innerHTML = '<div class="vazio">Nenhum voluntário cadastrado.</div>'
@@ -4818,6 +4825,7 @@ async function carregarEquipe() {
         <table>
           <thead>
             <tr>
+              <th style="width:1%;text-align:center">#</th>
               <th>Nome</th>
               <th>E-mail</th>
               <th>Celular</th>
@@ -4829,7 +4837,8 @@ async function carregarEquipe() {
           </thead>
           <tbody id="equipe-tbody">
             ${usuarios.map(u => `
-              <tr>
+              <tr data-seq="${seqMap[u.id] || ''}">
+                <td style="text-align:center;color:var(--texto-mutado);font-size:0.78rem;white-space:nowrap">${seqMap[u.id] || ''}</td>
                 <td><strong>${esc(u.nome)}</strong></td>
                 <td style="color:var(--texto-mutado)">${esc(u.email)}</td>
                 <td style="color:var(--texto-mutado);white-space:nowrap">${esc(u.celular || '—')}</td>
