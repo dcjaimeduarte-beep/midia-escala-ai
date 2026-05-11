@@ -1773,34 +1773,12 @@
       <div class="form-grupo"><label style="text-transform:none;letter-spacing:0">
         <input type="checkbox" id="edit-usuario-ativo" style="width:auto;margin-right:0.5rem"/> Conta ativa
       </label></div>
-      <div class="form-grupo" id="edit-usuario-financeiro-wrap" style="display:none"><label style="text-transform:none;letter-spacing:0">
-        <input type="checkbox" id="edit-usuario-financeiro" style="width:auto;margin-right:0.5rem" onchange="_toggleFinCheckboxes()"/> Acesso ao módulo financeiro
-      </label>
-      <p class="muted" style="font-size:0.75rem;margin:0.2rem 0 0;line-height:1.4">Permite lançar entradas no financeiro.</p>
-      <div id="edit-usuario-financeiro-extras" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.35rem">
-        <label style="text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:0.4rem;cursor:pointer">
-          <input type="checkbox" id="edit-usuario-financeiro-relatorio" style="width:auto"/>
-          <span style="font-size:0.83rem">Visualizar relatórios e dashboard <span style="color:var(--texto-mutado);font-size:0.75rem">(dashboards, gráficos e relatório mensal)</span></span>
-        </label>
-        <label style="text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:0.4rem;cursor:pointer">
-          <input type="checkbox" id="edit-usuario-financeiro-global" style="width:auto"/>
-          <span style="font-size:0.83rem">Acesso financeiro global <span style="color:var(--texto-mutado);font-size:0.75rem">(vê e filtra todas as congregações)</span></span>
-        </label>
-      </div>
-      </div>
-      <div class="form-grupo" id="edit-usuario-cultos-wrap" style="display:none">
-        <label style="text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:0.5rem;cursor:pointer">
-          <input type="checkbox" id="edit-usuario-cultos" style="width:auto"/>
-          🙏 Acesso ao módulo de Cultos
-        </label>
-        <p class="muted" style="font-size:0.75rem;margin:0.25rem 0 0;line-height:1.4">Pode criar, encerrar e gerenciar cultos / check-in (Obreiros de check-in).</p>
-      </div>
-      <div class="form-grupo" id="edit-usuario-escala-wrap" style="display:none">
-        <label style="text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:0.5rem;cursor:pointer">
-          <input type="checkbox" id="edit-usuario-escala-global" style="width:auto"/>
-          🎬 Piloto de escalas
-        </label>
-        <p class="muted" style="font-size:0.75rem;margin:0.25rem 0 0;line-height:1.4">Pode criar, editar e excluir escalas em qualquer departamento, independente de ser líder ou membro do setor.</p>
+      <div class="form-grupo" id="edit-usuario-acesso-wrap" style="display:none">
+        <label>Perfil de acesso <span style="font-weight:400;color:var(--texto-mutado);font-size:0.75rem">(define permissões especiais)</span></label>
+        <select id="edit-usuario-perfil-acesso" onchange="_onPerfilAcessoChange(this.value)">
+          <option value="">Nenhum</option>
+        </select>
+        <div id="edit-usuario-perfil-acesso-chips" style="margin-top:0.45rem;display:flex;flex-wrap:wrap;gap:0.3rem;min-height:1.2rem"></div>
       </div>
       <div class="form-grupo" id="edit-usuario-cong-wrap" style="display:none">
         <label>Congregação</label>
@@ -2043,8 +2021,9 @@
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
       <div class="form-grupo" style="margin:0">
-        <label>Culto escalado (opcional)</label>
+        <label id="lote-escala-label">Culto escalado (opcional)</label>
         <select id="lote-escala" onchange="_loteEscalaSelecionada(this.value)"></select>
+        <p id="lote-escala-aviso" style="display:none;font-size:0.73rem;color:var(--alerta);margin:0.25rem 0 0;line-height:1.4">⚠️ Nenhum culto encontrado para hoje. Selecione um ou deixe em branco.</p>
       </div>
       <div class="form-grupo" style="margin:0">
         <label>Data (DD/MM/AAAA)</label>
@@ -2158,6 +2137,8 @@ let usuario  = null
 let deptoCache = []   // departamentos carregados para lookups
 let eventoCache = []  // tipos de culto/evento
 let filtroEquipeStatus = 'ativos'
+let filtroEquipeNome = ''
+let _equipeCache = []
 let loginEscolhaPendente = null
 let popupEntradaTimer = null
 let trocasPendentesCache = []
@@ -2506,16 +2487,23 @@ function mostrarApp() {
     else congEl.style.display = 'none'
   }
 
-  // Usuário restrito = não é admin/líder e não tem departamentos (só tem flags de acesso especial)
+  // Usuário com perfil de acesso (não admin/líder) é restrito às permissões do perfil,
+  // independente de ter departamentos
   const isAdminOuLider = usuario?.role === 'admin' || temPapelLiderancaNoApp()
   const temDepartamentos = !!(usuario?.departamentos?.length)
-  const isRestrito = !!(usuario && !isAdminOuLider && !temDepartamentos)
+  const temPerfil = !!(usuario?.perfil_id)
+  const isRestrito = !!(usuario && !isAdminOuLider && (temPerfil || !temDepartamentos))
 
-  const paginasMedia = ['nav-escalas','nav-equipe','nav-departamentos','nav-comunicacoes','nav-cadastro','nav-agente','nav-dashboard']
+  const paginasMedia = ['nav-equipe','nav-departamentos','nav-cadastro','nav-agente','nav-dashboard']
   for (const id of paginasMedia) {
     const el = document.getElementById(id)
     if (el) el.style.display = isRestrito ? 'none' : ''
   }
+  // Escalas e Comunicações: visíveis quando tem permissão no perfil ou não é restrito
+  const navEscalas = document.getElementById('nav-escalas')
+  if (navEscalas) navEscalas.style.display = (!isRestrito || usuario?.acesso_escalas) ? '' : 'none'
+  const navComun = document.getElementById('nav-comunicacoes')
+  if (navComun) navComun.style.display = (!isRestrito || usuario?.acesso_comunicacoes) ? '' : 'none'
   // Cadastros: só liderança
   const navCad = document.getElementById('nav-cadastro')
   if (navCad && !isRestrito) navCad.style.display = temPapelLiderancaNoApp() ? '' : 'none'
@@ -2572,10 +2560,14 @@ function irEquipeParaVincular() {
 // NAVEGAÇÃO
 // ═══════════════════════════════════════════════════════════
 function navegar(pagina) {
-  const restritas = ['escalas','equipe','departamentos','comunicacoes','cadastros','agente','dashboard']
   const _isAdminOuLider = usuario?.role === 'admin' || temPapelLiderancaNoApp()
-  const _isRestrito = !!(usuario && !_isAdminOuLider && !(usuario?.departamentos?.length))
-  if (_isRestrito && restritas.includes(pagina)) pagina = usuario?.acesso_cultos ? 'cultos' : 'financeiro'
+  const _temPerfil = !!(usuario?.perfil_id)
+  const _isRestrito = !!(usuario && !_isAdminOuLider && (_temPerfil || !(usuario?.departamentos?.length)))
+  const restritas = ['equipe','departamentos','cadastros','agente','dashboard',
+    ...(!usuario?.acesso_escalas ? ['escalas'] : []),
+    ...(!usuario?.acesso_comunicacoes ? ['comunicacoes'] : [])
+  ]
+  if (_isRestrito && restritas.includes(pagina)) pagina = usuario?.acesso_cultos ? 'cultos' : (usuario?.acesso_escalas ? 'escalas' : 'financeiro')
 
   document.querySelectorAll('.nav-link').forEach(el =>
     el.classList.toggle('ativo', el.dataset.pagina === pagina)
@@ -3758,6 +3750,8 @@ async function carregarCadastros() {
     const listaDAtivos = listaD.filter((d) => d.ativo !== false)
     const evs = await api('GET', '/evento/listar?todos=1').catch(() => [])
     const listaE = Array.isArray(evs) ? evs : []
+    const listaPerfis = await api('GET', '/perfil/listar').catch(() => [])
+    _perfisAcessoCache = listaPerfis
     const dias = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado']
     const optDeptos = listaDAtivos.map(d => `<option value="${d.id}">${esc(d.icone || '')} ${esc(d.nome)}</option>`).join('')
     const optDiaSemana = `<option value="">— Sem dia fixo —</option>` +
@@ -3846,6 +3840,30 @@ async function carregarCadastros() {
       <p class="secao-label">🏛️ Departamentos cadastrados</p>
       <p class="muted" style="font-size:0.8rem;margin:-0.5rem 0 1rem">Altere nome/aparência ou exclua quando necessário.</p>
       ${tabelaDeptosGerir}
+
+      <p class="secao-label">🔐 Perfis de acesso</p>
+      <p class="muted" style="font-size:0.8rem;margin:-0.5rem 0 1rem">Cada perfil define quais módulos especiais o usuário pode acessar.</p>
+      <div class="card" style="margin-bottom:1.5rem;padding:1rem">
+        ${listaPerfis.length
+          ? `<div class="tabela-wrapper"><table><thead><tr><th>Nome</th><th>Permissões</th><th></th></tr></thead><tbody>` +
+            listaPerfis.map(p => {
+              const chips = [
+                p.acesso_financeiro           ? '💰 Financeiro' : '',
+                p.acesso_relatorio_financeiro ? '📊 Relatórios' : '',
+                p.acesso_financeiro_global    ? '🌐 Fin. global' : '',
+                p.acesso_cultos               ? '🙏 Cultos' : '',
+                p.acesso_escala_global        ? '🎬 Piloto escalas' : '',
+              ].filter(Boolean).map(c => `<span class="badge badge-sucesso" style="font-size:0.72rem;margin:1px 2px">${c}</span>`).join('')
+              return `<tr>
+                <td><strong>${esc(p.nome)}</strong></td>
+                <td>${chips || '<span style="color:var(--texto-mutado);font-size:0.82rem">Nenhuma</span>'}</td>
+                <td style="white-space:nowrap"><button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalEditarPerfil('${esc(p.id)}')">Editar</button></td>
+              </tr>`
+            }).join('') + '</tbody></table></div>'
+          : '<p style="color:var(--texto-mutado);font-size:0.85rem;margin:0 0 0.75rem">Nenhum perfil cadastrado.</p>'
+        }
+        <button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalNovoPerfil()">+ Novo perfil</button>
+      </div>
 
       <p class="secao-label">📧 Convidar voluntário / obreiro</p>
       <div class="card" style="margin-bottom:1.5rem">
@@ -4304,23 +4322,10 @@ async function abrirModalEditarUsuario(id) {
     document.getElementById('edit-usuario-ativo').checked = u.ativo !== false
     document.getElementById('edit-usuario-erro').style.display = 'none'
 
-    const finWrap = document.getElementById('edit-usuario-financeiro-wrap')
-    if (finWrap) {
-      finWrap.style.display = usuario?.role === 'admin' ? '' : 'none'
-      document.getElementById('edit-usuario-financeiro').checked = !!u.acesso_financeiro
-      document.getElementById('edit-usuario-financeiro-relatorio').checked = !!u.acesso_relatorio_financeiro
-      document.getElementById('edit-usuario-financeiro-global').checked = !!u.acesso_financeiro_global
-      _toggleFinCheckboxes()
-    }
-    const cultosWrap = document.getElementById('edit-usuario-cultos-wrap')
-    if (cultosWrap) {
-      cultosWrap.style.display = usuario?.role === 'admin' ? '' : 'none'
-      document.getElementById('edit-usuario-cultos').checked = !!u.acesso_cultos
-    }
-    const escalaWrap = document.getElementById('edit-usuario-escala-wrap')
-    if (escalaWrap) {
-      escalaWrap.style.display = usuario?.role === 'admin' ? '' : 'none'
-      document.getElementById('edit-usuario-escala-global').checked = !!u.acesso_escala_global
+    const acessoWrap = document.getElementById('edit-usuario-acesso-wrap')
+    if (acessoWrap) {
+      acessoWrap.style.display = usuario?.role === 'admin' ? '' : 'none'
+      if (usuario?.role === 'admin') await _carregarSelectPerfilAcesso(u.perfil_id)
     }
 
     const congWrap = document.getElementById('edit-usuario-cong-wrap')
@@ -4374,19 +4379,9 @@ async function salvarEditUsuario(ev) {
   }
   const senha = document.getElementById('edit-usuario-senha').value
   if (senha) body.senha = senha
-  const finWrap = document.getElementById('edit-usuario-financeiro-wrap')
-  if (finWrap && finWrap.style.display !== 'none' && usuario?.role === 'admin') {
-    body.acesso_financeiro = document.getElementById('edit-usuario-financeiro').checked
-    body.acesso_relatorio_financeiro = document.getElementById('edit-usuario-financeiro-relatorio').checked
-    body.acesso_financeiro_global = document.getElementById('edit-usuario-financeiro-global').checked
-  }
-  const cultosWrap2 = document.getElementById('edit-usuario-cultos-wrap')
-  if (cultosWrap2 && cultosWrap2.style.display !== 'none' && usuario?.role === 'admin') {
-    body.acesso_cultos = document.getElementById('edit-usuario-cultos').checked
-  }
-  const escalaWrap = document.getElementById('edit-usuario-escala-wrap')
-  if (escalaWrap && escalaWrap.style.display !== 'none' && usuario?.role === 'admin') {
-    body.acesso_escala_global = document.getElementById('edit-usuario-escala-global').checked
+  const acessoWrap2 = document.getElementById('edit-usuario-acesso-wrap')
+  if (acessoWrap2 && acessoWrap2.style.display !== 'none' && usuario?.role === 'admin') {
+    body.perfil_id = document.getElementById('edit-usuario-perfil-acesso').value || null
   }
 
   const congWrap = document.getElementById('edit-usuario-cong-wrap')
@@ -4733,6 +4728,21 @@ function setFiltroEquipeStatus(valor) {
   carregarEquipe()
 }
 
+function _filtrarEquipeNome(valor) {
+  filtroEquipeNome = (valor || '').toLowerCase().trim()
+  const tbody = document.getElementById('equipe-tbody')
+  if (!tbody) return
+  let visivel = 0
+  tbody.querySelectorAll('tr').forEach(tr => {
+    const nome = (tr.querySelector('td strong')?.textContent || '').toLowerCase()
+    const mostrar = !filtroEquipeNome || nome.includes(filtroEquipeNome)
+    tr.style.display = mostrar ? '' : 'none'
+    if (mostrar) visivel++
+  })
+  const count = document.getElementById('equipe-count')
+  if (count) count.textContent = `${visivel} de ${_equipeCache.length}`
+}
+
 async function carregarEquipe() {
   const el = document.getElementById('equipe-conteudo')
   el.innerHTML = '<p class="carregando">Carregando…</p>'
@@ -4740,6 +4750,7 @@ async function carregarEquipe() {
   try {
     const lista = await api('GET', '/usuario/listar')
     const usuariosBase = Array.isArray(lista) ? lista : []
+    _equipeCache = usuariosBase
 
     const usuarios =
       filtroEquipeStatus === 'todos'
@@ -4778,16 +4789,23 @@ async function carregarEquipe() {
 
     const filtrosAdmin =
       usuario?.role === 'admin'
-        ? `<div class="card" style="margin-bottom:1rem;padding:0.85rem 1rem">
-            <label style="font-size:0.74rem;color:var(--texto-mutado);margin-right:0.5rem">Exibir:</label>
+        ? `<div class="card" style="margin-bottom:1rem;padding:0.85rem 1rem;display:flex;align-items:center;gap:0.65rem;flex-wrap:wrap">
+            <label style="font-size:0.74rem;color:var(--texto-mutado);flex-shrink:0">Exibir:</label>
             <select class="select-inline" onchange="setFiltroEquipeStatus(this.value)" style="min-width:11rem">
               <option value="ativos" ${filtroEquipeStatus === 'ativos' ? 'selected' : ''}>Somente ativos</option>
               <option value="inativos" ${filtroEquipeStatus === 'inativos' ? 'selected' : ''}>Somente inativos</option>
               <option value="todos" ${filtroEquipeStatus === 'todos' ? 'selected' : ''}>Todos</option>
             </select>
-            <span class="muted" style="font-size:0.78rem;margin-left:0.5rem">${usuarios.length} de ${usuariosBase.length}</span>
+            <input type="text" placeholder="🔍 Pesquisar por nome…" value="${esc(filtroEquipeNome)}"
+              oninput="_filtrarEquipeNome(this.value)"
+              style="flex:1;min-width:160px;max-width:260px;padding:0.3rem 0.65rem;font-size:0.82rem;background:var(--fundo);border:1px solid var(--borda);border-radius:var(--raio);color:var(--texto);font-family:inherit"/>
+            <span id="equipe-count" class="muted" style="font-size:0.78rem;flex-shrink:0">${usuarios.length} de ${usuariosBase.length}</span>
           </div>`
-        : ''
+        : `<div class="card" style="margin-bottom:1rem;padding:0.65rem 1rem">
+            <input type="text" placeholder="🔍 Pesquisar por nome…" value="${esc(filtroEquipeNome)}"
+              oninput="_filtrarEquipeNome(this.value)"
+              style="width:100%;padding:0.3rem 0.65rem;font-size:0.82rem;background:var(--fundo);border:1px solid var(--borda);border-radius:var(--raio);color:var(--texto);font-family:inherit"/>
+          </div>`
 
     const vazioFiltro =
       !usuarios.length
@@ -4809,7 +4827,7 @@ async function carregarEquipe() {
               ${thAcoes}
             </tr>
           </thead>
-          <tbody>
+          <tbody id="equipe-tbody">
             ${usuarios.map(u => `
               <tr>
                 <td><strong>${esc(u.nome)}</strong></td>
@@ -4822,15 +4840,11 @@ async function carregarEquipe() {
                     ? u.departamentos.map(d =>
                         `<span class="badge badge-info" style="margin:1px 2px">${esc(d.nome)}</span>`
                       ).join('')
-                    : (!u.acesso_financeiro ? '<span style="color:var(--texto-mutado)">—</span>' : '')
-                  }
-                  ${u.acesso_financeiro && usuario?.role === 'admin'
-                    ? `<span class="badge" style="margin:1px 2px;background:rgba(22,163,74,.15);color:#16a34a;border:1px solid rgba(22,163,74,.3);cursor:pointer" onclick="abrirModalEditarUsuario('${esc(u.id)}')" title="Clique para editar acesso financeiro">💰 Financeiro${u.acesso_relatorio_financeiro ? ' + 📊' : ''}</span>`
                     : ''
                   }
-                  ${u.acesso_escala_global && usuario?.role === 'admin'
-                    ? `<span class="badge" style="margin:1px 2px;background:rgba(99,102,241,.15);color:#6366f1;border:1px solid rgba(99,102,241,.3);cursor:pointer" onclick="abrirModalEditarUsuario('${esc(u.id)}')" title="Piloto — gere escalas em todos os departamentos">🎬 Piloto</span>`
-                    : ''
+                  ${u.perfil_id && usuario?.role === 'admin'
+                    ? `<span class="badge" style="margin:1px 2px;background:rgba(99,102,241,.12);color:#6366f1;border:1px solid rgba(99,102,241,.3);cursor:pointer" onclick="abrirModalEditarUsuario('${esc(u.id)}')" title="Perfil de acesso: ${esc((_perfisAcessoCache||[]).find(p=>p.id===u.perfil_id)?.nome||'')}">${esc((_perfisAcessoCache||[]).find(p=>p.id===u.perfil_id)?.nome||'Perfil')}</span>`
+                    : (!(u.departamentos||[]).length && !u.perfil_id ? '<span style="color:var(--texto-mutado)">—</span>' : '')
                   }
                 </td>
                 ${
@@ -6279,23 +6293,44 @@ function _renderLancamentos(rows) {
     porData[l.data].push(l)
   }
   const datasOrdenadas = Object.keys(porData).sort((a, b) => _ddmmToISO(b).localeCompare(_ddmmToISO(a)))
-  for (const data of datasOrdenadas) {
+
+  const renderDiaFin = (data) => {
     const itens  = porData[data]
     const entDia = itens.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
     const saiDia = itens.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
     const saldoDia = entDia - saiDia
-    html += `<div class="fin-dia-card">
-      <div style="margin-bottom:0.65rem">
-        <span class="fin-dia-header" style="margin:0">${esc(data)}</span>
-      </div>
-      <div class="fin-chips-wrap">`
-    for (const l of itens) html += _renderChip(l, true)
-    html += `</div>
+    let chips = ''
+    for (const l of itens) chips += _renderChip(l, true)
+    return `<div class="fin-dia-card">
+      <div style="margin-bottom:0.65rem"><span class="fin-dia-header" style="margin:0">${esc(data)}</span></div>
+      <div class="fin-chips-wrap">${chips}</div>
       <div style="display:flex;gap:0.65rem;align-items:center;justify-content:flex-end;margin-top:0.55rem;padding-top:0.45rem;border-top:1px solid var(--borda);font-size:0.75rem;font-weight:600">
         ${filtro !== 'saida'   ? `<span style="color:var(--sucesso)">+${_fmtVal(entDia)}</span>` : ''}
         ${filtro !== 'entrada' ? `<span style="color:var(--erro)">−${_fmtVal(saiDia)}</span>` : ''}
         ${filtro === 'todos'   ? `<span style="color:var(--texto-mutado)">= </span><span style="color:${saldoDia>=0?'var(--sucesso)':'var(--erro)'}">${_fmtVal(saldoDia)}</span>` : ''}
       </div>
+    </div>`
+  }
+
+  const hojeStr = new Date().toLocaleDateString('pt-BR')
+  const destaques  = datasOrdenadas.filter(d => d === hojeStr)
+  const anteriores = datasOrdenadas.filter(d => d !== hojeStr)
+
+  // Se não há lançamentos hoje, mostra o mais recente expandido e colapsa o resto
+  const exibidos  = destaques.length ? destaques : datasOrdenadas.slice(0, 1)
+  const colapsados = destaques.length ? anteriores : datasOrdenadas.slice(1)
+
+  for (const d of exibidos) html += renderDiaFin(d)
+
+  if (colapsados.length) {
+    const totalReg = colapsados.reduce((acc, d) => acc + porData[d].length, 0)
+    html += `<div style="margin-top:0.25rem">
+      <button type="button" class="btn-toggle-passados" onclick="this.classList.toggle('aberto');this.nextElementSibling.classList.toggle('aberta');this.setAttribute('aria-expanded',this.classList.contains('aberto'))" aria-expanded="false">
+        <span style="font-size:0.85rem">📋</span>
+        <span>${colapsados.length} dia(s) anterior(es) · ${totalReg} lançamento(s)</span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="fin-passados-lista">${colapsados.map(d => renderDiaFin(d)).join('')}</div>
     </div>`
   }
   return html
@@ -6606,6 +6641,22 @@ function abrirModalLancamentoLote() {
   _popularEventosModalLote()
   _loteFiltrarCats('entrada')
   _loteRenderLista()
+
+  // Auto-seleciona escala de hoje; exibe aviso se não houver
+  const selEscala = document.getElementById('lote-escala')
+  const aviso = document.getElementById('lote-escala-aviso')
+  const hojeISO = _ddmmToISO(_dataHoje())
+  const optHoje = selEscala
+    ? [...selEscala.options].find(o => o.value && _ddmmToISO(o.dataset?.data || o.text.split(' ')[0]) === hojeISO)
+    : null
+  if (optHoje) {
+    selEscala.value = optHoje.value
+    _loteEscalaSelecionada(optHoje.value)
+    if (aviso) aviso.style.display = 'none'
+  } else {
+    if (aviso) aviso.style.display = ''
+  }
+
   document.getElementById('modal-lancamento-lote').classList.add('aberto')
   setTimeout(() => document.getElementById('lote-valor').focus(), 100)
 }
@@ -6960,36 +7011,46 @@ async function carregarCultos() {
     const elHora = document.getElementById('cultos-atualizado')
     if (elHora) elHora.textContent = agora
 
-    el.innerHTML = cultos.map(c => {
-      const data = c.data ? formatarDataCulto(c.data) : '—'
+    const renderCultoCard = (c) => {
+      const data  = c.data ? formatarDataCulto(c.data) : '—'
       const status = c.encerrado
         ? `<span style="color:var(--texto-mutado);font-size:0.75rem">Encerrado</span>`
         : `<span style="color:var(--sucesso);font-size:0.75rem">Aberto</span>`
       const nome = c.titulo || c.evento_nome || 'Culto'
       return `
-        <div class="card" style="margin-bottom:0.75rem;cursor:pointer" onclick="abrirDetalheCulto('${esc(c.id)}')">
+        <div class="card" style="margin-bottom:0.65rem;cursor:pointer" onclick="abrirDetalheCulto('${esc(c.id)}')">
           <div class="card-body" style="padding:1rem 1.15rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
             <div>
               <div style="font-weight:600;font-size:0.95rem">${esc(nome)}</div>
-              <div style="font-size:0.8rem;color:var(--texto-mutado);margin-top:0.2rem">${data} ${status ? '· ' : ''}${status}</div>
+              <div style="font-size:0.8rem;color:var(--texto-mutado);margin-top:0.2rem">${data} · ${status}</div>
             </div>
             <div style="display:flex;gap:1.25rem;text-align:center;flex-shrink:0">
-              <div>
-                <div style="font-size:1.1rem;font-weight:700">${c.total_presencas ?? 0}</div>
-                <div style="font-size:0.68rem;color:var(--texto-mutado)">Total</div>
-              </div>
-              <div>
-                <div style="font-size:1.1rem;font-weight:700;color:var(--acento)">${c.total_membros ?? 0}</div>
-                <div style="font-size:0.68rem;color:var(--texto-mutado)">Membros</div>
-              </div>
-              <div>
-                <div style="font-size:1.1rem;font-weight:700;color:var(--dourado)">${(c.total_visitantes ?? 0) + (c.total_convidados ?? 0)}</div>
-                <div style="font-size:0.68rem;color:var(--texto-mutado)">Visitas</div>
-              </div>
+              <div><div style="font-size:1.1rem;font-weight:700">${c.total_presencas ?? 0}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Total</div></div>
+              <div><div style="font-size:1.1rem;font-weight:700;color:var(--acento)">${c.total_membros ?? 0}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Membros</div></div>
+              <div><div style="font-size:1.1rem;font-weight:700;color:var(--dourado)">${(c.total_visitantes ?? 0) + (c.total_convidados ?? 0)}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Visitas</div></div>
             </div>
           </div>
         </div>`
-    }).join('')
+    }
+
+    const abertos    = cultos.filter(c => !c.encerrado)
+    const encerrados = cultos.filter(c =>  c.encerrado)
+
+    let html = abertos.map(renderCultoCard).join('')
+
+    if (encerrados.length) {
+      html += `<div style="margin-top:0.5rem">
+        <button type="button" class="btn-toggle-passados" onclick="this.classList.toggle('aberto');this.nextElementSibling.classList.toggle('aberta');this.setAttribute('aria-expanded',this.classList.contains('aberto'))" aria-expanded="false">
+          <span style="font-size:0.85rem">📋</span>
+          <span>${encerrados.length} check-in(s) encerrado(s)</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="fin-passados-lista" style="gap:0">${encerrados.map(renderCultoCard).join('')}</div>
+      </div>`
+    }
+
+    if (!abertos.length && !encerrados.length) html = ''
+    el.innerHTML = html || '<p class="muted" style="margin-top:1rem">Nenhum culto cadastrado.</p>'
     // Inicia timer se ainda não estiver rodando
     if (!_cultosListTimer) {
       const ms = parseInt(document.getElementById('cultos-intervalo')?.value || '15000', 10)
@@ -7523,6 +7584,176 @@ async function salvarPresencaManual(cultoId) {
     erroEl.style.display = 'block'
   }
 }
+
+
+// ── PERFIS DE ACESSO ──────────────────────────────────────────────────────────
+let _perfisAcessoCache = null
+
+async function _carregarSelectPerfilAcesso(perfilIdAtual) {
+  if (!_perfisAcessoCache) {
+    try { _perfisAcessoCache = await api('GET', '/perfil/listar') } catch { _perfisAcessoCache = [] }
+  }
+  const sel = document.getElementById('edit-usuario-perfil-acesso')
+  if (!sel) return
+  sel.innerHTML = '<option value="">Nenhum</option>' + (_perfisAcessoCache || []).map(p =>
+    `<option value="${esc(p.id)}" ${p.id === perfilIdAtual ? 'selected' : ''}>${esc(p.nome)}</option>`
+  ).join('')
+  _onPerfilAcessoChange(sel.value)
+}
+
+function _onPerfilAcessoChange(perfilId) {
+  const chips = document.getElementById('edit-usuario-perfil-acesso-chips')
+  if (!chips) return
+  const perfil = (_perfisAcessoCache || []).find(p => p.id === perfilId)
+  if (!perfil) { chips.innerHTML = ''; return }
+  const labels = {
+    acesso_financeiro: '💰 Financeiro',
+    acesso_relatorio_financeiro: '📊 Relatórios',
+    acesso_financeiro_global: '🌐 Financeiro global',
+    acesso_escala_global: '🎬 Piloto escalas',
+    acesso_cultos: '🙏 Cultos'
+  }
+  chips.innerHTML = Object.entries(labels)
+    .filter(([k]) => perfil[k])
+    .map(([, v]) => `<span class="badge badge-sucesso" style="font-size:0.72rem">${v}</span>`)
+    .join('') || '<span style="color:var(--texto-mutado);font-size:0.78rem">Nenhuma permissão especial</span>'
+}
+
+function abrirModalNovoPerfil() {
+  document.getElementById('perfil-id').value = ''
+  document.getElementById('modal-perfil-titulo').textContent = 'Novo perfil de acesso'
+  document.getElementById('perfil-nome').value = ''
+  document.getElementById('perfil-flag-financeiro').checked = false
+  document.getElementById('perfil-flag-relatorio').checked = false
+  document.getElementById('perfil-flag-fin-global').checked = false
+  document.getElementById('perfil-flag-cultos').checked = false
+  document.getElementById('perfil-flag-escala').checked = false
+  document.getElementById('perfil-flag-escalas').checked = false
+  document.getElementById('perfil-flag-comunicacoes').checked = false
+  document.getElementById('perfil-erro').style.display = 'none'
+  document.getElementById('btn-excluir-perfil').style.display = 'none'
+  document.getElementById('modal-perfil-acesso').classList.add('aberto')
+}
+
+function abrirModalEditarPerfil(id) {
+  const perfil = (_perfisAcessoCache || []).find(p => p.id === id)
+  if (!perfil) return
+  document.getElementById('perfil-id').value = perfil.id
+  document.getElementById('modal-perfil-titulo').textContent = 'Editar perfil de acesso'
+  document.getElementById('perfil-nome').value = perfil.nome
+  document.getElementById('perfil-flag-financeiro').checked = !!perfil.acesso_financeiro
+  document.getElementById('perfil-flag-relatorio').checked = !!perfil.acesso_relatorio_financeiro
+  document.getElementById('perfil-flag-fin-global').checked = !!perfil.acesso_financeiro_global
+  document.getElementById('perfil-flag-cultos').checked = !!perfil.acesso_cultos
+  document.getElementById('perfil-flag-escala').checked = !!perfil.acesso_escala_global
+  document.getElementById('perfil-flag-escalas').checked = !!perfil.acesso_escalas
+  document.getElementById('perfil-flag-comunicacoes').checked = !!perfil.acesso_comunicacoes
+  document.getElementById('perfil-erro').style.display = 'none'
+  document.getElementById('btn-excluir-perfil').style.display = ''
+  document.getElementById('modal-perfil-acesso').classList.add('aberto')
+}
+
+function fecharModalPerfil() {
+  document.getElementById('modal-perfil-acesso').classList.remove('aberto')
+}
+
+async function salvarPerfil(ev) {
+  ev.preventDefault()
+  const id = document.getElementById('perfil-id').value
+  const body = {
+    nome: document.getElementById('perfil-nome').value.trim(),
+    acesso_financeiro: document.getElementById('perfil-flag-financeiro').checked,
+    acesso_relatorio_financeiro: document.getElementById('perfil-flag-relatorio').checked,
+    acesso_financeiro_global: document.getElementById('perfil-flag-fin-global').checked,
+    acesso_cultos: document.getElementById('perfil-flag-cultos').checked,
+    acesso_escala_global: document.getElementById('perfil-flag-escala').checked,
+    acesso_escalas: !!(document.getElementById('perfil-flag-escalas')?.checked),
+    acesso_comunicacoes: !!(document.getElementById('perfil-flag-comunicacoes')?.checked),
+  }
+  const errEl = document.getElementById('perfil-erro')
+  errEl.style.display = 'none'
+  try {
+    if (id) await api('PUT', `/perfil/${id}`, body)
+    else await api('POST', '/perfil/criar', body)
+    _perfisAcessoCache = null
+    toast(id ? 'Perfil atualizado.' : 'Perfil criado.', 'ok')
+    fecharModalPerfil()
+    carregarCadastros()
+  } catch (e) {
+    errEl.textContent = e.erro || 'Erro ao salvar perfil.'
+    errEl.style.display = ''
+  }
+}
+
+async function excluirPerfil() {
+  const id = document.getElementById('perfil-id').value
+  if (!id || !confirm('Excluir este perfil? Usuários vinculados perderão o perfil mas não os acessos.')) return
+  try {
+    await api('DELETE', `/perfil/${id}`)
+    _perfisAcessoCache = null
+    toast('Perfil excluído.', 'ok')
+    fecharModalPerfil()
+    carregarCadastros()
+  } catch (e) {
+    toast(e.erro || 'Erro ao excluir.', 'err')
+  }
+}
 </script>
+
+<!-- MODAL: PERFIL DE ACESSO -->
+<div id="modal-perfil-acesso" class="modal-overlay" onclick="if(event.target===this)fecharModalPerfil()">
+  <div class="modal" style="max-width:460px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 id="modal-perfil-titulo" style="font-size:1.1rem">Perfil de acesso</h2>
+      <button class="btn-fechar" onclick="fecharModalPerfil()">✕</button>
+    </div>
+    <form onsubmit="salvarPerfil(event)" style="padding:1.25rem;display:flex;flex-direction:column;gap:0.9rem">
+      <input type="hidden" id="perfil-id"/>
+      <div class="form-grupo" style="margin:0"><label>Nome do perfil</label>
+        <input id="perfil-nome" required placeholder="Ex: Obreiro, Financeiro…"/>
+      </div>
+      <div class="form-grupo" style="margin:0">
+        <label>Permissões</label>
+        <div style="display:flex;flex-direction:column;gap:0.6rem;margin-top:0.3rem">
+          <label style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer">
+            <input type="checkbox" id="perfil-flag-financeiro" style="width:auto;margin-top:0.18rem;flex-shrink:0"/>
+            <div><div>💰 Acesso ao módulo financeiro</div><div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Permite lançar entradas no financeiro.</div></div>
+          </label>
+          <label style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer;margin-left:1.5rem">
+            <input type="checkbox" id="perfil-flag-relatorio" style="width:auto;margin-top:0.18rem;flex-shrink:0"/>
+            <div><div>📊 Visualizar relatórios financeiros</div><div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Dashboards, gráficos e relatório mensal.</div></div>
+          </label>
+          <label style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer;margin-left:1.5rem">
+            <input type="checkbox" id="perfil-flag-fin-global" style="width:auto;margin-top:0.18rem;flex-shrink:0"/>
+            <div><div>🌐 Financeiro global (todas congregações)</div><div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Vê e filtra lançamentos de todas as congregações.</div></div>
+          </label>
+          <label style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer">
+            <input type="checkbox" id="perfil-flag-cultos" style="width:auto;margin-top:0.18rem;flex-shrink:0"/>
+            <div><div>🙏 Acesso ao módulo de Cultos</div><div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Pode criar, encerrar e gerenciar cultos / check-in.</div></div>
+          </label>
+          <label style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer">
+            <input type="checkbox" id="perfil-flag-escala" style="width:auto;margin-top:0.18rem;flex-shrink:0"/>
+            <div><div>🎬 Piloto de escalas (todos departamentos)</div><div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Pode criar, editar e excluir escalas em qualquer departamento, independente de ser líder ou membro do setor.</div></div>
+          </label>
+          <label style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer">
+            <input type="checkbox" id="perfil-flag-escalas" style="width:auto;margin-top:0.18rem;flex-shrink:0"/>
+            <div><div>📅 Acesso ao módulo de Escalas</div><div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Visualiza e interage com as escalas do próprio departamento.</div></div>
+          </label>
+          <label style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer">
+            <input type="checkbox" id="perfil-flag-comunicacoes" style="width:auto;margin-top:0.18rem;flex-shrink:0"/>
+            <div><div>💬 Acesso ao módulo de Comunicações</div><div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Visualiza e envia avisos e comunicados para a equipe.</div></div>
+          </label>
+        </div>
+      </div>
+      <p id="perfil-erro" class="erro-msg" style="display:none;margin:0"></p>
+      <div class="modal-actions" style="padding:0">
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-excluir-perfil" style="margin-right:auto;color:var(--erro);display:none" onclick="excluirPerfil()">Excluir</button>
+        <button type="button" class="btn btn-ghost" onclick="fecharModalPerfil()">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 </body>
 </html>

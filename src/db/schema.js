@@ -354,6 +354,10 @@ function migrate() {
   tryExec(
     `ALTER TABLE departamentos ADD COLUMN perfil_id TEXT REFERENCES perfis(id) ON DELETE SET NULL`
   )
+  tryExec(`ALTER TABLE perfis   ADD COLUMN acesso_escalas      INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE perfis   ADD COLUMN acesso_comunicacoes INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_escalas      INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_comunicacoes INTEGER NOT NULL DEFAULT 0`)
 }
 
 /** Perfis macro (flags padrão). “Cultos” legado é removido em sincronizarPerfisMacro. */
@@ -364,7 +368,9 @@ const PERFIS_MACRO = [
     acesso_relatorio_financeiro: 1,
     acesso_financeiro_global: 0,
     acesso_escala_global: 0,
-    acesso_cultos: 0
+    acesso_cultos: 0,
+    acesso_escalas: 0,
+    acesso_comunicacoes: 0
   },
   {
     nome: 'Obreiro',
@@ -372,7 +378,9 @@ const PERFIS_MACRO = [
     acesso_relatorio_financeiro: 0,
     acesso_financeiro_global: 0,
     acesso_escala_global: 0,
-    acesso_cultos: 1
+    acesso_cultos: 1,
+    acesso_escalas: 0,
+    acesso_comunicacoes: 0
   },
   {
     nome: 'Mídia',
@@ -380,7 +388,9 @@ const PERFIS_MACRO = [
     acesso_relatorio_financeiro: 0,
     acesso_financeiro_global: 0,
     acesso_escala_global: 0,
-    acesso_cultos: 0
+    acesso_cultos: 0,
+    acesso_escalas: 1,
+    acesso_comunicacoes: 1
   }
 ]
 
@@ -398,7 +408,7 @@ function sincronizarPerfisMacro() {
     const row = db.get('SELECT id FROM perfis WHERE nome = ?', p.nome)
     if (!row) {
       db.run(
-        `INSERT INTO perfis (id,nome,acesso_financeiro,acesso_relatorio_financeiro,acesso_financeiro_global,acesso_escala_global,acesso_cultos,criado_em) VALUES (?,?,?,?,?,?,?,?)`,
+        `INSERT INTO perfis (id,nome,acesso_financeiro,acesso_relatorio_financeiro,acesso_financeiro_global,acesso_escala_global,acesso_cultos,acesso_escalas,acesso_comunicacoes,criado_em) VALUES (?,?,?,?,?,?,?,?,?,?)`,
         uuidv4(),
         p.nome,
         p.acesso_financeiro,
@@ -406,16 +416,20 @@ function sincronizarPerfisMacro() {
         p.acesso_financeiro_global,
         p.acesso_escala_global,
         p.acesso_cultos,
+        p.acesso_escalas,
+        p.acesso_comunicacoes,
         agora
       )
     } else {
       db.run(
-        `UPDATE perfis SET acesso_financeiro=?, acesso_relatorio_financeiro=?, acesso_financeiro_global=?, acesso_escala_global=?, acesso_cultos=? WHERE nome=?`,
+        `UPDATE perfis SET acesso_financeiro=?, acesso_relatorio_financeiro=?, acesso_financeiro_global=?, acesso_escala_global=?, acesso_cultos=?, acesso_escalas=?, acesso_comunicacoes=? WHERE nome=?`,
         p.acesso_financeiro,
         p.acesso_relatorio_financeiro,
         p.acesso_financeiro_global,
         p.acesso_escala_global,
         p.acesso_cultos,
+        p.acesso_escalas,
+        p.acesso_comunicacoes,
         p.nome
       )
     }
@@ -429,7 +443,7 @@ function sincronizarPerfisMacro() {
     db.run(`DELETE FROM perfis WHERE id = ?`, cultos.id)
   } else if (cultos && !obreiro) {
     db.run(
-      `UPDATE perfis SET nome='Obreiro', acesso_financeiro=1, acesso_relatorio_financeiro=0, acesso_financeiro_global=0, acesso_escala_global=0, acesso_cultos=1 WHERE id=?`,
+      `UPDATE perfis SET nome='Obreiro', acesso_financeiro=1, acesso_relatorio_financeiro=0, acesso_financeiro_global=0, acesso_escala_global=0, acesso_cultos=1, acesso_escalas=0, acesso_comunicacoes=0 WHERE id=?`,
       cultos.id
     )
   }
