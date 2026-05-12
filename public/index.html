@@ -3851,6 +3851,7 @@ async function carregarCadastros() {
               const chips = [
                 p.acesso_financeiro           ? '💰 Financeiro' : '',
                 p.acesso_relatorio_financeiro ? '📊 Relatórios' : '',
+                p.acesso_financeiro_saida     ? '📤 Lança saídas' : '',
                 p.acesso_financeiro_global    ? '🌐 Fin. global' : '',
                 p.acesso_cultos               ? '🙏 Cultos' : '',
                 p.acesso_escala_global        ? '🎬 Piloto escalas' : '',
@@ -6624,8 +6625,10 @@ function abrirModalLancamento(existente) {
   document.getElementById('lanc-id').value = existente?.id || ''
   document.getElementById('lanc-erro').style.display = 'none'
 
+  const podeSaida = usuario?.role === 'admin' || !!usuario?.acesso_financeiro_saida
   const optSaida = document.querySelector('#lanc-tipo option[value="saida"]')
-  if (optSaida) optSaida.style.display = usuario?.role === 'admin' ? '' : 'none'
+  if (optSaida) optSaida.style.display = podeSaida ? '' : 'none'
+  if (!podeSaida) document.getElementById('lanc-tipo').value = 'entrada'
 
   _popularEventosModal(existente?.escala_id || '')
 
@@ -6661,6 +6664,9 @@ function abrirModalLancamentoLote() {
   document.getElementById('lote-descricao').value = ''
   document.getElementById('lote-tipo').value = 'entrada'
   document.getElementById('lote-erro').style.display = 'none'
+  const podeSaidaLote = usuario?.role === 'admin' || !!usuario?.acesso_financeiro_saida
+  const optSaidaLote = document.querySelector('#lote-tipo option[value="saida"]')
+  if (optSaidaLote) optSaidaLote.style.display = podeSaidaLote ? '' : 'none'
   _popularEventosModalLote()
   _loteFiltrarCats('entrada')
   _loteRenderLista()
@@ -7634,7 +7640,8 @@ function _onPerfilAcessoChange(perfilId) {
   const labels = {
     acesso_financeiro: '💰 Financeiro',
     acesso_relatorio_financeiro: '📊 Relatórios',
-    acesso_financeiro_global: '🌐 Financeiro global',
+    acesso_financeiro_saida: '📤 Lança saídas',
+    acesso_financeiro_global: '🌐 Fin. global',
     acesso_escala_global: '🎬 Piloto escalas',
     acesso_cultos: '🙏 Cultos'
   }
@@ -7650,6 +7657,7 @@ function abrirModalNovoPerfil() {
   document.getElementById('perfil-nome').value = ''
   document.getElementById('perfil-flag-financeiro').checked = false
   document.getElementById('perfil-flag-relatorio').checked = false
+  document.getElementById('perfil-flag-fin-saida').checked = false
   document.getElementById('perfil-flag-fin-global').checked = false
   document.getElementById('perfil-flag-cultos').checked = false
   document.getElementById('perfil-flag-escala').checked = false
@@ -7668,6 +7676,7 @@ function abrirModalEditarPerfil(id) {
   document.getElementById('perfil-nome').value = perfil.nome
   document.getElementById('perfil-flag-financeiro').checked = !!perfil.acesso_financeiro
   document.getElementById('perfil-flag-relatorio').checked = !!perfil.acesso_relatorio_financeiro
+  document.getElementById('perfil-flag-fin-saida').checked = !!perfil.acesso_financeiro_saida
   document.getElementById('perfil-flag-fin-global').checked = !!perfil.acesso_financeiro_global
   document.getElementById('perfil-flag-cultos').checked = !!perfil.acesso_cultos
   document.getElementById('perfil-flag-escala').checked = !!perfil.acesso_escala_global
@@ -7689,6 +7698,7 @@ async function salvarPerfil(ev) {
     nome: document.getElementById('perfil-nome').value.trim(),
     acesso_financeiro: document.getElementById('perfil-flag-financeiro').checked,
     acesso_relatorio_financeiro: document.getElementById('perfil-flag-relatorio').checked,
+    acesso_financeiro_saida: !!(document.getElementById('perfil-flag-fin-saida')?.checked),
     acesso_financeiro_global: document.getElementById('perfil-flag-fin-global').checked,
     acesso_cultos: document.getElementById('perfil-flag-cultos').checked,
     acesso_escala_global: document.getElementById('perfil-flag-escala').checked,
@@ -7878,6 +7888,10 @@ async function _excluirArquivoBackup(nome) {
           <label style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer;margin-left:1.5rem">
             <input type="checkbox" id="perfil-flag-relatorio" style="width:auto;margin-top:0.18rem;flex-shrink:0"/>
             <div><div>📊 Visualizar relatórios financeiros</div><div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Dashboards, gráficos e relatório mensal.</div></div>
+          </label>
+          <label style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer;margin-left:1.5rem">
+            <input type="checkbox" id="perfil-flag-fin-saida" style="width:auto;margin-top:0.18rem;flex-shrink:0"/>
+            <div><div>📤 Lançar saídas (despesas)</div><div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Pode registrar despesas e saídas financeiras. Necessário para o admin financeiro / tesoureiro.</div></div>
           </label>
           <label style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer;margin-left:1.5rem">
             <input type="checkbox" id="perfil-flag-fin-global" style="width:auto;margin-top:0.18rem;flex-shrink:0"/>

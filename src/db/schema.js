@@ -354,10 +354,12 @@ function migrate() {
   tryExec(
     `ALTER TABLE departamentos ADD COLUMN perfil_id TEXT REFERENCES perfis(id) ON DELETE SET NULL`
   )
-  tryExec(`ALTER TABLE perfis   ADD COLUMN acesso_escalas      INTEGER NOT NULL DEFAULT 0`)
-  tryExec(`ALTER TABLE perfis   ADD COLUMN acesso_comunicacoes INTEGER NOT NULL DEFAULT 0`)
-  tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_escalas      INTEGER NOT NULL DEFAULT 0`)
-  tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_comunicacoes INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE perfis   ADD COLUMN acesso_escalas           INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE perfis   ADD COLUMN acesso_comunicacoes      INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_escalas           INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_comunicacoes      INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE perfis   ADD COLUMN acesso_financeiro_saida  INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_financeiro_saida  INTEGER NOT NULL DEFAULT 0`)
 }
 
 /** Perfis macro (flags padrão). “Cultos” legado é removido em sincronizarPerfisMacro. */
@@ -367,6 +369,7 @@ const PERFIS_MACRO = [
     acesso_financeiro: 1,
     acesso_relatorio_financeiro: 1,
     acesso_financeiro_global: 0,
+    acesso_financeiro_saida: 1,
     acesso_escala_global: 0,
     acesso_cultos: 0,
     acesso_escalas: 0,
@@ -377,6 +380,7 @@ const PERFIS_MACRO = [
     acesso_financeiro: 1,
     acesso_relatorio_financeiro: 0,
     acesso_financeiro_global: 0,
+    acesso_financeiro_saida: 0,
     acesso_escala_global: 0,
     acesso_cultos: 1,
     acesso_escalas: 0,
@@ -387,6 +391,7 @@ const PERFIS_MACRO = [
     acesso_financeiro: 0,
     acesso_relatorio_financeiro: 0,
     acesso_financeiro_global: 0,
+    acesso_financeiro_saida: 0,
     acesso_escala_global: 0,
     acesso_cultos: 0,
     acesso_escalas: 1,
@@ -408,12 +413,13 @@ function sincronizarPerfisMacro() {
     const row = db.get('SELECT id FROM perfis WHERE nome = ?', p.nome)
     if (!row) {
       db.run(
-        `INSERT INTO perfis (id,nome,acesso_financeiro,acesso_relatorio_financeiro,acesso_financeiro_global,acesso_escala_global,acesso_cultos,acesso_escalas,acesso_comunicacoes,criado_em) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO perfis (id,nome,acesso_financeiro,acesso_relatorio_financeiro,acesso_financeiro_global,acesso_financeiro_saida,acesso_escala_global,acesso_cultos,acesso_escalas,acesso_comunicacoes,criado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
         uuidv4(),
         p.nome,
         p.acesso_financeiro,
         p.acesso_relatorio_financeiro,
         p.acesso_financeiro_global,
+        p.acesso_financeiro_saida,
         p.acesso_escala_global,
         p.acesso_cultos,
         p.acesso_escalas,
@@ -422,10 +428,11 @@ function sincronizarPerfisMacro() {
       )
     } else {
       db.run(
-        `UPDATE perfis SET acesso_financeiro=?, acesso_relatorio_financeiro=?, acesso_financeiro_global=?, acesso_escala_global=?, acesso_cultos=?, acesso_escalas=?, acesso_comunicacoes=? WHERE nome=?`,
+        `UPDATE perfis SET acesso_financeiro=?, acesso_relatorio_financeiro=?, acesso_financeiro_global=?, acesso_financeiro_saida=?, acesso_escala_global=?, acesso_cultos=?, acesso_escalas=?, acesso_comunicacoes=? WHERE nome=?`,
         p.acesso_financeiro,
         p.acesso_relatorio_financeiro,
         p.acesso_financeiro_global,
+        p.acesso_financeiro_saida,
         p.acesso_escala_global,
         p.acesso_cultos,
         p.acesso_escalas,

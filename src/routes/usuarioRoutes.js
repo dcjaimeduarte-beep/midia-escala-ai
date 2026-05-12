@@ -49,7 +49,7 @@ router.get('/listar', autenticar, (req, res) => {
     const usuarios = sql.all(
       `SELECT u.id, u.nome, u.email, u.celular, u.role, u.ativo, u.avatar, u.criado_em,
               u.precisa_trocar_senha, u.acesso_financeiro, u.acesso_relatorio_financeiro, u.acesso_cultos,
-              u.acesso_financeiro_global, u.acesso_escala_global, u.acesso_escalas, u.acesso_comunicacoes,
+              u.acesso_financeiro_global, u.acesso_financeiro_saida, u.acesso_escala_global, u.acesso_escalas, u.acesso_comunicacoes,
               u.congregacao_id, u.perfil_id,
               c.nome as congregacao_nome, c.tipo as congregacao_tipo
        FROM usuarios u
@@ -154,7 +154,7 @@ router.put('/:id', autenticar, async (req, res) => {
   if (!podeEditar)
     return res.status(403).json({ erro: 'Sem permissão para alterar cadastros' })
 
-  const { nome, email, celular, data_nascimento, senha, ativo, avatar, role, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, acesso_escala_global, acesso_cultos, congregacao_id, perfil_id } = req.body
+  const { nome, email, celular, data_nascimento, senha, ativo, avatar, role, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, acesso_financeiro_saida, acesso_escala_global, acesso_cultos, congregacao_id, perfil_id } = req.body
 
   if (role !== undefined) {
     if (req.usuario.role !== 'admin')
@@ -185,6 +185,8 @@ router.put('/:id', autenticar, async (req, res) => {
     sql.run(`UPDATE usuarios SET acesso_relatorio_financeiro = ? WHERE id = ?`, acesso_relatorio_financeiro ? 1 : 0, req.params.id)
   if (acesso_financeiro_global !== undefined && admin)
     sql.run(`UPDATE usuarios SET acesso_financeiro_global = ? WHERE id = ?`, acesso_financeiro_global ? 1 : 0, req.params.id)
+  if (acesso_financeiro_saida !== undefined && admin)
+    sql.run(`UPDATE usuarios SET acesso_financeiro_saida = ? WHERE id = ?`, acesso_financeiro_saida ? 1 : 0, req.params.id)
   if (acesso_escala_global !== undefined && admin)
     sql.run(`UPDATE usuarios SET acesso_escala_global = ? WHERE id = ?`, acesso_escala_global ? 1 : 0, req.params.id)
   if (acesso_cultos !== undefined && admin)
@@ -197,17 +199,17 @@ router.put('/:id', autenticar, async (req, res) => {
       const perfil = sql.get(`SELECT * FROM perfis WHERE id = ?`, perfil_id)
       if (perfil) {
         sql.run(
-          `UPDATE usuarios SET perfil_id=?,acesso_financeiro=?,acesso_relatorio_financeiro=?,acesso_financeiro_global=?,acesso_escala_global=?,acesso_cultos=?,acesso_escalas=?,acesso_comunicacoes=? WHERE id=?`,
-          perfil_id, perfil.acesso_financeiro, perfil.acesso_relatorio_financeiro, perfil.acesso_financeiro_global, perfil.acesso_escala_global, perfil.acesso_cultos, perfil.acesso_escalas ?? 0, perfil.acesso_comunicacoes ?? 0, req.params.id
+          `UPDATE usuarios SET perfil_id=?,acesso_financeiro=?,acesso_relatorio_financeiro=?,acesso_financeiro_global=?,acesso_financeiro_saida=?,acesso_escala_global=?,acesso_cultos=?,acesso_escalas=?,acesso_comunicacoes=? WHERE id=?`,
+          perfil_id, perfil.acesso_financeiro, perfil.acesso_relatorio_financeiro, perfil.acesso_financeiro_global, perfil.acesso_financeiro_saida ?? 0, perfil.acesso_escala_global, perfil.acesso_cultos, perfil.acesso_escalas ?? 0, perfil.acesso_comunicacoes ?? 0, req.params.id
         )
       }
     } else {
-      sql.run(`UPDATE usuarios SET perfil_id=NULL, acesso_financeiro=0, acesso_relatorio_financeiro=0, acesso_financeiro_global=0, acesso_escala_global=0, acesso_cultos=0, acesso_escalas=0, acesso_comunicacoes=0 WHERE id=?`, req.params.id)
+      sql.run(`UPDATE usuarios SET perfil_id=NULL, acesso_financeiro=0, acesso_relatorio_financeiro=0, acesso_financeiro_global=0, acesso_financeiro_saida=0, acesso_escala_global=0, acesso_cultos=0, acesso_escalas=0, acesso_comunicacoes=0 WHERE id=?`, req.params.id)
     }
   }
 
   syncTudoParaMemoria()
-  const atual = sql.get(`SELECT id, nome, email, celular, role, ativo, avatar, criado_em, precisa_trocar_senha, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, acesso_escala_global, acesso_cultos, perfil_id FROM usuarios WHERE id = ?`, req.params.id)
+  const atual = sql.get(`SELECT id, nome, email, celular, role, ativo, avatar, criado_em, precisa_trocar_senha, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, acesso_financeiro_saida, acesso_escala_global, acesso_cultos, perfil_id FROM usuarios WHERE id = ?`, req.params.id)
   res.json({
     ...atual,
     ativo: !!atual.ativo,
