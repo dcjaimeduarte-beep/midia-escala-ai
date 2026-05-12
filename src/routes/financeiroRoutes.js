@@ -348,6 +348,41 @@ router.get('/relatorio', autenticar, apenasFinanceiro, apenasRelatorioFinanceiro
   })
 })
 
+// ── DASHBOARD ANUAL ─────────────────────────────────────────────────────────
+
+// GET /financeiro/dashboard-anual?ano=YYYY&congregacao_id=X
+router.get('/dashboard-anual', autenticar, apenasFinanceiro, apenasRelatorioFinanceiro, (req, res) => {
+  const anoStr   = (req.query.ano || String(new Date().getFullYear())).slice(0, 4)
+  const isGlobal = req.usuario.role === 'admin' || req.usuario.acesso_financeiro_global
+  const congId   = isGlobal
+    ? (req.query.congregacao_id || null)
+    : (req.usuario.congregacao_id || null)
+  const cf = congId ? 'AND l.congregacao_id = ?' : ''
+  const cp = congId ? [congId] : []
+
+  const meses = db.all(`
+    SELECT substr(l.data,7,4)||'-'||substr(l.data,4,2) AS mes,
+           SUM(CASE WHEN l.tipo='entrada' THEN l.valor ELSE 0 END) AS entradas,
+           SUM(CASE WHEN l.tipo='saida'   THEN l.valor ELSE 0 END) AS saidas
+    FROM lancamentos_financeiro l
+    WHERE substr(l.data,7,4) = ? ${cf}
+    GROUP BY mes ORDER BY mes
+  `, anoStr, ...cp)
+
+  const categorias = db.all(`
+    SELECT c.nome, l.tipo, SUM(l.valor) AS total
+    FROM lancamentos_financeiro l
+    JOIN categorias_financeiro c ON c.id = l.categoria_id
+    WHERE substr(l.data,7,4) = ? ${cf}
+    GROUP BY l.categoria_id, l.tipo
+    ORDER BY total DESC
+  `, anoStr, ...cp)
+
+  const totalEnt = meses.reduce((s, m) => s + (m.entradas || 0), 0)
+  const totalSai = meses.reduce((s, m) => s + (m.saidas   || 0), 0)
+  res.json({ ano: anoStr, meses, categorias, totais: { entradas: totalEnt, saidas: totalSai, saldo: totalEnt - totalSai } })
+})
+
 // GET /financeiro/me — retorna se o usuário logado tem acesso financeiro
 router.get('/me', autenticar, (req, res) => {
   res.json({

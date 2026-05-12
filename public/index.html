@@ -1590,12 +1590,14 @@
         <button class="fin-tab ativo" data-fintab="dashboard"   onclick="finTab('dashboard')">📊 Resumo do Dia</button>
         <button class="fin-tab"       data-fintab="lancamentos" onclick="finTab('lancamentos')">📋 Lançamentos</button>
         <button class="fin-tab"       data-fintab="relatorio"   onclick="finTab('relatorio')">📈 Relatório Mensal</button>
+        <button class="fin-tab" id="fin-tab-anual" data-fintab="anual" onclick="finTab('anual')">📊 Dashboard Anual</button>
         <button class="fin-tab" id="fin-tab-cat" data-fintab="categorias" onclick="finTab('categorias')" style="display:none">⚙️ Categorias</button>
       </div>
 
       <div id="fin-dashboard"   class="fin-panel"><p class="carregando">Carregando…</p></div>
       <div id="fin-lancamentos" class="fin-panel" style="display:none"><p class="carregando">Carregando…</p></div>
       <div id="fin-relatorio"   class="fin-panel" style="display:none"><p class="carregando">Carregando…</p></div>
+      <div id="fin-anual"       class="fin-panel" style="display:none"><p class="carregando">Carregando…</p></div>
       <div id="fin-categorias"  class="fin-panel" style="display:none"><p class="carregando">Carregando…</p></div>
     </div>
 
@@ -5817,6 +5819,7 @@ function finTab(aba) {
   if (aba === 'dashboard')    carregarFinDashboard()
   else if (aba === 'lancamentos') carregarFinLancamentos()
   else if (aba === 'relatorio')   carregarFinRelatorio()
+  else if (aba === 'anual')       carregarFinAnual()
   else if (aba === 'categorias')  carregarFinCategorias()
 }
 
@@ -5828,12 +5831,14 @@ async function carregarFinanceiro() {
 
   // Esconde Dashboard e Relatório para quem só pode lançar
   const podeRelatorio = _finTemRelatorio()
-  const tabDash = document.querySelector('.fin-tab[data-fintab="dashboard"]')
-  const tabRel  = document.querySelector('.fin-tab[data-fintab="relatorio"]')
-  if (tabDash) tabDash.style.display = podeRelatorio ? '' : 'none'
-  if (tabRel)  tabRel.style.display  = podeRelatorio ? '' : 'none'
+  const tabDash  = document.querySelector('.fin-tab[data-fintab="dashboard"]')
+  const tabRel   = document.querySelector('.fin-tab[data-fintab="relatorio"]')
+  const tabAnual = document.getElementById('fin-tab-anual')
+  if (tabDash)  tabDash.style.display  = podeRelatorio ? '' : 'none'
+  if (tabRel)   tabRel.style.display   = podeRelatorio ? '' : 'none'
+  if (tabAnual) tabAnual.style.display = podeRelatorio ? '' : 'none'
   // Se não tem acesso a relatório, força a aba de lançamentos
-  if (!podeRelatorio && (finAbaAtiva === 'dashboard' || finAbaAtiva === 'relatorio')) {
+  if (!podeRelatorio && (finAbaAtiva === 'dashboard' || finAbaAtiva === 'relatorio' || finAbaAtiva === 'anual')) {
     finAbaAtiva = 'lancamentos'
   }
   try { finCategorias = await api('GET', '/financeiro/categorias') } catch (_) { finCategorias = [] }
@@ -6489,53 +6494,57 @@ function _renderRelatorio(data) {
     <div class="fin-stat-card"><div class="fin-stat-label">Saldo</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(totais.saldo)}</div></div>
   </div>`
 
-  if (por_data.length) {
-    const maxVal = Math.max(...por_data.map(d => Math.max(d.entradas, d.saidas)), 1)
-    const chartH = 160
-    const barW   = 18
-    const gap    = 4
-    const grpW   = barW * 2 + gap + 12
-
-    // linhas de grade em 25%, 50%, 75%, 100%
-    const grades = [1, 0.75, 0.5, 0.25].map(pct => {
-      const y = Math.round((1 - pct) * chartH)
-      const label = _fmtVal(maxVal * pct)
-      return `<div style="position:absolute;top:${y}px;left:0;right:0;height:1px;background:rgba(255,255,255,0.07)">
-        <span style="position:absolute;right:calc(100% + 6px);top:-7px;font-size:0.58rem;color:rgba(255,255,255,0.25);white-space:nowrap">${label}</span>
-      </div>`
-    }).join('')
-
+  if (totais.entradas > 0 || totais.saidas > 0) {
+    const _pieTotal = totais.entradas + totais.saidas
+    const _pEnt     = _pieTotal > 0 ? totais.entradas / _pieTotal : 0
+    const _pctEnt   = Math.round(_pEnt * 100)
+    const _pctSai   = 100 - _pctEnt
+    const _cx = 80, _cy = 80, _Ro = 68, _Ri = 44
+    let _svgSlices = ''
+    if (_pEnt >= 1) {
+      _svgSlices = `<circle cx="${_cx}" cy="${_cy}" r="${_Ro}" fill="rgba(92,173,106,0.82)"/><circle cx="${_cx}" cy="${_cy}" r="${_Ri}" fill="var(--fundo-elevado)"/>`
+    } else if (_pEnt <= 0) {
+      _svgSlices = `<circle cx="${_cx}" cy="${_cy}" r="${_Ro}" fill="rgba(232,93,93,0.75)"/><circle cx="${_cx}" cy="${_cy}" r="${_Ri}" fill="var(--fundo-elevado)"/>`
+    } else {
+      const _arc = (p0, p1) => {
+        const toRad = p => (p - 0.25) * Math.PI * 2
+        const [a0, a1] = [toRad(p0), toRad(p1)]
+        const x0o = (_cx + _Ro * Math.cos(a0)).toFixed(2), y0o = (_cy + _Ro * Math.sin(a0)).toFixed(2)
+        const x1o = (_cx + _Ro * Math.cos(a1)).toFixed(2), y1o = (_cy + _Ro * Math.sin(a1)).toFixed(2)
+        const x1i = (_cx + _Ri * Math.cos(a1)).toFixed(2), y1i = (_cy + _Ri * Math.sin(a1)).toFixed(2)
+        const x0i = (_cx + _Ri * Math.cos(a0)).toFixed(2), y0i = (_cy + _Ri * Math.sin(a0)).toFixed(2)
+        const lg  = (p1 - p0) > 0.5 ? 1 : 0
+        return `M ${x0o} ${y0o} A ${_Ro} ${_Ro} 0 ${lg} 1 ${x1o} ${y1o} L ${x1i} ${y1i} A ${_Ri} ${_Ri} 0 ${lg} 0 ${x0i} ${y0i} Z`
+      }
+      _svgSlices = `<path d="${_arc(0, _pEnt)}" fill="rgba(92,173,106,0.82)"/><path d="${_arc(_pEnt, 1)}" fill="rgba(232,93,93,0.75)"/>`
+    }
+    const _saldoCor = totais.saldo >= 0 ? 'rgba(92,173,106,0.95)' : 'rgba(232,93,93,0.95)'
     html += `<div class="fin-relatorio-chart-wrapper">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem">
-        <p style="font-size:0.78rem;font-weight:600;margin:0;color:var(--texto-mutado)">Entradas × Saídas por dia</p>
-        <div style="display:flex;gap:1rem;font-size:0.72rem;color:var(--texto-mutado)">
-          <span><span style="display:inline-block;width:10px;height:10px;background:rgba(92,173,106,0.75);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Entradas</span>
-          <span><span style="display:inline-block;width:10px;height:10px;background:rgba(232,93,93,0.7);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Saídas</span>
-        </div>
-      </div>
-      <div style="overflow-x:auto;padding-left:42px">
-        <div style="display:flex;align-items:flex-end;gap:10px;height:${chartH + 28}px;min-width:${por_data.length * grpW}px;position:relative;padding-bottom:24px">
-          ${grades}
-          ${por_data.map(d => {
-            const hEnt = d.entradas ? Math.max(3, Math.round((d.entradas / maxVal) * chartH)) : 0
-            const hSai = d.saidas   ? Math.max(3, Math.round((d.saidas   / maxVal) * chartH)) : 0
-            const dia  = d.data.split('/')[0] + '/' + d.data.split('/')[1]
-            const temEnt = d.entradas > 0
-            const temSai = d.saidas   > 0
-            return `<div style="display:flex;flex-direction:column;align-items:center;gap:0;justify-content:flex-end;height:${chartH}px;flex-shrink:0;width:${grpW}px" title="${esc(d.data)} — +${_fmtVal(d.entradas)} / −${_fmtVal(d.saidas)}">
-              <div style="display:flex;gap:${gap}px;align-items:flex-end">
-                <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-                  ${temEnt ? `<span style="font-size:0.56rem;color:rgba(92,173,106,0.9);font-weight:600;white-space:nowrap">${_fmtVal(d.entradas)}</span>` : ''}
-                  <div style="width:${barW}px;height:${hEnt}px;background:rgba(92,173,106,0.75);border-radius:3px 3px 0 0;min-height:${temEnt?3:0}px"></div>
-                </div>
-                <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-                  ${temSai ? `<span style="font-size:0.56rem;color:rgba(232,93,93,0.9);font-weight:600;white-space:nowrap">${_fmtVal(d.saidas)}</span>` : ''}
-                  <div style="width:${barW}px;height:${hSai}px;background:rgba(232,93,93,0.7);border-radius:3px 3px 0 0;min-height:${temSai?3:0}px"></div>
-                </div>
-              </div>
-              <span style="font-size:0.62rem;color:var(--texto-mutado);margin-top:5px;white-space:nowrap">${dia}</span>
-            </div>`
-          }).join('')}
+      <p style="font-size:0.78rem;font-weight:600;margin:0 0 1.1rem;color:var(--texto-mutado)">Entradas × Saídas</p>
+      <div style="display:flex;align-items:center;gap:1.75rem;flex-wrap:wrap">
+        <svg width="160" height="160" viewBox="0 0 160 160" style="flex-shrink:0;overflow:visible">
+          ${_svgSlices}
+          <text x="${_cx}" y="${_cy - 7}" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="10.5" font-family="inherit">Saldo</text>
+          <text x="${_cx}" y="${_cy + 10}" text-anchor="middle" fill="${_saldoCor}" font-size="12.5" font-weight="bold" font-family="inherit">${_fmtVal(totais.saldo)}</text>
+        </svg>
+        <div style="display:flex;flex-direction:column;gap:1rem;flex:1;min-width:130px">
+          <div>
+            <div style="display:flex;align-items:center;gap:0.45rem;margin-bottom:0.3rem">
+              <span style="width:11px;height:11px;border-radius:3px;background:rgba(92,173,106,0.82);flex-shrink:0"></span>
+              <span style="font-size:0.76rem;color:var(--texto-mutado)">Entradas</span>
+              <span style="font-size:0.69rem;color:rgba(92,173,106,0.8);margin-left:auto;font-weight:600">${_pctEnt}%</span>
+            </div>
+            <span style="font-size:1.05rem;font-weight:700;color:var(--sucesso)">${_fmtVal(totais.entradas)}</span>
+          </div>
+          <div style="height:1px;background:rgba(255,255,255,0.06)"></div>
+          <div>
+            <div style="display:flex;align-items:center;gap:0.45rem;margin-bottom:0.3rem">
+              <span style="width:11px;height:11px;border-radius:3px;background:rgba(232,93,93,0.75);flex-shrink:0"></span>
+              <span style="font-size:0.76rem;color:var(--texto-mutado)">Saídas</span>
+              <span style="font-size:0.69rem;color:rgba(232,93,93,0.8);margin-left:auto;font-weight:600">${_pctSai}%</span>
+            </div>
+            <span style="font-size:1.05rem;font-weight:700;color:var(--erro)">${_fmtVal(totais.saidas)}</span>
+          </div>
         </div>
       </div>
     </div>`
@@ -6600,6 +6609,277 @@ function _renderRelatorio(data) {
   return html
 }
 
+
+// ── DASHBOARD ANUAL ────────────────────────────────────────
+
+async function carregarFinAnual(ano, mes) {
+  const el = document.getElementById('fin-anual')
+  if (!el) return
+  el.innerHTML = '<p class="carregando">Carregando…</p>'
+  try {
+    const anoParam  = parseInt(ano  || new Date().getFullYear())
+    const mesParam  = mes || `${anoParam}-${String(new Date().getMonth()+1).padStart(2,'0')}`
+    const congParam = finCongFiltro ? `&congregacao_id=${encodeURIComponent(finCongFiltro)}` : ''
+    const [anualData, mensalData] = await Promise.all([
+      api('GET', `/financeiro/dashboard-anual?ano=${anoParam}${congParam}`),
+      api('GET', `/financeiro/relatorio?mes=${mesParam}${congParam}`)
+    ])
+    el.innerHTML = _renderDashAnual(anualData, mensalData, String(mesParam))
+  } catch (e) {
+    el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
+  }
+}
+
+function _renderDashAnual(anualData, mensalData, mesSel) {
+  const { ano, meses, categorias, totais: totAno } = anualData
+  const { por_categoria: porCatMes, totais: totMes } = mensalData
+  const anoNum = parseInt(ano)
+  const mesIdx = parseInt((mesSel || '').split('-')[1] || new Date().getMonth()+1) - 1
+
+  const MESES_FULL  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+  const MESES_CURTO = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+  const CORES = ['#FF6B35','#9B59B6','#3498DB','#2ECC71','#E74C3C','#F39C12','#1ABC9C','#E91E63','#00BCD4','#4CAF50','#FF5722','#B45309','#8E44AD','#16A085','#D35400']
+
+  // ── Preenche 12 meses ──────────────────────────────────────
+  const mesMap = {}
+  for (const m of meses) mesMap[m.mes] = m
+  const meses12 = Array.from({ length: 12 }, (_, i) => {
+    const k = `${ano}-${String(i+1).padStart(2,'0')}`
+    return { mes: k, idx: i, entradas: 0, saidas: 0, ...( mesMap[k] || {} ) }
+  })
+
+  // ── Sparkline SVG ──────────────────────────────────────────
+  const _spk = (vals, cor) => {
+    const mx = Math.max(...vals, 1), w = 88, h = 28, n = vals.length
+    if (n < 2) return ''
+    const pts = vals.map((v, i) => `${(i/(n-1)*w).toFixed(1)},${(h-(v/mx)*(h-4)-2).toFixed(1)}`).join(' ')
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="overflow:hidden">
+      <polygon points="0,${h} ${pts} ${w},${h}" fill="${cor}" opacity="0.15"/>
+      <polyline points="${pts}" fill="none" stroke="${cor}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`
+  }
+
+  // ── Donut multi-slice ──────────────────────────────────────
+  const _donut = (slices, cx, cy, Ro, Ri) => {
+    const tot = slices.reduce((s,sl) => s+(sl.v||0), 0) || 1
+    const toRad = p => (p-0.25)*Math.PI*2
+    const pt = (r,p) => [(cx+r*Math.cos(toRad(p))).toFixed(2),(cy+r*Math.sin(toRad(p))).toFixed(2)]
+    let paths='', start=0
+    for (const sl of slices) {
+      if (!sl.v) continue
+      const pct = sl.v/tot, gap = 0.004
+      const s = start+gap, e = start+pct-gap
+      if (pct >= 0.998) {
+        paths += `<circle cx="${cx}" cy="${cy}" r="${Ro}" fill="${sl.c}"/><circle cx="${cx}" cy="${cy}" r="${Ri}" fill="var(--fundo)"/>`
+      } else if (e > s) {
+        const [x0o,y0o]=pt(Ro,s),[x1o,y1o]=pt(Ro,e),[x1i,y1i]=pt(Ri,e),[x0i,y0i]=pt(Ri,s)
+        const lg = pct>0.5?1:0
+        paths += `<path d="M ${x0o} ${y0o} A ${Ro} ${Ro} 0 ${lg} 1 ${x1o} ${y1o} L ${x1i} ${y1i} A ${Ri} ${Ri} 0 ${lg} 0 ${x0i} ${y0i} Z" fill="${sl.c}"/>`
+      }
+      start += pct
+    }
+    return paths
+  }
+
+  // ── Ring de progresso ──────────────────────────────────────
+  const _ring = (pct, cor, label, val) =>
+    `<div style="display:flex;flex-direction:column;align-items:center;gap:0.3rem;min-width:72px">
+      <svg viewBox="0 0 36 36" width="56" height="56">
+        <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3.5"/>
+        <circle cx="18" cy="18" r="15.9" fill="none" stroke="${cor}" stroke-width="3.5"
+          stroke-dasharray="${pct.toFixed(1)} 100" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+        <text x="18" y="20.5" text-anchor="middle" fill="white" font-size="6.2" font-weight="bold">${pct.toFixed(0)}%</text>
+      </svg>
+      <span style="font-size:0.6rem;color:var(--texto-mutado);text-align:center;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(label)}">${esc(label)}</span>
+      <span style="font-size:0.62rem;font-weight:600;color:rgba(255,255,255,0.75)">${_fmtVal(val)}</span>
+    </div>`
+
+  // ── Dados por categoria ────────────────────────────────────
+  const despMes = (porCatMes||[]).filter(c=>c.tipo==='saida').sort((a,b)=>b.total-a.total)
+  const recMes  = (porCatMes||[]).filter(c=>c.tipo==='entrada').sort((a,b)=>b.total-a.total)
+  const despAno = categorias.filter(c=>c.tipo==='saida').sort((a,b)=>b.total-a.total)
+  const recAno  = categorias.filter(c=>c.tipo==='entrada').sort((a,b)=>b.total-a.total)
+  const totDespMes = despMes.reduce((s,c)=>s+c.total,0)||1
+  const totDespAno = despAno.reduce((s,c)=>s+c.total,0)||1
+  const maxRecAno  = Math.max(...recAno.map(c=>c.total),1)
+
+  const slicesMes = despMes.map((c,i)=>({c:CORES[i%CORES.length],v:c.total,nome:c.nome}))
+  const slicesAno = despAno.map((c,i)=>({c:CORES[i%CORES.length],v:c.total,nome:c.nome}))
+
+  const _legenda = slices => slices.slice(0,7).map(sl=>
+    `<div style="display:flex;align-items:center;gap:0.3rem;font-size:0.66rem">
+      <span style="width:7px;height:7px;border-radius:50%;background:${sl.c};flex-shrink:0"></span>
+      <span style="color:var(--texto-mutado);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px">${esc(sl.nome)}</span>
+    </div>`).join('')
+
+  // ── Barras horizontais por categoria (mês) ─────────────────
+  const maxDetMes = Math.max(...despMes.map(c=>c.total),1)
+  const detalhe = despMes.map((c,i)=>{
+    const pct = Math.min(100,Math.round((c.total/maxDetMes)*100))
+    return `<div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.5rem">
+      <span style="font-size:0.72rem;color:var(--texto-mutado);min-width:88px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.nome)}</span>
+      <div style="flex:1;height:5px;border-radius:999px;background:rgba(255,255,255,0.06)">
+        <div style="height:5px;border-radius:999px;width:${pct}%;background:${CORES[i%CORES.length]};opacity:0.85"></div>
+      </div>
+      <span style="font-size:0.7rem;font-weight:600;color:rgba(255,255,255,0.75);min-width:66px;text-align:right;flex-shrink:0">${_fmtVal(c.total)}</span>
+    </div>`}).join('')
+
+  // ── Fontes de receita (ano) barras ─────────────────────────
+  const barrasRec = recAno.map(c=>{
+    const pct = Math.min(100,Math.round((c.total/maxRecAno)*100))
+    return `<div style="margin-bottom:0.55rem">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.2rem;font-size:0.76rem">
+        <span style="font-weight:500">${esc(c.nome)}</span>
+        <span style="font-weight:700;color:var(--sucesso);flex-shrink:0;margin-left:0.5rem">${_fmtVal(c.total)}</span>
+      </div>
+      <div style="height:4px;border-radius:999px;background:rgba(255,255,255,0.06)">
+        <div style="height:4px;border-radius:999px;width:${pct}%;background:var(--sucesso);opacity:0.8"></div>
+      </div>
+    </div>`}).join('')
+
+  // ── Gráfico de barras anual ────────────────────────────────
+  const maxBar = Math.max(...meses12.map(m=>Math.max(m.entradas||0,m.saidas||0)),1)
+  const bH=140, bW=12, bGp=2, bGrp=bW*2+bGp+14
+  const barGrades = [1,0.5].map(pct=>{
+    const y = Math.round((1-pct)*bH)
+    return `<div style="position:absolute;top:${y}px;left:0;right:0;height:1px;background:rgba(255,255,255,0.06)">
+      <span style="position:absolute;right:calc(100% + 4px);top:-6px;font-size:0.54rem;color:rgba(255,255,255,0.2);white-space:nowrap">${_fmtVal(maxBar*pct)}</span>
+    </div>`}).join('')
+
+  const barrasMeses = meses12.map((m,i)=>{
+    const hE=(m.entradas||0)?Math.max(3,Math.round(((m.entradas||0)/maxBar)*bH)):0
+    const hS=(m.saidas||0)?Math.max(3,Math.round(((m.saidas||0)/maxBar)*bH)):0
+    const sel = m.mes===mesSel
+    return `<div onclick="carregarFinAnual(${anoNum},'${m.mes}')" title="${MESES_FULL[i]} — +${_fmtVal(m.entradas||0)} / −${_fmtVal(m.saidas||0)}"
+      style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:${bH}px;flex-shrink:0;width:${bGrp}px;cursor:pointer;${sel?'filter:brightness(1.25);':'opacity:0.85;'}">
+      <div style="display:flex;gap:${bGp}px;align-items:flex-end">
+        <div style="width:${bW}px;height:${hE}px;background:rgba(92,173,106,0.8);border-radius:3px 3px 0 0;min-height:${hE?3:0}px"></div>
+        <div style="width:${bW}px;height:${hS}px;background:rgba(232,93,93,0.75);border-radius:3px 3px 0 0;min-height:${hS?3:0}px"></div>
+      </div>
+      <span style="font-size:0.56rem;color:${sel?'var(--texto)':'var(--texto-mutado)'};margin-top:4px;font-weight:${sel?700:400}">${MESES_CURTO[i]}</span>
+    </div>`}).join('')
+
+  // ── Sidebar ────────────────────────────────────────────────
+  const anoAtual = new Date().getFullYear()
+  const anosBtns = [anoAtual,anoAtual-1,anoAtual-2].map(y=>
+    `<button onclick="carregarFinAnual(${y})" style="display:block;width:100%;text-align:left;padding:0.28rem 0.5rem;border-radius:5px;border:none;cursor:pointer;font-size:0.78rem;font-weight:${y===anoNum?700:400};background:${y===anoNum?'rgba(201,74,82,0.2)':'transparent'};color:${y===anoNum?'var(--primaria)':'var(--texto-mutado)'};transition:background 0.15s">${y}</button>`
+  ).join('')
+  const mesBtns = MESES_FULL.map((nome,i)=>{
+    const k=`${ano}-${String(i+1).padStart(2,'0')}`
+    const sel=k===mesSel
+    return `<button onclick="carregarFinAnual(${anoNum},'${k}')" style="display:block;width:100%;text-align:left;padding:0.26rem 0.5rem;border-radius:5px;border:none;cursor:pointer;font-size:0.74rem;font-weight:${sel?600:400};background:${sel?'rgba(201,74,82,0.18)':'transparent'};color:${sel?'var(--primaria)':'var(--texto-mutado)'};white-space:nowrap;transition:background 0.15s">${nome}</button>`
+  }).join('')
+
+  // ── Sparklines ─────────────────────────────────────────────
+  const spkEnt  = _spk(meses12.map(m=>m.entradas||0),'rgba(92,173,106,0.9)')
+  const spkSai  = _spk(meses12.map(m=>m.saidas||0),'rgba(232,93,93,0.9)')
+  const spkSald = _spk(meses12.map(m=>(m.entradas||0)-(m.saidas||0)),totAno.saldo>=0?'rgba(92,173,106,0.9)':'rgba(232,93,93,0.9)')
+  const nomeMes = MESES_FULL[mesIdx] || ''
+
+  const _kpi = (titulo, valor, cls, spk) => `
+    <div class="fin-relatorio-chart-wrapper" style="padding:0.85rem 1rem">
+      <p style="font-size:0.68rem;color:var(--texto-mutado);margin:0 0 0.3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${titulo}</p>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:0.5rem">
+        <span class="fin-stat-valor ${cls}" style="font-size:1.15rem;font-weight:700;flex-shrink:0">${valor}</span>
+        <div style="flex-shrink:0">${spk}</div>
+      </div>
+    </div>`
+
+  return `
+  <div style="display:flex;gap:0.75rem;align-items:start">
+
+    <!-- Sidebar -->
+    <div style="flex-shrink:0;width:112px;display:flex;flex-direction:column;gap:0.75rem">
+      <div class="fin-relatorio-chart-wrapper" style="padding:0.7rem 0.6rem">
+        <p style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--texto-mutado);margin:0 0 0.4rem">Ano</p>
+        ${anosBtns}
+      </div>
+      <div class="fin-relatorio-chart-wrapper" style="padding:0.7rem 0.6rem">
+        <p style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--texto-mutado);margin:0 0 0.4rem">Mês</p>
+        ${mesBtns}
+      </div>
+    </div>
+
+    <!-- Conteúdo principal -->
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:0.75rem">
+
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem">
+        ${_kpi('Entradas — '+nomeMes, _fmtVal(totMes.entradas), 'fin-stat-entrada', spkEnt)}
+        ${_kpi('Saídas — '+nomeMes, _fmtVal(totMes.saidas), 'fin-stat-saida', spkSai)}
+        ${_kpi('Saldo — '+nomeMes, _fmtVal(totMes.saldo), totMes.saldo>=0?'fin-stat-saldo-pos':'fin-stat-saldo-neg', spkSald)}
+      </div>
+
+      <!-- Análise Anual + Donut mês -->
+      <div style="display:flex;gap:0.75rem;align-items:start;flex-wrap:wrap">
+        <div class="fin-relatorio-chart-wrapper" style="flex:2;min-width:200px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.7rem;flex-wrap:wrap;gap:0.35rem">
+            <p style="font-size:0.72rem;font-weight:600;margin:0;color:var(--texto-mutado)">Análise Anual ${anoNum}</p>
+            <div style="display:flex;gap:0.65rem;font-size:0.66rem;color:var(--texto-mutado)">
+              <span><span style="display:inline-block;width:8px;height:8px;background:rgba(92,173,106,0.8);border-radius:2px;margin-right:3px;vertical-align:middle"></span>Entradas</span>
+              <span><span style="display:inline-block;width:8px;height:8px;background:rgba(232,93,93,0.75);border-radius:2px;margin-right:3px;vertical-align:middle"></span>Saídas</span>
+            </div>
+          </div>
+          <div style="overflow-x:auto;padding-left:34px">
+            <div style="display:flex;align-items:flex-end;gap:0;height:${bH+22}px;min-width:${12*bGrp}px;position:relative;padding-bottom:20px">
+              ${barGrades}${barrasMeses}
+            </div>
+          </div>
+        </div>
+        <div class="fin-relatorio-chart-wrapper" style="flex:1;min-width:170px">
+          <p style="font-size:0.7rem;font-weight:600;margin:0 0 0.7rem;color:var(--texto-mutado)">Despesas — ${nomeMes}</p>
+          ${despMes.length ? `
+            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+              <svg width="110" height="110" viewBox="0 0 110 110" style="flex-shrink:0">
+                ${_donut(slicesMes,55,55,48,31)}
+                <text x="55" y="52" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-size="8.5">Total</text>
+                <text x="55" y="64" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="9.5" font-weight="bold">${_fmtVal(totDespMes)}</text>
+              </svg>
+              <div style="display:flex;flex-direction:column;gap:0.28rem">${_legenda(slicesMes)}</div>
+            </div>` : '<p class="muted" style="font-size:0.78rem">Sem despesas no mês.</p>'}
+        </div>
+      </div>
+
+      <!-- Donut ano + Rings participação -->
+      <div style="display:flex;gap:0.75rem;align-items:start;flex-wrap:wrap">
+        <div class="fin-relatorio-chart-wrapper" style="flex:1;min-width:170px">
+          <p style="font-size:0.7rem;font-weight:600;margin:0 0 0.7rem;color:var(--texto-mutado)">Despesas no Ano ${anoNum}</p>
+          ${despAno.length ? `
+            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+              <svg width="110" height="110" viewBox="0 0 110 110" style="flex-shrink:0">
+                ${_donut(slicesAno,55,55,48,31)}
+                <text x="55" y="52" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-size="8.5">Total</text>
+                <text x="55" y="64" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="9.5" font-weight="bold">${_fmtVal(totDespAno)}</text>
+              </svg>
+              <div style="display:flex;flex-direction:column;gap:0.28rem">${_legenda(slicesAno)}</div>
+            </div>` : '<p class="muted" style="font-size:0.78rem">Sem despesas no ano.</p>'}
+        </div>
+        <div class="fin-relatorio-chart-wrapper" style="flex:2;min-width:200px">
+          <p style="font-size:0.7rem;font-weight:600;margin:0 0 0.8rem;color:var(--texto-mutado)">Participação por categoria — ${anoNum}</p>
+          ${despAno.length ? `
+            <div style="display:flex;flex-wrap:wrap;gap:0.6rem;justify-content:center">
+              ${despAno.slice(0,9).map((c,i)=>_ring((c.total/totDespAno)*100,CORES[i%CORES.length],c.nome,c.total)).join('')}
+            </div>` : '<p class="muted" style="font-size:0.78rem">Sem dados.</p>'}
+        </div>
+      </div>
+
+      <!-- Detalhamento mês + Fontes receita ano -->
+      <div style="display:flex;gap:0.75rem;align-items:start;flex-wrap:wrap">
+        ${despMes.length ? `
+        <div class="fin-relatorio-chart-wrapper" style="flex:1.2;min-width:200px">
+          <p style="font-size:0.7rem;font-weight:600;margin:0 0 0.8rem;color:var(--texto-mutado)">Detalhamento de Despesas — ${nomeMes}</p>
+          ${detalhe}
+        </div>` : ''}
+        ${recAno.length ? `
+        <div class="fin-relatorio-chart-wrapper" style="flex:1;min-width:180px">
+          <p style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--sucesso);margin-bottom:0.8rem;opacity:0.85">↑ Fontes de Receitas — ${anoNum}</p>
+          ${barrasRec}
+        </div>` : ''}
+      </div>
+
+    </div>
+  </div>`
+}
 
 // ── CATEGORIAS ─────────────────────────────────────────────
 
