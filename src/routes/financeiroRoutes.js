@@ -128,8 +128,8 @@ router.post('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
     return res.status(400).json({ erro: 'data, categoria_id, valor e tipo são obrigatórios' })
   if (!['entrada','saida'].includes(tipo))
     return res.status(400).json({ erro: 'tipo deve ser entrada ou saida' })
-  if (tipo === 'saida' && req.usuario.role !== 'admin')
-    return res.status(403).json({ erro: 'Apenas admin pode lançar saídas' })
+  if (tipo === 'saida' && req.usuario.role !== 'admin' && !req.usuario.acesso_financeiro_saida)
+    return res.status(403).json({ erro: 'Apenas o administrador financeiro pode lançar saídas' })
 
   const cat = db.get('SELECT id FROM categorias_financeiro WHERE id=? AND ativo=1', categoria_id)
   if (!cat) return res.status(400).json({ erro: 'Categoria inválida ou inativa' })
