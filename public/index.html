@@ -1110,18 +1110,58 @@
 
       .nav-link { width: 100%; text-align: left; }
 
-      .fin-resumo-grid { grid-template-columns: 1fr 1fr; }
-      .fin-stat-valor { font-size: 1.05rem; }
+      /* Financeiro — stat cards: 3 colunas compactas */
+      .fin-resumo-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.4rem;
+        margin-bottom: 0.85rem;
+      }
+      .fin-stat-card { padding: 0.6rem 0.5rem; }
+      .fin-stat-label { font-size: 0.6rem; margin-bottom: 0.2rem; }
+      .fin-stat-valor { font-size: 0.9rem; }
 
-      /* Financeiro — filtro de período empilha em tela pequena */
-      #fin-periodo-bar { flex-direction: column; align-items: flex-start; gap: 0.35rem; }
+      /* Financeiro — abas: scroll horizontal, sem quebra de linha */
+      .fin-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 2px;
+        margin-bottom: 0.85rem;
+      }
+      .fin-tabs::-webkit-scrollbar { display: none; }
+      .fin-tab { white-space: nowrap; flex-shrink: 0; font-size: 0.78rem; padding: 0.4rem 0.7rem; }
+
+      /* Financeiro — filtros empilham */
+      #fin-cong-bar  { flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 0.45rem 0.7rem; }
+      #fin-cong-bar select { max-width: 100% !important; width: 100%; }
+      #fin-periodo-bar { flex-direction: column; align-items: stretch; gap: 0.35rem; padding: 0.45rem 0.7rem; }
       #fin-periodo-bar input[type=date] { width: 100%; }
+      #fin-periodo-bar span[style*="mutado"] { display: none; }
 
-      /* Modal Lançamento em Lote — grids fixos viram coluna única */
+      /* Financeiro — botões de ação no topo empilham */
+      #pagina-financeiro .pagina-actions { flex-wrap: wrap; gap: 0.4rem; }
+      #pagina-financeiro .pagina-actions .btn { font-size: 0.78rem; padding: 0.4rem 0.65rem; }
+
+      /* Financeiro — chips de lançamento: 2 por linha */
+      .fin-chip { min-width: calc(50% - 0.25rem); flex: 1 1 calc(50% - 0.25rem); max-width: 100%; }
+
+      /* Financeiro — card de dia menor padding */
+      .fin-dia-card { padding: 0.75rem; }
+
+      /* Modal Lançamento em Lote */
       #modal-lancamento-lote .modal { max-width: 100% !important; }
     }
 
     @media (max-width: 480px) {
+      /* Stat cards: fonte ainda menor mas mantém 3 colunas */
+      .fin-stat-card { padding: 0.5rem 0.4rem; }
+      .fin-stat-label { font-size: 0.55rem; letter-spacing: 0; }
+      .fin-stat-valor { font-size: 0.82rem; }
+
+      /* Chips: 1 por linha em telas muito pequenas */
+      .fin-chip { min-width: 100%; flex: 1 1 100%; }
+
       /* Grid 120px/flex/130px do lote quebra em mobile pequeno */
       #modal-lancamento-lote [style*="120px 1fr 130px"] {
         grid-template-columns: 1fr 1fr !important;
@@ -1130,8 +1170,6 @@
       #modal-lancamento-lote [style*="1fr 1fr"] {
         grid-template-columns: 1fr !important;
       }
-      /* Abas financeiro — fonte menor para caber */
-      .fin-tab { font-size: 0.75rem; padding: 0.4rem 0.5rem; }
     }
 
     /* ── FINANCEIRO ────────────────────────────────────────── */
@@ -1140,6 +1178,7 @@
       gap: 0.375rem;
       margin-bottom: 1.25rem;
       flex-wrap: wrap;
+      align-items: center;
     }
     .fin-tab {
       padding: 0.45rem 0.85rem;
@@ -1537,11 +1576,13 @@
       <!-- Filtro de período -->
       <div id="fin-periodo-bar" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem;padding:0.45rem 0.85rem;background:var(--fundo-elevado);border-radius:var(--raio);border:1px solid var(--borda);flex-wrap:wrap">
         <span style="font-size:0.78rem;color:var(--texto-mutado);white-space:nowrap">📅 Período:</span>
-        <input type="date" id="fin-data-inicio" onchange="_setFinPeriodo()"
-               style="padding:0.28rem 0.55rem;border-radius:var(--raio);background:var(--fundo);border:1px solid var(--borda);color:var(--texto);font-size:0.82rem;cursor:pointer"/>
-        <span style="font-size:0.78rem;color:var(--texto-mutado)">até</span>
-        <input type="date" id="fin-data-fim" onchange="_setFinPeriodo()"
-               style="padding:0.28rem 0.55rem;border-radius:var(--raio);background:var(--fundo);border:1px solid var(--borda);color:var(--texto);font-size:0.82rem;cursor:pointer"/>
+        <div style="display:flex;align-items:center;gap:0.4rem;flex:1;flex-wrap:wrap">
+          <input type="date" id="fin-data-inicio" onchange="_setFinPeriodo()"
+                 style="flex:1;min-width:120px;padding:0.28rem 0.55rem;border-radius:var(--raio);background:var(--fundo);border:1px solid var(--borda);color:var(--texto);font-size:0.82rem;cursor:pointer"/>
+          <span style="font-size:0.78rem;color:var(--texto-mutado);flex-shrink:0">até</span>
+          <input type="date" id="fin-data-fim" onchange="_setFinPeriodo()"
+                 style="flex:1;min-width:120px;padding:0.28rem 0.55rem;border-radius:var(--raio);background:var(--fundo);border:1px solid var(--borda);color:var(--texto);font-size:0.82rem;cursor:pointer"/>
+        </div>
       </div>
 
       <!-- Sub-tabs -->
@@ -5782,7 +5823,8 @@ function finTab(aba) {
 async function carregarFinanceiro() {
   if (!_finTemAcesso()) return
   const tabCat = document.getElementById('fin-tab-cat')
-  if (tabCat) tabCat.style.display = usuario?.role === 'admin' ? '' : 'none'
+  const podeGerenciarCats = usuario?.role === 'admin' || !!usuario?.acesso_financeiro_saida
+  if (tabCat) tabCat.style.display = podeGerenciarCats ? '' : 'none'
 
   // Esconde Dashboard e Relatório para quem só pode lançar
   const podeRelatorio = _finTemRelatorio()
@@ -6526,8 +6568,8 @@ function _renderRelatorio(data) {
 async function carregarFinCategorias() {
   const el = document.getElementById('fin-categorias')
   if (!el) return
-  if (usuario?.role !== 'admin') {
-    el.innerHTML = `<p class="muted">Apenas administradores podem gerenciar categorias.</p>`
+  if (usuario?.role !== 'admin' && !usuario?.acesso_financeiro_saida) {
+    el.innerHTML = `<p class="muted">Apenas o administrador financeiro pode gerenciar categorias.</p>`
     return
   }
   el.innerHTML = '<p class="carregando">Carregando…</p>'

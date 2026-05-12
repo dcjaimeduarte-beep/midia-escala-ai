@@ -2,7 +2,7 @@ const express = require('express')
 const router  = express.Router()
 const { v4: uuid } = require('uuid')
 const db = require('../db/database')
-const { autenticar, apenasAdmin, apenasFinanceiro, apenasRelatorioFinanceiro } = require('../auth/middleware')
+const { autenticar, apenasAdmin, apenasAdminFinanceiro, apenasFinanceiro, apenasRelatorioFinanceiro } = require('../auth/middleware')
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 function hoje() {
@@ -34,7 +34,7 @@ router.get('/categorias', autenticar, apenasFinanceiro, (req, res) => {
 })
 
 // POST /financeiro/categorias
-router.post('/categorias', autenticar, apenasAdmin, (req, res) => {
+router.post('/categorias', autenticar, apenasAdminFinanceiro, (req, res) => {
   const { nome, tipo } = req.body
   if (!nome || !['entrada','saida'].includes(tipo))
     return res.status(400).json({ erro: 'nome e tipo (entrada|saida) obrigatórios' })
@@ -45,7 +45,7 @@ router.post('/categorias', autenticar, apenasAdmin, (req, res) => {
 })
 
 // PUT /financeiro/categorias/:id
-router.put('/categorias/:id', autenticar, apenasAdmin, (req, res) => {
+router.put('/categorias/:id', autenticar, apenasAdminFinanceiro, (req, res) => {
   const { nome, tipo, ativo } = req.body
   const cat = db.get('SELECT id FROM categorias_financeiro WHERE id=?', req.params.id)
   if (!cat) return res.status(404).json({ erro: 'Categoria não encontrada' })
@@ -58,7 +58,7 @@ router.put('/categorias/:id', autenticar, apenasAdmin, (req, res) => {
 })
 
 // DELETE /financeiro/categorias/:id
-router.delete('/categorias/:id', autenticar, apenasAdmin, (req, res) => {
+router.delete('/categorias/:id', autenticar, apenasAdminFinanceiro, (req, res) => {
   const uso = db.get('SELECT id FROM lancamentos_financeiro WHERE categoria_id=? LIMIT 1', req.params.id)
   if (uso) return res.status(400).json({ erro: 'Categoria em uso, não pode ser excluída. Desative-a.' })
   db.run('DELETE FROM categorias_financeiro WHERE id=?', req.params.id)
@@ -210,7 +210,7 @@ router.delete('/lancamentos/:id', autenticar, apenasFinanceiro, (req, res) => {
 })
 
 // POST /financeiro/lancamentos/:id/validar
-router.post('/lancamentos/:id/validar', autenticar, apenasAdmin, (req, res) => {
+router.post('/lancamentos/:id/validar', autenticar, apenasAdminFinanceiro, (req, res) => {
   const lanc = db.get('SELECT id FROM lancamentos_financeiro WHERE id=?', req.params.id)
   if (!lanc) return res.status(404).json({ erro: 'Lançamento não encontrado' })
   db.run('UPDATE lancamentos_financeiro SET validado=1, validado_por=?, validado_em=? WHERE id=?',
@@ -219,7 +219,7 @@ router.post('/lancamentos/:id/validar', autenticar, apenasAdmin, (req, res) => {
 })
 
 // POST /financeiro/lancamentos/:id/desvalidar (admin pode reverter)
-router.post('/lancamentos/:id/desvalidar', autenticar, apenasAdmin, (req, res) => {
+router.post('/lancamentos/:id/desvalidar', autenticar, apenasAdminFinanceiro, (req, res) => {
   db.run('UPDATE lancamentos_financeiro SET validado=0, validado_por=NULL, validado_em=NULL WHERE id=?', req.params.id)
   res.json({ ok: true })
 })
