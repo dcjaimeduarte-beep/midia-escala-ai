@@ -1,18 +1,41 @@
 const fs   = require('fs')
 const path = require('path')
 
-const CONFIG_FILE = path.join(__dirname, '..', '..', 'backup_config.json')
+// Arquivo legado — mantido apenas para migração automática para o SQLite
+const CONFIG_FILE_LEGADO = path.join(__dirname, '..', '..', 'backup_config.json')
+
+const DEFAULTS = { ativo: false, hora: '02:00', pasta: '', manter_dias: 7, enviar_email: false, email_destino: '' }
+
+function _db() {
+  return require('../db/database')
+}
 
 function lerConfig() {
   try {
-    if (fs.existsSync(CONFIG_FILE))
-      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'))
+    const row = _db().get(`SELECT valor FROM configuracoes WHERE chave = 'backup_config'`)
+    if (row) return { ...DEFAULTS, ...JSON.parse(row.valor) }
+
+    // Migração automática: arquivo JSON legado → SQLite
+    if (fs.existsSync(CONFIG_FILE_LEGADO)) {
+      const cfg = { ...DEFAULTS, ...JSON.parse(fs.readFileSync(CONFIG_FILE_LEGADO, 'utf8')) }
+      salvarConfig(cfg)
+      try { fs.unlinkSync(CONFIG_FILE_LEGADO) } catch {}
+      return cfg
+    }
   } catch {}
-  return { ativo: false, hora: '02:00', pasta: '', manter_dias: 7, enviar_email: false, email_destino: '' }
+  return { ...DEFAULTS }
 }
 
 function salvarConfig(cfg) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf8')
+  const agora = new Date().toISOString()
+  _db().run(
+    `INSERT INTO configuracoes (chave, valor, criado_em, atualizado_em) VALUES (?, ?, ?, ?)
+     ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor, atualizado_em = excluded.atualizado_em`,
+    'backup_config',
+    JSON.stringify(cfg),
+    agora,
+    agora
+  )
 }
 
 async function gerarBackup() {
@@ -20,7 +43,7 @@ async function gerarBackup() {
   if (!config.pasta && !config.enviar_email)
     return { ok: false, erro: 'Configure a pasta de destino ou o e-mail de backup.' }
 
-  const db = require('../db/database')
+  const db = _db()
   const tabelas = {}
   db.all(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`)
     .forEach(({ name }) => {
@@ -34,7 +57,6 @@ async function gerarBackup() {
   const conteudo   = JSON.stringify({ versao: '1.1', app: 'peniel-midia', gerado_em: agora.toISOString(), tabelas })
   const resultado  = { ok: true, arquivo: nomeArq, gerado_em: agora.toISOString(), pasta: false, email: false }
 
-  // Salvar em pasta
   if (config.pasta) {
     try {
       const destino = path.resolve(config.pasta)
@@ -58,7 +80,6 @@ async function gerarBackup() {
     }
   }
 
-  // Enviar por e-mail
   if (config.enviar_email && config.email_destino) {
     try {
       const { enviarBackupEmail } = require('./mail')
@@ -84,7 +105,8 @@ function iniciarAgendador() {
   if (_timer) clearInterval(_timer)
   _timer = setInterval(() => {
     const config = lerConfig()
-    if (!config.ativo || !config.hora || !config.pasta) return
+    if (!config.ativo || !config.hora) return
+    if (!config.pasta && !config.enviar_email) return
     const agora   = new Date()
     const horaNow = `${String(agora.getHours()).padStart(2,'0')}:${String(agora.getMinutes()).padStart(2,'0')}`
     const chave   = `${agora.toISOString().slice(0,10)}_${horaNow}`

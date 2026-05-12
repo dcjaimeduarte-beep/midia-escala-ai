@@ -360,6 +360,16 @@ function migrate() {
   tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_comunicacoes      INTEGER NOT NULL DEFAULT 0`)
   tryExec(`ALTER TABLE perfis   ADD COLUMN acesso_financeiro_saida  INTEGER NOT NULL DEFAULT 0`)
   tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_financeiro_saida  INTEGER NOT NULL DEFAULT 0`)
+
+  // Tabela genérica de configurações do sistema (chave → valor JSON)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS configuracoes (
+      chave     TEXT PRIMARY KEY,
+      valor     TEXT NOT NULL DEFAULT '',
+      criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+      atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `)
 }
 
 /** Perfis macro (flags padrão). “Cultos” legado é removido em sincronizarPerfisMacro. */
