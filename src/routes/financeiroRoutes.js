@@ -165,9 +165,10 @@ router.post('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
 router.put('/lancamentos/:id', autenticar, apenasFinanceiro, (req, res) => {
   const lanc = db.get('SELECT * FROM lancamentos_financeiro WHERE id=?', req.params.id)
   if (!lanc) return res.status(404).json({ erro: 'Lançamento não encontrado' })
-  if (lanc.validado && req.usuario.role !== 'admin')
-    return res.status(403).json({ erro: 'Lançamento validado só pode ser alterado pelo admin' })
-  if (lanc.lancado_por !== req.usuario.id && req.usuario.role !== 'admin')
+  const ehAdminFin = req.usuario.role === 'admin' || req.usuario.acesso_financeiro_saida
+  if (lanc.validado && !ehAdminFin)
+    return res.status(403).json({ erro: 'Lançamento conferido só pode ser alterado pelo administrador financeiro' })
+  if (lanc.lancado_por !== req.usuario.id && !ehAdminFin)
     return res.status(403).json({ erro: 'Sem permissão para editar este lançamento' })
 
   const { valor, descricao, categoria_id, escala_id, evento_id, data } = req.body
@@ -201,9 +202,10 @@ router.put('/lancamentos/:id', autenticar, apenasFinanceiro, (req, res) => {
 router.delete('/lancamentos/:id', autenticar, apenasFinanceiro, (req, res) => {
   const lanc = db.get('SELECT * FROM lancamentos_financeiro WHERE id=?', req.params.id)
   if (!lanc) return res.status(404).json({ erro: 'Lançamento não encontrado' })
-  if (lanc.validado && req.usuario.role !== 'admin')
-    return res.status(403).json({ erro: 'Lançamento validado só pode ser excluído pelo admin' })
-  if (lanc.lancado_por !== req.usuario.id && req.usuario.role !== 'admin')
+  const ehAdminFin = req.usuario.role === 'admin' || req.usuario.acesso_financeiro_saida
+  if (lanc.validado && !ehAdminFin)
+    return res.status(403).json({ erro: 'Lançamento conferido só pode ser excluído pelo administrador financeiro' })
+  if (lanc.lancado_por !== req.usuario.id && !ehAdminFin)
     return res.status(403).json({ erro: 'Sem permissão para excluir este lançamento' })
   db.run('DELETE FROM lancamentos_financeiro WHERE id=?', req.params.id)
   res.json({ ok: true })

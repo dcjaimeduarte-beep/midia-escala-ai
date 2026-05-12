@@ -6416,7 +6416,7 @@ async function filtrarFinLancamentos(mes) {
 }
 
 function _renderChip(l, comAcoes) {
-  const isAdmin = usuario?.role === 'admin'
+  const isAdmin = usuario?.role === 'admin' || !!usuario?.acesso_financeiro_saida
   const isOwner = l.lancado_por === usuario?.id
   const cor = l.tipo === 'entrada' ? 'var(--sucesso)' : 'var(--erro)'
   const cls = l.tipo === 'entrada' ? 'fin-chip-entrada' : 'fin-chip-saida'
