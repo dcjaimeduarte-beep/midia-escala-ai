@@ -360,6 +360,7 @@ function migrate() {
   tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_comunicacoes      INTEGER NOT NULL DEFAULT 0`)
   tryExec(`ALTER TABLE perfis   ADD COLUMN acesso_financeiro_saida  INTEGER NOT NULL DEFAULT 0`)
   tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_financeiro_saida  INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE lancamentos_financeiro ADD COLUMN historico TEXT NOT NULL DEFAULT ''`)
 
   // Tabela genérica de configurações do sistema (chave → valor JSON)
   db.exec(`

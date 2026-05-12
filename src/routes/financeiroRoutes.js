@@ -123,7 +123,7 @@ router.get('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
 
 // POST /financeiro/lancamentos
 router.post('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
-  const { data, escala_id, evento_id, categoria_id, valor, descricao, tipo } = req.body
+  const { data, escala_id, evento_id, categoria_id, valor, descricao, historico, tipo } = req.body
   if (!data || !categoria_id || !valor || !tipo)
     return res.status(400).json({ erro: 'data, categoria_id, valor e tipo são obrigatórios' })
   if (!['entrada','saida'].includes(tipo))
@@ -145,9 +145,9 @@ router.post('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
   const agora = new Date().toISOString()
   const congId = req.usuario.congregacao_id || null
   db.run(`INSERT INTO lancamentos_financeiro
-    (id,data,escala_id,evento_id,categoria_id,valor,descricao,tipo,lancado_por,validado,criado_em,congregacao_id)
-    VALUES (?,?,?,?,?,?,?,?,?,0,?,?)`,
-    id, data, escala_id || null, eventoFinal, categoria_id, Number(valor), descricao || '', tipo, req.usuario.id, agora, congId)
+    (id,data,escala_id,evento_id,categoria_id,valor,descricao,historico,tipo,lancado_por,validado,criado_em,congregacao_id)
+    VALUES (?,?,?,?,?,?,?,?,?,?,0,?,?)`,
+    id, data, escala_id || null, eventoFinal, categoria_id, Number(valor), descricao || '', historico || '', tipo, req.usuario.id, agora, congId)
 
   res.status(201).json(db.get(`
     SELECT l.*, c.nome as categoria_nome, u.nome as lancado_por_nome,
@@ -171,9 +171,10 @@ router.put('/lancamentos/:id', autenticar, apenasFinanceiro, (req, res) => {
   if (lanc.lancado_por !== req.usuario.id && !ehAdminFin)
     return res.status(403).json({ erro: 'Sem permissão para editar este lançamento' })
 
-  const { valor, descricao, categoria_id, escala_id, evento_id, data } = req.body
+  const { valor, descricao, historico, categoria_id, escala_id, evento_id, data } = req.body
   if (valor !== undefined) db.run('UPDATE lancamentos_financeiro SET valor=? WHERE id=?', Number(valor), req.params.id)
   if (descricao !== undefined) db.run('UPDATE lancamentos_financeiro SET descricao=? WHERE id=?', descricao, req.params.id)
+  if (historico !== undefined) db.run('UPDATE lancamentos_financeiro SET historico=? WHERE id=?', historico, req.params.id)
   if (categoria_id) db.run('UPDATE lancamentos_financeiro SET categoria_id=? WHERE id=?', categoria_id, req.params.id)
   if (data) db.run('UPDATE lancamentos_financeiro SET data=? WHERE id=?', data, req.params.id)
   if (escala_id !== undefined) {
