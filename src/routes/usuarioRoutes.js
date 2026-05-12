@@ -178,6 +178,9 @@ router.put('/:id', autenticar, async (req, res) => {
   if (senha) {
     const hash = await bcrypt.hash(senha, 10)
     sql.run(`UPDATE usuarios SET senha = ? WHERE id = ?`, hash, req.params.id)
+    // Se quem mudou não é o próprio usuário, força troca na próxima entrada
+    if (req.params.id !== req.usuario.id)
+      sql.run(`UPDATE usuarios SET precisa_trocar_senha = 1 WHERE id = ?`, req.params.id)
   }
   if (acesso_financeiro !== undefined && admin)
     sql.run(`UPDATE usuarios SET acesso_financeiro = ? WHERE id = ?`, acesso_financeiro ? 1 : 0, req.params.id)

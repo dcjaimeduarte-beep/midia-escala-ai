@@ -6491,46 +6491,84 @@ function _renderRelatorio(data) {
 
   if (por_data.length) {
     const maxVal = Math.max(...por_data.map(d => Math.max(d.entradas, d.saidas)), 1)
-    const barHeight = 100
+    const chartH = 160
+    const barW   = 18
+    const gap    = 4
+    const grpW   = barW * 2 + gap + 12
+
+    // linhas de grade em 25%, 50%, 75%, 100%
+    const grades = [1, 0.75, 0.5, 0.25].map(pct => {
+      const y = Math.round((1 - pct) * chartH)
+      const label = _fmtVal(maxVal * pct)
+      return `<div style="position:absolute;top:${y}px;left:0;right:0;height:1px;background:rgba(255,255,255,0.07)">
+        <span style="position:absolute;right:calc(100% + 6px);top:-7px;font-size:0.58rem;color:rgba(255,255,255,0.25);white-space:nowrap">${label}</span>
+      </div>`
+    }).join('')
+
     html += `<div class="fin-relatorio-chart-wrapper">
-      <p style="font-size:0.78rem;font-weight:600;margin-bottom:0.85rem;color:var(--texto-mutado)">Entradas × Saídas por dia</p>
-      <div style="display:flex;align-items:flex-end;gap:4px;height:${barHeight}px;overflow-x:auto;padding-bottom:1.5rem;position:relative">
-        <div style="position:absolute;bottom:1.5rem;left:0;right:0;height:1px;background:rgba(255,255,255,0.07)"></div>`
-    for (const d of por_data) {
-      const hEnt = Math.round((d.entradas / maxVal) * barHeight)
-      const hSai = Math.round((d.saidas   / maxVal) * barHeight)
-      const dia  = d.data.split('/')[0]
-      html += `<div style="flex:1;min-width:18px;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end;height:100%" title="${esc(d.data)} — +${_fmtVal(d.entradas)} / -${_fmtVal(d.saidas)}">
-          <div style="display:flex;gap:2px;align-items:flex-end;width:100%">
-            <div style="flex:1;height:${hEnt}px;background:rgba(92,173,106,0.7);border-radius:2px 2px 0 0;min-height:${d.entradas?2:0}px"></div>
-            <div style="flex:1;height:${hSai}px;background:rgba(232,93,93,0.65);border-radius:2px 2px 0 0;min-height:${d.saidas?2:0}px"></div>
-          </div>
-          <span style="font-size:0.6rem;color:var(--texto-mutado);position:absolute;bottom:0">${dia}</span>
-        </div>`
-    }
-    html += `</div>
-      <div style="display:flex;gap:1rem;margin-top:0.3rem;font-size:0.72rem;color:var(--texto-mutado)">
-        <span><span style="display:inline-block;width:10px;height:10px;background:rgba(92,173,106,0.7);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Entradas</span>
-        <span><span style="display:inline-block;width:10px;height:10px;background:rgba(232,93,93,0.65);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Saídas</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem">
+        <p style="font-size:0.78rem;font-weight:600;margin:0;color:var(--texto-mutado)">Entradas × Saídas por dia</p>
+        <div style="display:flex;gap:1rem;font-size:0.72rem;color:var(--texto-mutado)">
+          <span><span style="display:inline-block;width:10px;height:10px;background:rgba(92,173,106,0.75);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Entradas</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:rgba(232,93,93,0.7);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Saídas</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto;padding-left:42px">
+        <div style="display:flex;align-items:flex-end;gap:10px;height:${chartH + 28}px;min-width:${por_data.length * grpW}px;position:relative;padding-bottom:24px">
+          ${grades}
+          ${por_data.map(d => {
+            const hEnt = d.entradas ? Math.max(3, Math.round((d.entradas / maxVal) * chartH)) : 0
+            const hSai = d.saidas   ? Math.max(3, Math.round((d.saidas   / maxVal) * chartH)) : 0
+            const dia  = d.data.split('/')[0] + '/' + d.data.split('/')[1]
+            const temEnt = d.entradas > 0
+            const temSai = d.saidas   > 0
+            return `<div style="display:flex;flex-direction:column;align-items:center;gap:0;justify-content:flex-end;height:${chartH}px;flex-shrink:0;width:${grpW}px" title="${esc(d.data)} — +${_fmtVal(d.entradas)} / −${_fmtVal(d.saidas)}">
+              <div style="display:flex;gap:${gap}px;align-items:flex-end">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                  ${temEnt ? `<span style="font-size:0.56rem;color:rgba(92,173,106,0.9);font-weight:600;white-space:nowrap">${_fmtVal(d.entradas)}</span>` : ''}
+                  <div style="width:${barW}px;height:${hEnt}px;background:rgba(92,173,106,0.75);border-radius:3px 3px 0 0;min-height:${temEnt?3:0}px"></div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                  ${temSai ? `<span style="font-size:0.56rem;color:rgba(232,93,93,0.9);font-weight:600;white-space:nowrap">${_fmtVal(d.saidas)}</span>` : ''}
+                  <div style="width:${barW}px;height:${hSai}px;background:rgba(232,93,93,0.7);border-radius:3px 3px 0 0;min-height:${temSai?3:0}px"></div>
+                </div>
+              </div>
+              <span style="font-size:0.62rem;color:var(--texto-mutado);margin-top:5px;white-space:nowrap">${dia}</span>
+            </div>`
+          }).join('')}
+        </div>
       </div>
     </div>`
   }
 
   if (por_categoria.length) {
-    const maxVal = Math.max(totais.entradas, totais.saidas, 1)
-    html += `<div class="fin-relatorio-chart-wrapper">
-      <p style="font-size:0.78rem;font-weight:600;margin-bottom:0.75rem;color:var(--texto-mutado)">Por categoria</p>`
-    for (const c of por_categoria) {
-      const barra = Math.min(100, Math.round((c.total / maxVal) * 100))
-      html += `<div style="margin-bottom:0.65rem">
-        <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;font-size:0.78rem">
-          <span>${esc(c.nome)} <span style="font-size:0.7rem;color:var(--texto-mutado)">${c.tipo === 'entrada' ? '↑' : '↓'}</span></span>
-          <span style="font-weight:600;color:${c.tipo === 'entrada' ? 'var(--sucesso)' : 'var(--erro)'}">${_fmtVal(c.total)}</span>
+    const receitas  = por_categoria.filter(c => c.tipo === 'entrada').sort((a,b) => b.total - a.total)
+    const despesas  = por_categoria.filter(c => c.tipo === 'saida').sort((a,b) => b.total - a.total)
+    const maxRec    = Math.max(...receitas.map(c => c.total), 1)
+    const maxDes    = Math.max(...despesas.map(c => c.total), 1)
+
+    const _linhasCat = (lista, cor, maxG) => lista.map(c => {
+      const barra = Math.min(100, Math.round((c.total / maxG) * 100))
+      return `<div style="margin-bottom:0.6rem">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.25rem;font-size:0.8rem">
+          <span style="font-weight:500">${esc(c.nome)}</span>
+          <span style="font-weight:700;color:${cor};flex-shrink:0;margin-left:0.5rem">${_fmtVal(c.total)}</span>
         </div>
-        <div style="height:4px;border-radius:999px;background:rgba(255,255,255,0.06)">
-          <div style="height:4px;border-radius:999px;width:${barra}%;background:${c.tipo === 'entrada' ? 'var(--sucesso)' : 'var(--erro)'}"></div>
+        <div style="height:5px;border-radius:999px;background:rgba(255,255,255,0.06)">
+          <div style="height:5px;border-radius:999px;width:${barra}%;background:${cor};opacity:0.8"></div>
         </div>
       </div>`
+    }).join('')
+
+    html += `<div class="fin-relatorio-chart-wrapper">`
+    if (receitas.length) {
+      html += `<p style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--sucesso);margin-bottom:0.65rem;opacity:0.85">↑ Receitas</p>`
+      html += _linhasCat(receitas, 'var(--sucesso)', maxRec)
+    }
+    if (despesas.length) {
+      if (receitas.length) html += `<div style="height:1px;background:rgba(255,255,255,0.06);margin:0.85rem 0"></div>`
+      html += `<p style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--erro);margin-bottom:0.65rem;opacity:0.85">↓ Despesas</p>`
+      html += _linhasCat(despesas, 'var(--erro)', maxDes)
     }
     html += `</div>`
   }
