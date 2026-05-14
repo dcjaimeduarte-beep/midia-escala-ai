@@ -54,7 +54,7 @@ router.get('/listar', autenticar, (req, res) => {
               c.nome as congregacao_nome, c.tipo as congregacao_tipo
        FROM usuarios u
        LEFT JOIN congregacoes c ON c.id = u.congregacao_id
-       ORDER BY u.nome`
+       ORDER BY u.criado_em ASC`
     )
     const lista = usuarios.map((u) => ({
       ...u,
@@ -114,7 +114,7 @@ router.get('/listar', autenticar, (req, res) => {
 router.get('/listar-publico', autenticar, (_req, res) => {
   const lista = sql
     .all(
-      `SELECT id, nome, email, celular FROM usuarios WHERE ativo = 1 ORDER BY nome`
+      `SELECT id, nome, email, celular FROM usuarios WHERE ativo = 1 ORDER BY criado_em ASC`
     )
     .map((u) => ({ ...u, celular: u.celular || '' }))
   res.json(lista)

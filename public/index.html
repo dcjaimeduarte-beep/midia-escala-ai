@@ -4424,6 +4424,8 @@
                 p.acesso_financeiro_global ? '🌐 Fin. global' : '',
                 p.acesso_cultos ? '🙏 Cultos' : '',
                 p.acesso_escala_global ? '🎬 Piloto escalas' : '',
+                p.acesso_escalas ? '📅 Escalas' : '',
+                p.acesso_comunicacoes ? '💬 Comunicações' : '',
               ].filter(Boolean).map(c => `<span class="badge badge-sucesso" style="font-size:0.72rem;margin:1px 2px">${c}</span>`).join('')
               return `<tr>
                 <td><strong>${esc(p.nome)}</strong></td>
@@ -8608,7 +8610,9 @@
         acesso_financeiro_saida: '📤 Lança saídas',
         acesso_financeiro_global: '🌐 Fin. global',
         acesso_escala_global: '🎬 Piloto escalas',
-        acesso_cultos: '🙏 Cultos'
+        acesso_cultos: '🙏 Cultos',
+        acesso_escalas: '📅 Escalas',
+        acesso_comunicacoes: '💬 Comunicações'
       }
       chips.innerHTML = Object.entries(labels)
         .filter(([k]) => perfil[k])
