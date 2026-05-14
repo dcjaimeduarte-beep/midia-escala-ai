@@ -6835,7 +6835,7 @@
         grupos[chave].total += l.valor
         grupos[chave].count++
       }
-      const validos = Object.values(grupos).filter(g => g.count >= 2).sort((a, b) => b.total - a.total)
+      const validos = Object.values(grupos).filter(g => g.count >= 1).sort((a, b) => b.total - a.total)
       if (!validos.length) return ''
       return `<div style="margin-top:0.55rem;padding-top:0.45rem;border-top:1px dashed rgba(255,255,255,0.08);display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center">
         <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--texto-mutado);opacity:0.7;flex-shrink:0">Subtotal:</span>
@@ -7132,7 +7132,7 @@
             grupos[chave].total += c.total
             grupos[chave].nomes.push(c.nome)
           }
-          const validos = Object.values(grupos).filter(g => g.nomes.length >= 2).sort((a, b) => b.total - a.total)
+          const validos = Object.values(grupos).filter(g => g.nomes.length >= 1).sort((a, b) => b.total - a.total)
           if (!validos.length) return ''
           return `<div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px dashed rgba(255,255,255,0.08)">
             <p style="font-size:0.66rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--texto-mutado);margin:0 0 0.45rem;opacity:0.7">Subtotal por tipo</p>
@@ -7301,7 +7301,7 @@
           grupos[chave].total += c.total
           grupos[chave].count++
         }
-        const validos = Object.values(grupos).filter(g => g.count >= 2).sort((a, b) => b.total - a.total)
+        const validos = Object.values(grupos).filter(g => g.count >= 1).sort((a, b) => b.total - a.total)
         if (!validos.length) return ''
         return `<div style="margin-top:0.65rem;padding-top:0.65rem;border-top:1px dashed rgba(255,255,255,0.08)">
           <p style="font-size:0.63rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--texto-mutado);margin:0 0 0.4rem;opacity:0.7">Subtotal por tipo</p>
