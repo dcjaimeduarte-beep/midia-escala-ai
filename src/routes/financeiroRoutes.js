@@ -96,8 +96,8 @@ router.get('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
     where.push('l.congregacao_id = ?')
     params.push(req.usuario.congregacao_id)
   } else if (isGlobal && req.query.congregacao_id) {
-    // Acesso global pode filtrar por congregação específica
-    where.push('l.congregacao_id = ?')
+    // Acesso global filtra por congregação; inclui lançamentos sem congregação (criados por admin sem vínculo)
+    where.push('(l.congregacao_id = ? OR l.congregacao_id IS NULL)')
     params.push(req.query.congregacao_id)
   }
 
