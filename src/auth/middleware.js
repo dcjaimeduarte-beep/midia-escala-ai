@@ -60,7 +60,7 @@ function verificarRole(...roles) {
 }
 
 function verificarAcessoDepartamento(req, res, next) {
-  if (req.usuario.role === 'admin' || req.usuario.role === 'lider' || req.usuario.acesso_escala_global) return next()
+  if (req.usuario.role === 'admin' || req.usuario.role === 'lider' || req.usuario.acesso_escala_global || req.usuario.acesso_financeiro) return next()
 
   const deptoId = req.body?.departamento_id || req.params?.departamento_id || req.query?.departamento_id
 

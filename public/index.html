@@ -2008,6 +2008,8 @@
             style="display:none">+ Lançamento</button>
           <button class="btn btn-secondary" id="btn-lancamento-lote" onclick="abrirModalLancamentoLote()"
             style="display:none">+ Em lote</button>
+          <button class="btn btn-ghost" id="btn-abrir-culto" onclick="abrirModalQuickCulto()"
+            style="display:none;border:1px solid var(--borda)">📅 + Culto</button>
         </div>
 
         <!-- Filtro de congregação (admin / acesso global) -->
@@ -2171,9 +2173,9 @@
           <input id="esc-data" type="date" required />
         </div>
         <div class="form-grupo">
-          <label>Departamento</label>
-          <select id="esc-depto" required onchange="onEscalaDeptoChange()">
-            <option value="">Selecione…</option>
+          <label>Departamento <span style="font-size:0.75rem;color:var(--texto-mutado);font-weight:400">(opcional — padrão: Obreiros)</span></label>
+          <select id="esc-depto" onchange="onEscalaDeptoChange()">
+            <option value="">— Obreiros (padrão) —</option>
           </select>
         </div>
         <div class="form-grupo" id="esc-membros-wrap" style="display:none">
@@ -2517,6 +2519,26 @@
     </div>
   </div>
 
+  <!-- QUICK CULTO FINANCEIRO -->
+  <div id="modal-quick-culto" class="modal-overlay" onclick="if(event.target===this)fecharModalQuickCulto()">
+    <div class="modal" style="max-width:360px" onclick="event.stopPropagation()">
+      <h3 class="modal-titulo">📅 Abrir Culto</h3>
+      <div class="form-grupo">
+        <label>Data do Culto</label>
+        <input id="qc-data" type="date" />
+      </div>
+      <div class="form-grupo">
+        <label>Tipo de culto (opcional)</label>
+        <select id="qc-evento"><option value="">— Nenhum —</option></select>
+      </div>
+      <p id="qc-erro" class="erro-msg"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="fecharModalQuickCulto()">Cancelar</button>
+        <button type="button" class="btn btn-primario" id="btn-qc-criar" onclick="criarQuickCulto()">Criar Culto</button>
+      </div>
+    </div>
+  </div>
+
   <!-- LANÇAMENTO FINANCEIRO -->
   <div id="modal-lancamento" class="modal-overlay" onclick="if(event.target===this)fecharModalLancamento()">
     <div class="modal" onclick="event.stopPropagation()">
@@ -2552,8 +2574,8 @@
           <select id="lanc-escala" onchange="_escalaSelecionada(this.value)"></select>
         </div>
         <div class="form-grupo">
-          <label>Data (DD/MM/AAAA)</label>
-          <input id="lanc-data" type="text" required placeholder="DD/MM/AAAA" />
+          <label>Data</label>
+          <input id="lanc-data" type="date" required />
         </div>
         <div class="form-grupo">
           <label>Obreiros*</label>
@@ -4260,8 +4282,7 @@
         select.innerHTML = '<option value="">Erro ao carregar departamentos</option>'
       }
 
-      // Mínimo = hoje
-      document.getElementById('esc-data').min = new Date().toISOString().split('T')[0]
+      document.getElementById('esc-data').min = ''
       document.getElementById('esc-data').value = ''
       document.getElementById('modal-escala').classList.add('aberto')
     }
@@ -4272,12 +4293,19 @@
 
     async function criarEscala() {
       const dataISO = document.getElementById('esc-data').value
-      const deptoId = document.getElementById('esc-depto').value
+      let deptoId = document.getElementById('esc-depto').value
       const eventoId = document.getElementById('esc-evento').value
       const btn = document.getElementById('btn-criar-esc')
       const erroEl = document.getElementById('esc-erro')
 
-      if (!dataISO || !deptoId) return
+      if (!dataISO) return
+
+      // Se nenhum departamento selecionado, usa Obreiros como padrão
+      if (!deptoId) {
+        const obreiros = deptoCache.find(d => d.nome === 'Obreiros')
+        if (!obreiros) { erroEl.textContent = 'Departamento Obreiros não encontrado.'; erroEl.style.display = 'block'; return }
+        deptoId = obreiros.id
+      }
 
       // Converter YYYY-MM-DD → DD/MM/YYYY para a API
       const [y, m, d] = dataISO.split('-')
@@ -6338,9 +6366,11 @@
       document.getElementById(`fin-${aba}`).style.display = 'block'
       const btnNovo = document.getElementById('btn-novo-lancamento')
       const btnLote = document.getElementById('btn-lancamento-lote')
+      const btnCulto = document.getElementById('btn-abrir-culto')
       const mostrar = aba === 'lancamentos' ? '' : 'none'
       if (btnNovo) btnNovo.style.display = mostrar
       if (btnLote) btnLote.style.display = mostrar
+      if (btnCulto) btnCulto.style.display = mostrar
       if (aba === 'dashboard') carregarFinDashboard()
       else if (aba === 'lancamentos') carregarFinLancamentos()
       else if (aba === 'relatorio') carregarFinRelatorio()
@@ -6418,6 +6448,12 @@
       if (!s) return ''
       const p = String(s).split('/')
       if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`
+      return s
+    }
+    function _isoToDdmm(s) {
+      if (!s) return ''
+      const p = String(s).split('-')
+      if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`
       return s
     }
     function _fmtVal(v) {
@@ -6913,8 +6949,6 @@
         const entDia = itens.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
         const saiDia = itens.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
         const saldoDia = entDia - saiDia
-        let chips = ''
-        for (const l of itens) chips += _renderChip(l, true)
         return `<div class="fin-dia-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem;flex-wrap:wrap;gap:0.35rem">
         <span class="fin-dia-header" style="margin:0">${esc(data)}</span>
@@ -6924,7 +6958,7 @@
           ${filtro === 'todos'   ? `<span style="color:${saldoDia>=0?'var(--sucesso)':'var(--erro)'};border-left:1px solid rgba(255,255,255,0.12);padding-left:0.65rem">= ${_fmtVal(saldoDia)}</span>` : ''}
         </span>
       </div>
-      <div class="fin-chips-wrap">${chips}</div>
+      ${_renderChipsAgrupados(itens)}
       ${_subtotaisChipsDia(itens)}
     </div>`
       }
@@ -6999,6 +7033,22 @@
     ${l.descricao ? `<span class="fin-chip-desc">${esc(l.descricao)}</span>` : ''}
     ${acoes ? `<div class="fin-chip-acoes">${acoes}</div>` : ''}
   </div>`
+    }
+
+    function _renderChipsAgrupados(itens) {
+      const grupos = {}
+      const ordem = []
+      for (const l of itens) {
+        const chave = l.evento_nome || ''
+        if (!grupos[chave]) { grupos[chave] = []; ordem.push(chave) }
+        grupos[chave].push(l)
+      }
+      let html = ''
+      for (const chave of ordem) {
+        if (chave) html += `<div style="font-size:0.72rem;color:var(--texto-mutado);margin:0.4rem 0 0.2rem">📅 ${esc(chave)}</div>`
+        html += `<div class="fin-chips-wrap">${grupos[chave].map(l => _renderChip(l, true)).join('')}</div>`
+      }
+      return html
     }
 
     // ── RELATÓRIO MENSAL ────────────────────────────────────────
@@ -7530,20 +7580,13 @@
       const escalaSelecionada = escalaIdSelecionado
         ? (finEscalas || []).find(e => e.id === escalaIdSelecionado)
         : null
-      const visto = new Set()
-      const cultos = []
-      const todas = [...(finEscalas || [])].sort((a, b) =>
+      const cultos = [...(finEscalas || [])].sort((a, b) =>
         _ddmmToISO(a.data).localeCompare(_ddmmToISO(b.data))
-      )
-      for (const e of todas) {
+      ).filter(e => {
         const dataISO = _ddmmToISO(e.data)
         const ehSelecionado = escalaSelecionada && e.id === escalaSelecionada.id
-        if (dataISO < limite && !ehSelecionado) continue
-        const chave = `${e.data}|${e.evento_id || ''}`
-        if (visto.has(chave)) continue
-        visto.add(chave)
-        cultos.push(e)
-      }
+        return dataISO >= limite || ehSelecionado
+      })
 
       let opts = '<option value="">Sem culto vinculado</option>'
       for (const e of cultos) {
@@ -7581,7 +7624,7 @@
       if (!escalaId) return
       const opt = document.querySelector(`#lanc-escala option[value="${CSS.escape(escalaId)}"]`)
       const data = opt?.dataset?.data
-      if (data) document.getElementById('lanc-data').value = data
+      if (data) document.getElementById('lanc-data').value = _ddmmToISO(data)
     }
 
     function abrirModalLancamento(existente) {
@@ -7599,7 +7642,7 @@
       if (existente) {
         document.getElementById('lanc-tipo').value = existente.tipo || 'entrada'
         document.getElementById('lanc-valor').value = existente.valor ? _formatCurrency(existente.valor) : ''
-        document.getElementById('lanc-data').value = existente.data || ''
+        document.getElementById('lanc-data').value = _ddmmToISO(existente.data || '')
         document.getElementById('lanc-descricao').value = existente.descricao || ''
         document.getElementById('lanc-historico').value = existente.historico || ''
         document.getElementById('lanc-escala').value = existente.escala_id || ''
@@ -7607,7 +7650,7 @@
       } else {
         document.getElementById('lanc-tipo').value = 'entrada'
         document.getElementById('lanc-valor').value = ''
-        document.getElementById('lanc-data').value = _dataHoje()
+        document.getElementById('lanc-data').value = _ddmmToISO(_dataHoje())
         document.getElementById('lanc-descricao').value = ''
         document.getElementById('lanc-historico').value = ''
         _filtrarCategoriasPorTipo('entrada')
@@ -7617,6 +7660,64 @@
 
     function fecharModalLancamento() {
       document.getElementById('modal-lancamento').classList.remove('aberto')
+    }
+
+    // ── QUICK CULTO ─────────────────────────────────────────────
+
+    function abrirModalQuickCulto() {
+      const selEv = document.getElementById('qc-evento')
+      selEv.innerHTML = '<option value="">— Nenhum —</option>' +
+        (finEventos || []).filter(x => x.ativo !== false).map(x =>
+          `<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join('')
+      document.getElementById('qc-data').value = _ddmmToISO(_dataHoje())
+      document.getElementById('qc-erro').style.display = 'none'
+      document.getElementById('modal-quick-culto').classList.add('aberto')
+    }
+
+    function fecharModalQuickCulto() {
+      document.getElementById('modal-quick-culto').classList.remove('aberto')
+    }
+
+    async function criarQuickCulto() {
+      const dataISO = document.getElementById('qc-data').value.trim()
+      const eventoId = document.getElementById('qc-evento').value
+      const erroEl = document.getElementById('qc-erro')
+      const btn = document.getElementById('btn-qc-criar')
+      erroEl.style.display = 'none'
+      if (!dataISO) { erroEl.textContent = 'Informe a data.'; erroEl.style.display = 'block'; return }
+      const dataBR = _isoToDdmm(dataISO)
+
+      const obreiros = (deptoCache.length ? deptoCache : await api('GET', '/departamento/listar').catch(() => [])).find(dep => dep.nome === 'Obreiros')
+      if (!obreiros) { erroEl.textContent = 'Departamento Obreiros não encontrado.'; erroEl.style.display = 'block'; return }
+
+      btn.disabled = true
+      try {
+        // Verifica se já existe escala para essa data+evento no Obreiros (evita duplicatas)
+        const jaExiste = (finEscalas || []).find(e =>
+          e.data === dataBR &&
+          e.departamento_id === obreiros.id &&
+          (e.evento_id || null) === (eventoId || null)
+        )
+        let escalaAlvo = jaExiste
+        if (!escalaAlvo) {
+          const body = { data: dataBR, departamento_id: obreiros.id, voluntarios: [] }
+          if (eventoId) body.evento_id = eventoId
+          escalaAlvo = await api('POST', '/escala/criar', body)
+          finEscalas = await api('GET', '/escala/visao-geral').catch(() => finEscalas)
+        }
+        fecharModalQuickCulto()
+        abrirModalLancamento()
+        if (escalaAlvo?.id) {
+          const sel = document.getElementById('lanc-escala')
+          if (sel) { sel.value = escalaAlvo.id; _escalaSelecionada(escalaAlvo.id) }
+        }
+        toast(jaExiste ? 'Culto já existe! Lançamento aberto.' : 'Culto aberto! Preencha o lançamento abaixo.', 'ok')
+      } catch (e) {
+        erroEl.textContent = e.erro || 'Erro ao criar culto.'
+        erroEl.style.display = 'block'
+      } finally {
+        btn.disabled = false
+      }
     }
 
     // ── LANÇAMENTO EM LOTE ──────────────────────────────────────
@@ -7804,7 +7905,7 @@
         tipo: document.getElementById('lanc-tipo').value,
         categoria_id: document.getElementById('lanc-categoria').value,
         valor: _parseCurrency(document.getElementById('lanc-valor').value),
-        data: document.getElementById('lanc-data').value,
+        data: _isoToDdmm(document.getElementById('lanc-data').value),
         escala_id: document.getElementById('lanc-escala').value || null,
         descricao: document.getElementById('lanc-descricao').value.trim(),
         historico: document.getElementById('lanc-historico').value.trim()
@@ -8031,23 +8132,38 @@
         </div>`
         }
 
-        const abertos = cultos.filter(c => !c.encerrado)
-        const encerrados = cultos.filter(c => c.encerrado)
+        const hoje = new Date().toISOString().slice(0, 10)
+        const deHoje = cultos.filter(c => c.data === hoje)
+        const futuros = cultos.filter(c => c.data > hoje && !c.encerrado)
+        const passados = cultos.filter(c => c.data < hoje || (c.data === hoje && c.encerrado))
 
-        let html = abertos.map(renderCultoCard).join('')
+        let html = ''
 
-        if (encerrados.length) {
-          html += `<div style="margin-top:0.5rem">
+        if (deHoje.length) {
+          html += `<div style="margin-bottom:0.4rem;font-size:0.75rem;font-weight:600;color:var(--acento);letter-spacing:0.04em">HOJE</div>`
+          html += deHoje.map(renderCultoCard).join('')
+        }
+
+        if (futuros.length) {
+          html += `<div style="margin:${deHoje.length ? '1rem' : '0'} 0 0.4rem;font-size:0.75rem;font-weight:600;color:var(--texto-mutado);letter-spacing:0.04em">PRÓXIMOS</div>`
+          html += futuros.map(renderCultoCard).join('')
+        }
+
+        if (!deHoje.length && !futuros.length) {
+          html += '<p class="muted" style="margin-top:1rem">Nenhum culto aberto hoje.</p>'
+        }
+
+        if (passados.length) {
+          html += `<div style="margin-top:1rem">
         <button type="button" class="btn-toggle-passados" onclick="this.classList.toggle('aberto');this.nextElementSibling.classList.toggle('aberta');this.setAttribute('aria-expanded',this.classList.contains('aberto'))" aria-expanded="false">
           <span style="font-size:0.85rem">📋</span>
-          <span>${encerrados.length} check-in(s) encerrado(s)</span>
+          <span>${passados.length} culto(s) anterior(es)</span>
           <span class="chevron">▾</span>
         </button>
-        <div class="fin-passados-lista" style="gap:0">${encerrados.map(renderCultoCard).join('')}</div>
+        <div class="fin-passados-lista" style="gap:0">${passados.map(renderCultoCard).join('')}</div>
       </div>`
         }
 
-        if (!abertos.length && !encerrados.length) html = ''
         el.innerHTML = html || '<p class="muted" style="margin-top:1rem">Nenhum culto cadastrado.</p>'
         // Inicia timer se ainda não estiver rodando
         if (!_cultosListTimer) {
