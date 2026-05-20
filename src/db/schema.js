@@ -362,6 +362,28 @@ function migrate() {
   tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_financeiro_saida  INTEGER NOT NULL DEFAULT 0`)
   tryExec(`ALTER TABLE lancamentos_financeiro ADD COLUMN historico TEXT NOT NULL DEFAULT ''`)
 
+  // ── VISITANTES ───────────────────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS visitantes (
+      id              TEXT PRIMARY KEY,
+      nome            TEXT NOT NULL,
+      celular         TEXT NOT NULL DEFAULT '',
+      email           TEXT NOT NULL DEFAULT '',
+      data_nascimento TEXT NOT NULL DEFAULT '',
+      bairro          TEXT NOT NULL DEFAULT '',
+      cidade          TEXT NOT NULL DEFAULT '',
+      igreja_origem   TEXT NOT NULL DEFAULT '',
+      como_conheceu   TEXT NOT NULL DEFAULT '',
+      observacoes     TEXT NOT NULL DEFAULT '',
+      cadastrado_por  TEXT REFERENCES usuarios(id) ON DELETE SET NULL,
+      criado_em       TEXT NOT NULL,
+      atualizado_em   TEXT NOT NULL
+    );
+  `)
+  tryExec(`ALTER TABLE presencas ADD COLUMN visitante_id TEXT REFERENCES visitantes(id) ON DELETE SET NULL`)
+  tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_visitantes INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE perfis   ADD COLUMN acesso_visitantes INTEGER NOT NULL DEFAULT 0`)
+
   // Tabela genérica de configurações do sistema (chave → valor JSON)
   db.exec(`
     CREATE TABLE IF NOT EXISTS configuracoes (
@@ -373,135 +395,115 @@ function migrate() {
   `)
 }
 
-/** Perfis macro (flags padrão). “Cultos” legado é removido em sincronizarPerfisMacro. */
+/** Perfis macro (flags padrão). */
 const PERFIS_MACRO = [
   {
-    nome: 'Financeiro',
-    acesso_financeiro: 1,
-    acesso_relatorio_financeiro: 1,
-    acesso_financeiro_global: 0,
-    acesso_financeiro_saida: 1,
-    acesso_escala_global: 0,
-    acesso_cultos: 0,
-    acesso_escalas: 0,
-    acesso_comunicacoes: 0
+    nome: 'Líder',
+    acesso_financeiro: 0, acesso_relatorio_financeiro: 0, acesso_financeiro_global: 0,
+    acesso_financeiro_saida: 0, acesso_escala_global: 0,
+    acesso_cultos: 1, acesso_escalas: 1, acesso_comunicacoes: 1, acesso_visitantes: 1
   },
   {
-    nome: 'Obreiro',
-    acesso_financeiro: 1,
-    acesso_relatorio_financeiro: 0,
-    acesso_financeiro_global: 0,
-    acesso_financeiro_saida: 0,
-    acesso_escala_global: 0,
-    acesso_cultos: 1,
-    acesso_escalas: 0,
-    acesso_comunicacoes: 0
+    nome: 'Obreiro — Recepção',
+    acesso_financeiro: 0, acesso_relatorio_financeiro: 0, acesso_financeiro_global: 0,
+    acesso_financeiro_saida: 0, acesso_escala_global: 0,
+    acesso_cultos: 1, acesso_escalas: 0, acesso_comunicacoes: 0, acesso_visitantes: 1
   },
   {
-    nome: 'Mídia',
-    acesso_financeiro: 0,
-    acesso_relatorio_financeiro: 0,
-    acesso_financeiro_global: 0,
-    acesso_financeiro_saida: 0,
-    acesso_escala_global: 0,
-    acesso_cultos: 0,
-    acesso_escalas: 1,
-    acesso_comunicacoes: 1
+    nome: 'Obreiro — Financeiro',
+    acesso_financeiro: 1, acesso_relatorio_financeiro: 0, acesso_financeiro_global: 0,
+    acesso_financeiro_saida: 0, acesso_escala_global: 0,
+    acesso_cultos: 1, acesso_escalas: 0, acesso_comunicacoes: 0, acesso_visitantes: 1
+  },
+  {
+    nome: 'Obreiro — Mídia',
+    acesso_financeiro: 0, acesso_relatorio_financeiro: 0, acesso_financeiro_global: 0,
+    acesso_financeiro_saida: 0, acesso_escala_global: 0,
+    acesso_cultos: 1, acesso_escalas: 1, acesso_comunicacoes: 1, acesso_visitantes: 0
+  },
+  {
+    nome: 'Financeiro — Líder',
+    acesso_financeiro: 1, acesso_relatorio_financeiro: 1, acesso_financeiro_global: 0,
+    acesso_financeiro_saida: 1, acesso_escala_global: 0,
+    acesso_cultos: 0, acesso_escalas: 0, acesso_comunicacoes: 0, acesso_visitantes: 0
   }
 ]
 
 const NOMES_DEPTO_MIDIA = ['Projeção', 'Ao Vivo', 'Stories', 'Iluminação', 'Fotos', 'Engajamento']
 
 /**
- * Cria/atualiza os 3 perfis macro, remove “Cultos”, garante Tesouraria,
+ * Cria/atualiza os 5 perfis macro, migra nomes antigos, garante Tesouraria,
  * liga cada departamento ao perfil adequado. Idempotente — chamar após seedDepartamentos().
  */
 function sincronizarPerfisMacro() {
   const { v4: uuidv4 } = require('uuid')
   const agora = new Date().toISOString()
 
+  // Migra nomes legados para os novos antes de upsert
+  const renomear = [
+    ['Financeiro', 'Financeiro — Líder'],
+    ['Obreiro',    'Obreiro — Recepção'],
+    ['Mídia',      'Obreiro — Mídia'],
+    ['Midia',      'Obreiro — Mídia'],
+    ['Cultos',     'Obreiro — Recepção'],
+  ]
+  for (const [antigo, novo] of renomear) {
+    const existe  = db.get('SELECT id FROM perfis WHERE nome = ?', antigo)
+    const jaExiste = db.get('SELECT id FROM perfis WHERE nome = ?', novo)
+    if (existe && !jaExiste) {
+      db.run('UPDATE perfis SET nome = ? WHERE nome = ?', novo, antigo)
+    } else if (existe && jaExiste) {
+      // Migra usuários e departamentos para o perfil correto e remove o duplicado
+      db.run('UPDATE usuarios     SET perfil_id = ? WHERE perfil_id = ?', jaExiste.id, existe.id)
+      db.run('UPDATE departamentos SET perfil_id = ? WHERE perfil_id = ?', jaExiste.id, existe.id)
+      db.run('DELETE FROM perfis WHERE id = ?', existe.id)
+    }
+  }
+
   for (const p of PERFIS_MACRO) {
     const row = db.get('SELECT id FROM perfis WHERE nome = ?', p.nome)
     if (!row) {
       db.run(
-        `INSERT INTO perfis (id,nome,acesso_financeiro,acesso_relatorio_financeiro,acesso_financeiro_global,acesso_financeiro_saida,acesso_escala_global,acesso_cultos,acesso_escalas,acesso_comunicacoes,criado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-        uuidv4(),
-        p.nome,
-        p.acesso_financeiro,
-        p.acesso_relatorio_financeiro,
-        p.acesso_financeiro_global,
-        p.acesso_financeiro_saida,
-        p.acesso_escala_global,
-        p.acesso_cultos,
-        p.acesso_escalas,
-        p.acesso_comunicacoes,
+        `INSERT INTO perfis (id,nome,acesso_financeiro,acesso_relatorio_financeiro,acesso_financeiro_global,acesso_financeiro_saida,acesso_escala_global,acesso_cultos,acesso_escalas,acesso_comunicacoes,acesso_visitantes,criado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        uuidv4(), p.nome,
+        p.acesso_financeiro, p.acesso_relatorio_financeiro, p.acesso_financeiro_global,
+        p.acesso_financeiro_saida, p.acesso_escala_global,
+        p.acesso_cultos, p.acesso_escalas, p.acesso_comunicacoes, p.acesso_visitantes,
         agora
       )
     } else {
       db.run(
-        `UPDATE perfis SET acesso_financeiro=?, acesso_relatorio_financeiro=?, acesso_financeiro_global=?, acesso_financeiro_saida=?, acesso_escala_global=?, acesso_cultos=?, acesso_escalas=?, acesso_comunicacoes=? WHERE nome=?`,
-        p.acesso_financeiro,
-        p.acesso_relatorio_financeiro,
-        p.acesso_financeiro_global,
-        p.acesso_financeiro_saida,
-        p.acesso_escala_global,
-        p.acesso_cultos,
-        p.acesso_escalas,
-        p.acesso_comunicacoes,
+        `UPDATE perfis SET acesso_financeiro=?,acesso_relatorio_financeiro=?,acesso_financeiro_global=?,acesso_financeiro_saida=?,acesso_escala_global=?,acesso_cultos=?,acesso_escalas=?,acesso_comunicacoes=?,acesso_visitantes=? WHERE nome=?`,
+        p.acesso_financeiro, p.acesso_relatorio_financeiro, p.acesso_financeiro_global,
+        p.acesso_financeiro_saida, p.acesso_escala_global,
+        p.acesso_cultos, p.acesso_escalas, p.acesso_comunicacoes, p.acesso_visitantes,
         p.nome
       )
     }
   }
 
-  const cultos = db.get(`SELECT id FROM perfis WHERE nome = 'Cultos'`)
-  const obreiro = db.get(`SELECT id FROM perfis WHERE nome = 'Obreiro'`)
-  if (cultos && obreiro && cultos.id !== obreiro.id) {
-    db.run(`UPDATE usuarios SET perfil_id = ? WHERE perfil_id = ?`, obreiro.id, cultos.id)
-    db.run(`UPDATE departamentos SET perfil_id = ? WHERE perfil_id = ?`, obreiro.id, cultos.id)
-    db.run(`DELETE FROM perfis WHERE id = ?`, cultos.id)
-  } else if (cultos && !obreiro) {
-    db.run(
-      `UPDATE perfis SET nome='Obreiro', acesso_financeiro=1, acesso_relatorio_financeiro=0, acesso_financeiro_global=0, acesso_escala_global=0, acesso_cultos=1, acesso_escalas=0, acesso_comunicacoes=0 WHERE id=?`,
-      cultos.id
-    )
-  }
-
-  const midiaSemAcento = db.get(`SELECT id FROM perfis WHERE nome = 'Midia'`)
-  const jaMidia = db.get(`SELECT id FROM perfis WHERE nome = 'Mídia'`)
-  if (midiaSemAcento && !jaMidia) {
-    db.run(`UPDATE perfis SET nome = 'Mídia' WHERE id = ?`, midiaSemAcento.id)
-  }
-
-  const fin = db.get(`SELECT id FROM perfis WHERE nome = 'Financeiro'`)
-  const obr = db.get(`SELECT id FROM perfis WHERE nome = 'Obreiro'`)
-  const mid = db.get(`SELECT id FROM perfis WHERE nome = 'Mídia'`)
+  const finLider  = db.get(`SELECT id FROM perfis WHERE nome = 'Financeiro — Líder'`)
+  const obrRec    = db.get(`SELECT id FROM perfis WHERE nome = 'Obreiro — Recepção'`)
+  const obrMidia  = db.get(`SELECT id FROM perfis WHERE nome = 'Obreiro — Mídia'`)
 
   let tes = db.get(`SELECT id FROM departamentos WHERE nome = 'Tesouraria'`)
-  if (!tes && fin) {
+  if (!tes && finLider) {
     const tid = uuidv4()
     db.run(
-      `INSERT INTO departamentos (id, nome, descricao, icone, cor, mensagem_pastoral, ativo, criado_em, perfil_id) VALUES (?,?,?,?,?,?,1,?,?)`,
-      tid,
-      'Tesouraria',
-      'Dízimos, ofertas e lançamentos financeiros',
-      '💰',
-      '#1E8449',
-      '',
-      agora,
-      fin.id
+      `INSERT INTO departamentos (id,nome,descricao,icone,cor,mensagem_pastoral,ativo,criado_em,perfil_id) VALUES (?,?,?,?,?,?,1,?,?)`,
+      tid, 'Tesouraria', 'Dízimos, ofertas e lançamentos financeiros', '💰', '#1E8449', '', agora, finLider.id
     )
-  } else if (tes && fin) {
-    db.run(`UPDATE departamentos SET perfil_id = ? WHERE nome = 'Tesouraria'`, fin.id)
+  } else if (tes && finLider) {
+    db.run(`UPDATE departamentos SET perfil_id = ? WHERE nome = 'Tesouraria'`, finLider.id)
   }
 
-  if (obr) db.run(`UPDATE departamentos SET perfil_id = ? WHERE nome = 'Obreiros'`, obr.id)
-
-  if (mid && NOMES_DEPTO_MIDIA.length) {
+  if (obrRec)   db.run(`UPDATE departamentos SET perfil_id = ? WHERE nome = 'Obreiros'`, obrRec.id)
+  if (obrMidia && NOMES_DEPTO_MIDIA.length) {
     const ph = NOMES_DEPTO_MIDIA.map(() => '?').join(',')
-    db.run(`UPDATE departamentos SET perfil_id = ? WHERE nome IN (${ph})`, mid.id, ...NOMES_DEPTO_MIDIA)
+    db.run(`UPDATE departamentos SET perfil_id = ? WHERE nome IN (${ph})`, obrMidia.id, ...NOMES_DEPTO_MIDIA)
     db.run(
       `UPDATE departamentos SET perfil_id = ? WHERE perfil_id IS NULL AND nome NOT IN ('Obreiros','Tesouraria')`,
-      mid.id
+      obrMidia.id
     )
   }
 }

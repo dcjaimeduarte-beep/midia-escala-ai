@@ -28,6 +28,7 @@
       --fundo: #0c0e11;
       --fundo-elevado: #12151a;
       --fundo-card: #161a21;
+      --fundo-soft: #0e1116;
       --texto: #e8eaed;
       --texto-mutado: #8d96a3;
       --borda: rgba(255, 255, 255, 0.07);
@@ -393,6 +394,47 @@
     .nav-link.ativo {
       color: var(--texto);
       background: rgba(201, 74, 82, 0.14);
+    }
+
+    .nav-grupo {
+      position: relative;
+    }
+    .nav-grupo-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      background: var(--fundo-elevado);
+      border: 1px solid var(--borda);
+      border-radius: var(--raio);
+      min-width: 190px;
+      z-index: 200;
+      padding: 0.3rem;
+      flex-direction: column;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    }
+    .nav-grupo.aberto .nav-grupo-menu {
+      display: flex;
+    }
+    .nav-grupo-btn .nav-grupo-chevron {
+      font-size: 0.65rem;
+      transition: transform 0.2s;
+      display: inline-block;
+      margin-left: 2px;
+    }
+    .nav-grupo.aberto .nav-grupo-chevron {
+      transform: rotate(180deg);
+    }
+    .nav-grupo-btn.grupo-ativo {
+      color: var(--texto);
+      background: rgba(201, 74, 82, 0.14);
+    }
+    .nav-sub {
+      padding: 0.42rem 0.75rem;
+      border-radius: calc(var(--raio) - 2px);
+      font-size: 0.8rem;
+      text-align: left;
+      white-space: nowrap;
     }
 
     .header-right {
@@ -781,6 +823,21 @@
       margin-bottom: 0.35rem;
     }
 
+    .enc-grupo { margin-bottom: 0.5rem; }
+    .enc-grupo-btn {
+      width: 100%; text-align: left; background: var(--fundo-elevado);
+      border: 1px solid var(--borda); border-radius: var(--raio);
+      padding: 0.55rem 0.9rem; cursor: pointer; color: var(--texto);
+      font-size: 0.84rem; font-weight: 600; display: flex; align-items: center;
+      gap: 0.5rem; transition: background 0.15s;
+    }
+    .enc-grupo-btn:hover { background: var(--fundo-card); }
+    .enc-chevron { margin-left: auto; font-size: 0.75rem; transition: transform 0.2s; }
+    .enc-count { background: var(--borda-forte); border-radius: 99px; padding: 0 0.45rem; font-size: 0.72rem; font-weight: 700; color: var(--texto-mutado); }
+    .enc-grupo-conteudo { display: none; padding-top: 0.6rem; }
+    .enc-grupo.aberto .enc-grupo-conteudo { display: block; }
+    .enc-grupo.aberto .enc-chevron { transform: rotate(180deg); }
+
     .esc-membros-checkboxes {
       max-height: 200px;
       overflow-y: auto;
@@ -874,6 +931,10 @@
     .escala-secao-hoje .dash-escala-card {
       border-color: rgba(201, 74, 82, 0.4);
       box-shadow: 0 0 0 3px rgba(201, 74, 82, 0.08);
+    }
+
+    .escala-secao-proximos .dash-escala-card {
+      border-color: rgba(255, 255, 255, 0.16);
     }
 
     .badge-hoje {
@@ -1894,21 +1955,28 @@
       </div>
 
       <nav class="header-nav" id="header-nav">
-        <button class="nav-link ativo" id="nav-dashboard" data-pagina="dashboard" onclick="navegar('dashboard')">🏠
-          Painel</button>
+        <button class="nav-link ativo" id="nav-dashboard" data-pagina="dashboard" onclick="navegar('dashboard')">🏠 Painel</button>
         <button class="nav-link" id="nav-escalas" data-pagina="escalas" onclick="navegar('escalas')">📅 Escalas</button>
-        <button class="nav-link" id="nav-equipe" data-pagina="equipe" onclick="navegar('equipe')">👥 Equipe</button>
-        <button class="nav-link" id="nav-departamentos" data-pagina="departamentos"
-          onclick="navegar('departamentos')">🏛️ Departamentos</button>
-        <button class="nav-link" id="nav-comunicacoes" data-pagina="comunicacoes" onclick="navegar('comunicacoes')">💬
-          Comunicações</button>
-        <button class="nav-link" id="nav-cadastro" data-pagina="cadastros" onclick="navegar('cadastros')"
-          style="display:none">⚙️ Cadastros</button>
-        <button class="nav-link" id="nav-financeiro" data-pagina="financeiro" onclick="navegar('financeiro')"
-          style="display:none">💰 Financeiro</button>
+        <button class="nav-link" id="nav-comunicacoes" data-pagina="comunicacoes" onclick="navegar('comunicacoes')">💬 Comunicações</button>
+        <button class="nav-link" id="nav-cultos" data-pagina="cultos" onclick="navegar('cultos'); carregarCultos()" style="display:none">⛪ Cultos</button>
+        <button class="nav-link" id="nav-financeiro" data-pagina="financeiro" onclick="navegar('financeiro')" style="display:none">💰 Financeiro</button>
+
+        <!-- GRUPO CADASTROS -->
+        <div class="nav-grupo" id="nav-grupo-cadastros" style="display:none">
+          <button class="nav-link nav-grupo-btn" id="nav-grupo-cadastros-btn" onclick="toggleNavGrupo('cadastros', event)">
+            ⚙️ Cadastros <span class="nav-grupo-chevron">▾</span>
+          </button>
+          <div class="nav-grupo-menu" id="nav-grupo-cadastros-menu">
+            <button class="nav-link nav-sub" id="nav-equipe" data-pagina="equipe" onclick="navegar('equipe');fecharNavGrupos()" style="display:none">👤 Membros</button>
+            <button class="nav-link nav-sub" id="nav-visitantes" data-pagina="visitantes" onclick="navegar('visitantes');carregarVisitantes();fecharNavGrupos()" style="display:none">👥 Visitantes</button>
+            <button class="nav-link nav-sub" id="nav-departamentos" data-pagina="departamentos" onclick="navegar('departamentos');fecharNavGrupos()" style="display:none">🏛️ Departamentos</button>
+            <button class="nav-link nav-sub" id="nav-cadastro" data-pagina="cadastros" onclick="navegar('cadastros');fecharNavGrupos()" style="display:none">⛪ Igreja</button>
+            <button class="nav-link nav-sub" id="nav-perfis" data-pagina="perfis" onclick="navegar('perfis');carregarPerfis();fecharNavGrupos()" style="display:none">🔐 Perfis</button>
+            <button class="nav-link nav-sub" id="nav-backup" data-pagina="backup" onclick="navegar('backup');fecharNavGrupos()" style="display:none">💾 Backup</button>
+          </div>
+        </div>
+
         <button class="nav-link" id="nav-agente" data-pagina="agente" onclick="navegar('agente')">🔥 Pastor IA</button>
-        <button class="nav-link" id="nav-cultos" data-pagina="cultos" onclick="navegar('cultos'); carregarCultos()"
-          style="display:none">⛪ Cultos</button>
       </nav>
 
       <div class="header-right">
@@ -1988,15 +2056,78 @@
 
       <!-- CADASTROS (admin / líder) -->
       <div id="pagina-cadastros" class="pagina" style="display:none">
-        <h2 class="pagina-titulo">⚙️ Cadastros</h2>
+        <h2 class="pagina-titulo">⛪ Igreja</h2>
         <p class="muted" style="color:var(--texto-mutado);font-size:0.85rem;margin:-1rem 0 1.25rem">
-          Mapa de cadastros, convites, departamentos e tipos de culto. Para <strong
-            style="color:var(--texto)">membros</strong> use <strong>Equipe</strong>; para <strong
-            style="color:var(--texto)">escalas</strong> use <strong>Escalas</strong> (editar data/evento ou trocar
-          integrante).
+          Congregações, tipos de evento/culto e convite de voluntários.
         </p>
         <div id="cadastros-conteudo">
           <p class="carregando">Carregando…</p>
+        </div>
+      </div>
+
+      <!-- VISITANTES -->
+      <div id="pagina-visitantes" class="pagina" style="display:none">
+        <div class="pagina-actions">
+          <h2 class="pagina-titulo">👥 Visitantes</h2>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <button id="btn-importar-checkin" class="btn btn-ghost" onclick="importarDoCheckin()"
+              style="display:none;border:1px solid var(--borda);font-size:0.83rem">📋 Importar do check-in</button>
+            <button class="btn btn-primario" onclick="abrirModalVisitante()">+ Novo Visitante</button>
+          </div>
+        </div>
+        <div style="margin-bottom:1rem">
+          <input id="visitantes-busca" type="text" placeholder="Buscar por nome ou celular…"
+            oninput="_filtrarVisitantes(this.value)"
+            style="width:100%;max-width:400px;padding:0.45rem 0.75rem;border-radius:var(--raio);border:1px solid var(--borda);background:var(--fundo);color:var(--texto);font-size:0.88rem" />
+        </div>
+        <div id="visitantes-conteudo"><p class="carregando">Carregando…</p></div>
+      </div>
+
+      <!-- PERFIS -->
+      <div id="pagina-perfis" class="pagina" style="display:none">
+        <div class="pagina-actions">
+          <h2 class="pagina-titulo">🔐 Perfis de Acesso</h2>
+          <button class="btn btn-primario" onclick="abrirModalNovoPerfil()">+ Novo Perfil</button>
+        </div>
+        <p class="muted" style="color:var(--texto-mutado);font-size:0.85rem;margin:-1rem 0 1.25rem">
+          Cada perfil define quais módulos especiais o usuário pode acessar. Atribuído em <strong>Membros → Editar</strong>.
+        </p>
+        <div id="perfis-conteudo"><p class="carregando">Carregando…</p></div>
+      </div>
+
+      <!-- BACKUP -->
+      <div id="pagina-backup" class="pagina" style="display:none">
+        <h2 class="pagina-titulo">💾 Backup e Restauração</h2>
+        <p class="muted" style="color:var(--texto-mutado);font-size:0.85rem;margin:-1rem 0 1.25rem;line-height:1.55">
+          Antes de cada atualização do sistema, faça o backup. Após o deploy (que zera o banco), restaure o arquivo baixado.
+        </p>
+        <div class="card" style="margin-bottom:1.5rem">
+          <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1.2rem">
+            <div>
+              <p style="font-weight:600;margin-bottom:0.4rem">📥 Fazer backup</p>
+              <p class="muted" style="font-size:0.8rem;margin-bottom:0.75rem">Baixa um arquivo <code>.json</code> com todos os usuários, congregações, escalas, lançamentos e mais.</p>
+              <button type="button" class="btn btn-primario btn-sm" onclick="_baixarBackup()">⬇️ Baixar backup agora</button>
+            </div>
+            <hr style="border:none;border-top:1px solid var(--borda)"/>
+            <div>
+              <p style="font-weight:600;margin-bottom:0.4rem">📤 Restaurar backup</p>
+              <p class="muted" style="font-size:0.8rem;margin-bottom:0.75rem">
+                <strong style="color:var(--alerta)">⚠️ Atenção:</strong> apaga todos os dados atuais e substitui pelo conteúdo do arquivo. Use apenas após um deploy que zerou o banco.
+              </p>
+              <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+                <input type="file" id="input-backup-file" accept=".json" style="font-size:0.82rem;color:var(--texto)" onchange="_previewBackup(this)"/>
+                <button type="button" id="btn-restaurar-backup" class="btn btn-sm" style="background:var(--alerta);color:#000;display:none" onclick="_restaurarBackup()">⬆️ Restaurar</button>
+              </div>
+              <p id="backup-preview-info" style="font-size:0.78rem;color:var(--texto-mutado);margin-top:0.4rem"></p>
+              <p id="backup-restaurar-erro" class="erro-msg" style="display:none"></p>
+            </div>
+          </div>
+        </div>
+        <p class="secao-label" style="margin-top:1rem">⏰ Backup Automático</p>
+        <div class="card" style="margin-bottom:1.5rem" id="card-backup-auto">
+          <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem" id="backup-auto-corpo">
+            <p class="muted" style="font-size:0.8rem;margin:0">Carregando configuração…</p>
+          </div>
         </div>
       </div>
 
@@ -3084,25 +3215,65 @@
       const temPerfil = !!(usuario?.perfil_id)
       const isRestrito = !!(usuario && !isAdminOuLider && (temPerfil || !temDepartamentos))
 
-      const paginasMedia = ['nav-equipe', 'nav-departamentos', 'nav-cadastro', 'nav-agente', 'nav-dashboard']
-      for (const id of paginasMedia) {
-        const el = document.getElementById(id)
-        if (el) el.style.display = isRestrito ? 'none' : ''
-      }
       // Escalas e Comunicações: visíveis quando tem permissão no perfil ou não é restrito
       const navEscalas = document.getElementById('nav-escalas')
       if (navEscalas) navEscalas.style.display = (!isRestrito || usuario?.acesso_escalas) ? '' : 'none'
       const navComun = document.getElementById('nav-comunicacoes')
       if (navComun) navComun.style.display = (!isRestrito || usuario?.acesso_comunicacoes) ? '' : 'none'
-      // Cadastros: só liderança
-      const navCad = document.getElementById('nav-cadastro')
-      if (navCad && !isRestrito) navCad.style.display = temPapelLiderancaNoApp() ? '' : 'none'
 
+      // Financeiro
       const navFin = document.getElementById('nav-financeiro')
       if (navFin) navFin.style.display = (usuario?.role === 'admin' || usuario?.acesso_financeiro) ? '' : 'none'
 
+      // Cultos
+      const navCultos = document.getElementById('nav-cultos')
+      if (navCultos) navCultos.style.display = (isAdminOuLider || usuario?.acesso_cultos) ? '' : 'none'
+
+      // ── GRUPO CADASTROS ───────────────────────────────────────────────────────
+      const podeMembros     = isAdminOuLider
+      const podeDepartamentos = isAdminOuLider
+      const podeIgreja      = isAdminOuLider
+      const podeVisitantes  = isAdminOuLider || !!usuario?.acesso_visitantes
+      const podePerfis      = usuario?.role === 'admin'
+      const podeBackup      = isAdminOuLider
+
+      const navEquipe = document.getElementById('nav-equipe')
+      if (navEquipe) navEquipe.style.display = podeMembros ? '' : 'none'
+      const navVisit = document.getElementById('nav-visitantes')
+      if (navVisit) navVisit.style.display = podeVisitantes ? '' : 'none'
+      const navDepto = document.getElementById('nav-departamentos')
+      if (navDepto) navDepto.style.display = podeDepartamentos ? '' : 'none'
+      const navCad = document.getElementById('nav-cadastro')
+      if (navCad) navCad.style.display = podeIgreja ? '' : 'none'
+      const navPerf = document.getElementById('nav-perfis')
+      if (navPerf) navPerf.style.display = podePerfis ? '' : 'none'
+      const navBkp = document.getElementById('nav-backup')
+      if (navBkp) navBkp.style.display = podeBackup ? '' : 'none'
+
+      // Mostra o grupo se pelo menos um sub-item está visível
+      const grupoCad = document.getElementById('nav-grupo-cadastros')
+      if (grupoCad) grupoCad.style.display = (podeMembros || podeVisitantes || podeDepartamentos || podeIgreja || podePerfis || podeBackup) ? '' : 'none'
+
+      // Dashboard e Agente
+      const navDash = document.getElementById('nav-dashboard')
+      if (navDash) navDash.style.display = isRestrito ? 'none' : ''
+      const navAgente = document.getElementById('nav-agente')
+      if (navAgente) navAgente.style.display = isRestrito ? 'none' : ''
+
       verificarSenhaObrigatoria()
     }
+
+    function toggleNavGrupo(nome, ev) {
+      ev?.stopPropagation()
+      const grupo = document.getElementById(`nav-grupo-${nome}`)
+      if (grupo) grupo.classList.toggle('aberto')
+    }
+    function fecharNavGrupos() {
+      document.querySelectorAll('.nav-grupo.aberto').forEach(g => g.classList.remove('aberto'))
+    }
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.nav-grupo')) fecharNavGrupos()
+    })
 
     function verificarSenhaObrigatoria() {
       const modal = document.getElementById('modal-troca-senha')
@@ -3155,13 +3326,18 @@
       const _isRestrito = !!(usuario && !_isAdminOuLider && (_temPerfil || !(usuario?.departamentos?.length)))
       const restritas = ['equipe', 'departamentos', 'cadastros', 'agente', 'dashboard',
         ...(!usuario?.acesso_escalas ? ['escalas'] : []),
-        ...(!usuario?.acesso_comunicacoes ? ['comunicacoes'] : [])
+        ...(!usuario?.acesso_comunicacoes ? ['comunicacoes'] : []),
+        ...(!usuario?.acesso_visitantes ? ['visitantes'] : [])
       ]
-      if (_isRestrito && restritas.includes(pagina)) pagina = usuario?.acesso_cultos ? 'cultos' : (usuario?.acesso_escalas ? 'escalas' : 'financeiro')
+      if (_isRestrito && restritas.includes(pagina)) pagina = usuario?.acesso_cultos ? 'cultos' : (usuario?.acesso_visitantes ? 'visitantes' : (usuario?.acesso_escalas ? 'escalas' : 'financeiro'))
 
       document.querySelectorAll('.nav-link').forEach(el =>
         el.classList.toggle('ativo', el.dataset.pagina === pagina)
       )
+      // Marca o botão do grupo Cadastros como ativo quando sub-página está selecionada
+      const paginasCadastros = ['equipe','departamentos','cadastros','visitantes','perfis','backup']
+      const btnGrupoCad = document.getElementById('nav-grupo-cadastros-btn')
+      if (btnGrupoCad) btnGrupoCad.classList.toggle('grupo-ativo', paginasCadastros.includes(pagina))
       document.querySelectorAll('.pagina').forEach(el => el.style.display = 'none')
       document.getElementById(`pagina-${pagina}`).style.display = 'block'
       document.getElementById('header-nav').classList.remove('aberto')
@@ -3175,6 +3351,9 @@
         cadastros: carregarCadastros,
         financeiro: carregarFinanceiro,
         cultos: carregarCultos,
+        visitantes: carregarVisitantes,
+        perfis: carregarPerfis,
+        backup: carregarBackupAuto,
         agente: () => { }
       }
       loaders[pagina]?.()
@@ -4011,7 +4190,7 @@
       ${temMinhaEscala ? '<div style="margin-bottom:0.45rem"><span class="badge badge-vermelho">Tenho participação neste evento</span></div>' : ''}
       <div class="dash-escala-evento">${esc(nomeEvento(grupo.evento_id))}</div>
       ${grupo.congregacao_nome ? `<div style="font-size:0.68rem;color:var(--texto-mutado);margin:-0.2rem 0 0.3rem">⛪ ${esc(grupo.congregacao_nome)}</div>` : ''}
-      ${isPassado ? `<p style="font-size:0.72rem;color:var(--texto-mutado);margin:0.1rem 0 0.4rem;font-style:italic">Evento encerrado — clique para expandir detalhes</p>` : ''}
+      ${isPassado ? `<p style="font-size:0.72rem;color:var(--texto-mutado);margin:0.1rem 0 0.4rem;font-style:italic">Culto encerrado — equipe que ministrou</p>` : ''}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0.6rem;margin-top:0.55rem">
         ${grupo.itens
           .map((e) => {
@@ -4081,7 +4260,7 @@
       <div class="escala-secao-passados">
         <button type="button" class="btn-toggle-passados" onclick="toggleEscalasPassadas(this)" aria-expanded="false">
           <span style="font-size:0.85rem">📋</span>
-          <span>${passados.length} evento(s) encerrado(s)</span>
+          <span>Escalas anteriores — ${passados.length} culto(s) encerrado(s) <span style="font-size:0.75em;opacity:0.7">(clique para ver)</span></span>
           <span class="chevron">▾</span>
         </button>
         <div class="escalas-passadas-lista">
@@ -4454,6 +4633,7 @@
                 p.acesso_escala_global ? '🎬 Piloto escalas' : '',
                 p.acesso_escalas ? '📅 Escalas' : '',
                 p.acesso_comunicacoes ? '💬 Comunicações' : '',
+                p.acesso_visitantes ? '👥 Visitantes' : '',
               ].filter(Boolean).map(c => `<span class="badge badge-sucesso" style="font-size:0.72rem;margin:1px 2px">${c}</span>`).join('')
               return `<tr>
                 <td><strong>${esc(p.nome)}</strong></td>
@@ -4532,47 +4712,7 @@
       </div>
       ${tabelaEventos}
 
-      ${usuario?.role === 'admin' ? `
-      <p class="secao-label" style="margin-top:2rem">💾 Backup e Restauração</p>
-      <p class="muted" style="font-size:0.8rem;margin:-0.5rem 0 1rem;line-height:1.5">
-        Antes de cada atualização do sistema, faça o backup. Após o deploy (que zera o banco), restaure o arquivo baixado.
-      </p>
-      <div class="card" style="margin-bottom:1.5rem">
-        <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1.2rem">
-
-          <div>
-            <p style="font-weight:600;margin-bottom:0.4rem">📥 Fazer backup</p>
-            <p class="muted" style="font-size:0.8rem;margin-bottom:0.75rem">Baixa um arquivo <code>.json</code> com todos os usuários, congregações, escalas, lançamentos e mais.</p>
-            <button type="button" class="btn btn-primario btn-sm" onclick="_baixarBackup()">⬇️ Baixar backup agora</button>
-          </div>
-
-          <hr style="border:none;border-top:1px solid var(--borda)"/>
-
-          <div>
-            <p style="font-weight:600;margin-bottom:0.4rem">📤 Restaurar backup</p>
-            <p class="muted" style="font-size:0.8rem;margin-bottom:0.75rem">
-              <strong style="color:var(--alerta)">⚠️ Atenção:</strong> apaga todos os dados atuais e substitui pelo conteúdo do arquivo. Use apenas após um deploy que zerou o banco.
-            </p>
-            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
-              <input type="file" id="input-backup-file" accept=".json" style="font-size:0.82rem;color:var(--texto)" onchange="_previewBackup(this)"/>
-              <button type="button" id="btn-restaurar-backup" class="btn btn-sm" style="background:var(--alerta);color:#000;display:none" onclick="_restaurarBackup()">⬆️ Restaurar</button>
-            </div>
-            <p id="backup-preview-info" style="font-size:0.78rem;color:var(--texto-mutado);margin-top:0.4rem"></p>
-            <p id="backup-restaurar-erro" class="erro-msg" style="display:none"></p>
-          </div>
-
-        </div>
-      </div>
-
-      <p class="secao-label" style="margin-top:2rem">⏰ Backup Automático</p>
-      <div class="card" style="margin-bottom:1.5rem" id="card-backup-auto">
-        <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem" id="backup-auto-corpo">
-          <p class="muted" style="font-size:0.8rem;margin:0">Carregando configuração…</p>
-        </div>
-      </div>
-      ` : ''}
     `
-        if (usuario?.role === 'admin') carregarBackupAuto()
       } catch (err) {
         el.innerHTML = `<p class="carregando" style="color:var(--erro)">Erro ao carregar cadastros.</p>`
         console.error(err)
@@ -5887,16 +6027,36 @@
           ? list.map((a) => htmlCardAvisoComunicacao(a)).join('')
           : '<p class="vazio">Nenhum aviso em vigor.</p>'
 
-        const encerradosHtml =
-          pode && encerrados.length
-            ? `<p class="secao-label" style="margin-top:1.25rem">Encerrados (arquivo)</p>` +
-            encerrados
-              .map(
-                (a) =>
-                  `<div style="opacity:0.88">${htmlCardAvisoComunicacao(a)}</div>`
-              )
-              .join('')
-            : ''
+        const encerradosHtml = (() => {
+          if (!pode || !encerrados.length) return ''
+          // group by data_inicio (or criado_em date as fallback)
+          const grupos = {}
+          for (const a of encerrados) {
+            const key = (a.data_inicio || (a.criado_em || '').split('T')[0] || '').slice(0, 10)
+            if (!grupos[key]) grupos[key] = []
+            grupos[key].push(a)
+          }
+          const datasOrdenadas = Object.keys(grupos).sort((a, b) => b.localeCompare(a))
+          const gruposHtml = datasOrdenadas.map((data, idx) => {
+            const itens = grupos[data]
+            let dataFmt = data
+            try {
+              const d = new Date(data + 'T12:00:00')
+              dataFmt = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })
+              dataFmt = dataFmt.charAt(0).toUpperCase() + dataFmt.slice(1)
+            } catch (_) {}
+            const gid = `enc-g-${data}`
+            return `<div class="enc-grupo ${idx === 0 ? 'aberto' : ''}" id="${gid}">
+              <button class="enc-grupo-btn" onclick="this.closest('.enc-grupo').classList.toggle('aberto')">
+                📅 ${dataFmt} <span class="enc-count">${itens.length}</span><span class="enc-chevron">▾</span>
+              </button>
+              <div class="enc-grupo-conteudo">
+                ${itens.map(a => `<div style="opacity:0.88">${htmlCardAvisoComunicacao(a)}</div>`).join('')}
+              </div>
+            </div>`
+          }).join('')
+          return `<p class="secao-label" style="margin-top:1.25rem">Encerrados (arquivo)</p>` + gruposHtml
+        })()
 
         const trocasHtml = pode
           ? `
@@ -8077,6 +8237,50 @@
     </div>
   </div>
 
+  <!-- Modal editar presença -->
+  <div id="modal-editar-presenca" class="modal-overlay" onclick="if(event.target===this)fecharModalEditarPresenca()">
+    <div class="modal" style="max-width:420px">
+      <h3 class="modal-titulo">✏️ Editar presença</h3>
+      <input type="hidden" id="ep-id"/>
+      <div class="form-grupo">
+        <label>Nome *</label>
+        <input type="text" id="ep-nome" placeholder="Nome completo"/>
+      </div>
+      <div class="form-grupo">
+        <label>Como veio</label>
+        <select id="ep-tipo">
+          <option value="membro">Membro da Casa</option>
+          <option value="visitante">Visitante</option>
+          <option value="visitante_convidado">Convidado de alguém</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label>Celular</label>
+        <input type="tel" id="ep-celular" placeholder="(XX) XXXXX-XXXX" oninput="mascaraTelApp(this)" maxlength="15"/>
+      </div>
+      <div class="form-grupo">
+        <label>Bairro</label>
+        <input type="text" id="ep-bairro"/>
+      </div>
+      <div class="form-grupo" id="ep-wrap-igreja">
+        <label>Igreja de origem</label>
+        <input type="text" id="ep-igreja"/>
+      </div>
+      <div class="form-grupo" id="ep-wrap-convidado">
+        <label>Quem convidou</label>
+        <input type="text" id="ep-convidado"/>
+      </div>
+      <p id="ep-erro" class="erro-msg" style="display:none"></p>
+      <div class="modal-actions" style="justify-content:space-between">
+        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--erro)" onclick="excluirPresenca()">Excluir</button>
+        <div style="display:flex;gap:0.5rem">
+          <button type="button" class="btn btn-ghost" onclick="fecharModalEditarPresenca()">Cancelar</button>
+          <button type="button" class="btn btn-primario" onclick="salvarEdicaoPresenca()">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
       // ══════════════════════════════════════════════════════════════
       // CULTOS — funções do módulo
@@ -8210,6 +8414,148 @@
       } catch { return iso }
     }
 
+    // ── VISITANTES ─────────────────────────────────────────────────────────────
+    let _visitantesCache = []
+
+    async function carregarVisitantes() {
+      const el = document.getElementById('visitantes-conteudo')
+      if (!el) return
+      try {
+        _visitantesCache = await api('GET', '/visitante/listar')
+        _renderVisitantes(_visitantesCache)
+        // Verifica se há visitantes do check-in para importar
+        const { total } = await api('GET', '/visitante/contar-checkin').catch(() => ({ total: 0 }))
+        const btnImportar = document.getElementById('btn-importar-checkin')
+        if (btnImportar) {
+          if (total > 0) {
+            btnImportar.style.display = ''
+            btnImportar.textContent = `📋 Importar ${total} do check-in`
+          } else {
+            btnImportar.style.display = 'none'
+          }
+        }
+      } catch (e) {
+        el.innerHTML = '<p class="muted">Erro ao carregar visitantes.</p>'
+      }
+    }
+
+    async function importarDoCheckin() {
+      const btn = document.getElementById('btn-importar-checkin')
+      if (btn) btn.disabled = true
+      try {
+        const r = await api('POST', '/visitante/importar-checkin', {})
+        toast(`${r.importados} visitante(s) importado(s) do check-in!`, 'ok')
+        await carregarVisitantes()
+      } catch (e) {
+        toast(e.erro || 'Erro ao importar.', 'err')
+      } finally {
+        if (btn) btn.disabled = false
+      }
+    }
+
+    function _renderVisitantes(lista) {
+      const el = document.getElementById('visitantes-conteudo')
+      if (!el) return
+      if (!lista.length) {
+        el.innerHTML = '<p class="muted" style="margin-top:1rem">Nenhum visitante cadastrado ainda.</p>'
+        return
+      }
+      el.innerHTML = `<div style="overflow-x:auto"><table class="tabela-dados" style="min-width:600px">
+        <thead><tr>
+          <th>Nome</th><th>Celular</th><th>Bairro / Cidade</th>
+          <th style="text-align:center">Visitas</th><th>Última visita</th><th></th>
+        </tr></thead>
+        <tbody>${lista.map(v => `
+          <tr>
+            <td><strong>${esc(v.nome)}</strong>${v.igreja_origem ? `<br><span style="font-size:0.73rem;color:var(--texto-mutado)">${esc(v.igreja_origem)}</span>` : ''}</td>
+            <td>${esc(v.celular || '—')}</td>
+            <td>${esc([v.bairro, v.cidade].filter(Boolean).join(', ') || '—')}</td>
+            <td style="text-align:center;font-weight:700;color:var(--acento)">${v.total_visitas ?? 0}</td>
+            <td style="font-size:0.8rem;color:var(--texto-mutado)">${v.ultima_visita ? new Date(v.ultima_visita).toLocaleDateString('pt-BR') : '—'}</td>
+            <td style="white-space:nowrap">
+              <button class="btn btn-ghost btn-sm" onclick="abrirModalVisitante('${esc(v.id)}')">✏️</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>`
+    }
+
+    function _filtrarVisitantes(termo) {
+      const t = termo.toLowerCase().trim()
+      if (!t) return _renderVisitantes(_visitantesCache)
+      _renderVisitantes(_visitantesCache.filter(v =>
+        v.nome.toLowerCase().includes(t) || (v.celular || '').includes(t)
+      ))
+    }
+
+    async function abrirModalVisitante(id) {
+      document.getElementById('modal-visitante-titulo').textContent = id ? 'Editar Visitante' : 'Novo Visitante'
+      document.getElementById('visitante-id').value = id || ''
+      document.getElementById('visitante-erro').style.display = 'none'
+      const campos = ['nome','celular','email','data_nascimento','bairro','cidade','igreja_origem','como_conheceu','observacoes']
+      campos.forEach(c => { document.getElementById(`visitante-${c}`).value = '' })
+      document.getElementById('visitante-historico').innerHTML = ''
+      document.getElementById('visitante-historico-wrap').style.display = 'none'
+      if (id) {
+        try {
+          const v = await api('GET', `/visitante/${id}`)
+          campos.forEach(c => { if (document.getElementById(`visitante-${c}`)) document.getElementById(`visitante-${c}`).value = v[c] || '' })
+          if (v.historico?.length) {
+            document.getElementById('visitante-historico-wrap').style.display = ''
+            document.getElementById('visitante-historico').innerHTML = v.historico.map(h => `
+              <div style="font-size:0.8rem;padding:0.3rem 0;border-bottom:1px solid var(--borda)">
+                📅 ${h.culto_data ? new Date(h.culto_data+'T12:00:00').toLocaleDateString('pt-BR') : '—'}
+                &nbsp;·&nbsp; ${esc(h.titulo || h.evento_nome || 'Culto')}
+              </div>`).join('')
+          }
+        } catch (_) {}
+      }
+      document.getElementById('modal-visitante').classList.add('aberto')
+    }
+
+    function fecharModalVisitante() {
+      document.getElementById('modal-visitante').classList.remove('aberto')
+    }
+
+    async function salvarVisitante(ev) {
+      ev.preventDefault()
+      const id = document.getElementById('visitante-id').value
+      const errEl = document.getElementById('visitante-erro')
+      errEl.style.display = 'none'
+      const body = {
+        nome: document.getElementById('visitante-nome').value.trim(),
+        celular: document.getElementById('visitante-celular').value.trim(),
+        email: document.getElementById('visitante-email').value.trim(),
+        data_nascimento: document.getElementById('visitante-data_nascimento').value.trim(),
+        bairro: document.getElementById('visitante-bairro').value.trim(),
+        cidade: document.getElementById('visitante-cidade').value.trim(),
+        igreja_origem: document.getElementById('visitante-igreja_origem').value.trim(),
+        como_conheceu: document.getElementById('visitante-como_conheceu').value.trim(),
+        observacoes: document.getElementById('visitante-observacoes').value.trim(),
+      }
+      try {
+        if (id) await api('PUT', `/visitante/${id}`, body)
+        else await api('POST', '/visitante/criar', body)
+        fecharModalVisitante()
+        await carregarVisitantes()
+        toast(id ? 'Visitante atualizado.' : 'Visitante cadastrado!', 'ok')
+      } catch (e) {
+        errEl.textContent = e.erro || 'Erro ao salvar.'
+        errEl.style.display = 'block'
+      }
+    }
+
+    async function excluirVisitante() {
+      const id = document.getElementById('visitante-id').value
+      if (!id || !confirm('Excluir este visitante? O histórico de presenças será desvinculado.')) return
+      try {
+        await api('DELETE', `/visitante/${id}`)
+        fecharModalVisitante()
+        await carregarVisitantes()
+        toast('Visitante excluído.', 'ok')
+      } catch (e) { toast(e.erro || 'Erro ao excluir.', 'err') }
+    }
+
     // ── Modal criar culto ──────────────────────────────────────────────────────
     async function abrirModalNovoCulto() {
       const hoje = new Date().toISOString().split('T')[0]
@@ -8280,13 +8626,19 @@
           ? ` <span title="Clique para ver histórico" style="font-size:0.66rem;background:rgba(201,74,82,0.15);color:var(--primaria);border-radius:4px;padding:0.1rem 0.35rem;cursor:pointer;vertical-align:middle"
                onclick="_verHistoricoVisitante('${p.celular.replace(/'/g, "\\'")}','${p.nome.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">🔄 ${total}ª vez</span>`
           : ''
+        const podEditar = temPapelLiderancaNoApp() || !!usuario?.acesso_cultos
+        const pJson = esc(JSON.stringify({ id: p.id, nome: p.nome, tipo: p.tipo, celular: p.celular || '', bairro: p.bairro || '', igreja: p.igreja || '', convidado_por: p.convidado_por || '' }))
         return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:0.5rem 0;border-bottom:1px solid var(--borda)">
-      <div>
+      <div style="flex:1;min-width:0">
         <span style="font-size:0.88rem;font-weight:500">${esc(p.nome)}</span>${vezBadge}
         <br/>${tipoBadge}
         ${extras ? `<br/><span style="font-size:0.7rem;color:var(--texto-mutado)">${esc(extras)}</span>` : ''}
       </div>
-      <span style="font-size:0.75rem;color:var(--texto-mutado);flex-shrink:0;margin-left:0.5rem">${hora}</span>
+      <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;margin-left:0.5rem">
+        <span style="font-size:0.75rem;color:var(--texto-mutado)">${hora}</span>
+        ${podEditar ? `<button type="button" onclick='abrirModalEditarPresenca(${pJson})' title="Editar"
+          style="background:none;border:none;cursor:pointer;font-size:0.8rem;padding:0.1rem 0.3rem;color:var(--texto-mutado);line-height:1">✏️</button>` : ''}
+      </div>
     </div>`
       }).join('')
     }
@@ -8453,7 +8805,7 @@
                    oninput="_manualResetBusca()"/>
             <button type="button" id="btn-manual-buscar" onclick="_manualBuscarHistorico()"
                     style="margin-top:0.4rem;width:100%;padding:0.45rem 0.6rem;background:rgba(255,255,255,0.04);border:1px solid var(--borda);border-radius:7px;color:var(--texto-mutado);font-size:0.78rem;cursor:pointer;font-family:inherit;opacity:0.35;transition:opacity 0.2s,border-color 0.2s,color 0.2s,background 0.2s">
-              🔍 Já esteve aqui antes — verificar
+              🔍 Buscar no histórico (opcional — preenche dados automaticamente)
             </button>
           </div>
           <div class="form-grupo" id="manual-wrap-convidado" style="margin:0;display:none">
@@ -8543,6 +8895,72 @@
       if (_cultoRefreshTimer) { clearInterval(_cultoRefreshTimer); _cultoRefreshTimer = null }
     }
 
+    function abrirModalEditarPresenca(p) {
+      document.getElementById('ep-id').value = p.id
+      document.getElementById('ep-nome').value = p.nome || ''
+      document.getElementById('ep-tipo').value = p.tipo || 'visitante'
+      document.getElementById('ep-celular').value = p.celular || ''
+      document.getElementById('ep-bairro').value = p.bairro || ''
+      document.getElementById('ep-igreja').value = p.igreja || ''
+      document.getElementById('ep-convidado').value = p.convidado_por || ''
+      document.getElementById('ep-erro').style.display = 'none'
+      _atualizarCamposEdicaoPresenca(p.tipo)
+      document.getElementById('modal-editar-presenca').classList.add('aberto')
+    }
+
+    function fecharModalEditarPresenca() {
+      document.getElementById('modal-editar-presenca').classList.remove('aberto')
+    }
+
+    function _atualizarCamposEdicaoPresenca(tipo) {
+      const wIgreja = document.getElementById('ep-wrap-igreja')
+      const wConv = document.getElementById('ep-wrap-convidado')
+      if (wIgreja) wIgreja.style.display = tipo === 'membro' ? 'none' : ''
+      if (wConv) wConv.style.display = tipo === 'visitante_convidado' ? '' : 'none'
+    }
+
+    document.getElementById('ep-tipo')?.addEventListener('change', function() {
+      _atualizarCamposEdicaoPresenca(this.value)
+    })
+
+    async function salvarEdicaoPresenca() {
+      const id = document.getElementById('ep-id').value
+      const nome = document.getElementById('ep-nome').value.trim()
+      const errEl = document.getElementById('ep-erro')
+      if (!nome) { errEl.textContent = 'Nome é obrigatório.'; errEl.style.display = ''; return }
+      errEl.style.display = 'none'
+      try {
+        await api('PUT', `/culto/presenca/${id}`, {
+          nome,
+          tipo: document.getElementById('ep-tipo').value,
+          celular: document.getElementById('ep-celular').value.trim(),
+          bairro: document.getElementById('ep-bairro').value.trim(),
+          igreja: document.getElementById('ep-igreja').value.trim(),
+          convidado_por: document.getElementById('ep-convidado').value.trim(),
+        })
+        toast('Presença atualizada.', 'ok')
+        fecharModalEditarPresenca()
+        if (_cultoDetalheId) _recarregarPresencas(_cultoDetalheId)
+      } catch (e) {
+        errEl.textContent = e.erro || 'Erro ao salvar.'
+        errEl.style.display = ''
+      }
+    }
+
+    async function excluirPresenca() {
+      const id = document.getElementById('ep-id').value
+      const nome = document.getElementById('ep-nome').value.trim()
+      if (!confirm(`Excluir a presença de "${nome}"? Esta ação não pode ser desfeita.`)) return
+      try {
+        await api('DELETE', `/culto/presenca/${id}`)
+        toast('Presença excluída.', 'ok')
+        fecharModalEditarPresenca()
+        if (_cultoDetalheId) _recarregarPresencas(_cultoDetalheId)
+      } catch (e) {
+        toast(e.erro || 'Erro ao excluir.', 'err')
+      }
+    }
+
     async function alterarStatusCulto(id, encerrar) {
       try {
         await api('POST', `/culto/${id}/${encerrar ? 'encerrar' : 'reabrir'}`)
@@ -8606,11 +9024,11 @@
       const ativo = nome.length >= 2
       if (btnBusc) {
         btnBusc.disabled = false
-        btnBusc.textContent = '🔍 Já esteve aqui antes — verificar'
+        btnBusc.textContent = '🔍 Buscar no histórico (opcional — preenche dados automaticamente)'
         btnBusc.style.opacity = ativo ? '1' : '0.35'
-        btnBusc.style.color = ativo ? 'var(--primaria)' : 'var(--texto-mutado)'
-        btnBusc.style.borderColor = ativo ? 'var(--primaria)' : 'var(--borda)'
-        btnBusc.style.background = ativo ? 'rgba(201,74,82,0.10)' : 'rgba(255,255,255,0.04)'
+        btnBusc.style.color = ativo ? 'var(--texto)' : 'var(--texto-mutado)'
+        btnBusc.style.borderColor = ativo ? 'var(--borda-forte)' : 'var(--borda)'
+        btnBusc.style.background = ativo ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)'
       }
       const erroEl = document.getElementById('manual-erro')
       if (erroEl) erroEl.style.display = 'none'
@@ -8654,9 +9072,9 @@
           }
         }
         if (erroEl) { erroEl.textContent = 'Nenhum cadastro encontrado com esse nome.'; erroEl.style.display = 'block' }
-        if (btnBusc) { btnBusc.disabled = false; btnBusc.textContent = '🔍 Já esteve aqui antes — verificar' }
+        if (btnBusc) { btnBusc.disabled = false; btnBusc.textContent = '🔍 Buscar no histórico (opcional — preenche dados automaticamente)' }
       } catch {
-        if (btnBusc) { btnBusc.disabled = false; btnBusc.textContent = '🔍 Já esteve aqui antes — verificar' }
+        if (btnBusc) { btnBusc.disabled = false; btnBusc.textContent = '🔍 Buscar no histórico (opcional — preenche dados automaticamente)' }
       }
     }
 
@@ -8728,12 +9146,48 @@
         acesso_escala_global: '🎬 Piloto escalas',
         acesso_cultos: '🙏 Cultos',
         acesso_escalas: '📅 Escalas',
-        acesso_comunicacoes: '💬 Comunicações'
+        acesso_comunicacoes: '💬 Comunicações',
+        acesso_visitantes: '👥 Visitantes'
       }
       chips.innerHTML = Object.entries(labels)
         .filter(([k]) => perfil[k])
         .map(([, v]) => `<span class="badge badge-sucesso" style="font-size:0.72rem">${v}</span>`)
         .join('') || '<span style="color:var(--texto-mutado);font-size:0.78rem">Nenhuma permissão especial</span>'
+    }
+
+    async function carregarPerfis() {
+      const el = document.getElementById('perfis-conteudo')
+      if (!el) return
+      el.innerHTML = '<p class="carregando">Carregando…</p>'
+      try {
+        const lista = await api('GET', '/perfil/listar').catch(() => [])
+        _perfisAcessoCache = lista
+        if (!lista.length) {
+          el.innerHTML = '<p class="vazio">Nenhum perfil cadastrado.</p>'
+          return
+        }
+        const chips = (p) => [
+          p.acesso_financeiro ? '💰 Financeiro' : '',
+          p.acesso_relatorio_financeiro ? '📊 Relatórios' : '',
+          p.acesso_financeiro_saida ? '📤 Lança saídas' : '',
+          p.acesso_financeiro_global ? '🌐 Fin. global' : '',
+          p.acesso_cultos ? '🙏 Cultos' : '',
+          p.acesso_escala_global ? '🎬 Piloto escalas' : '',
+          p.acesso_escalas ? '📅 Escalas' : '',
+          p.acesso_comunicacoes ? '💬 Comunicações' : '',
+          p.acesso_visitantes ? '👥 Visitantes' : '',
+        ].filter(Boolean).map(c => `<span class="badge badge-sucesso" style="font-size:0.72rem;margin:1px 2px">${c}</span>`).join('')
+
+        el.innerHTML = `<div class="tabela-wrapper"><table><thead><tr><th>Nome</th><th>Permissões</th><th></th></tr></thead><tbody>` +
+          lista.map(p => `<tr>
+            <td><strong>${esc(p.nome)}</strong></td>
+            <td>${chips(p) || '<span style="color:var(--texto-mutado);font-size:0.82rem">Nenhuma</span>'}</td>
+            <td style="white-space:nowrap"><button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalEditarPerfil('${esc(p.id)}')">Editar</button></td>
+          </tr>`).join('') +
+          '</tbody></table></div>'
+      } catch (e) {
+        el.innerHTML = '<p class="vazio">Erro ao carregar perfis.</p>'
+      }
     }
 
     function abrirModalNovoPerfil() {
@@ -8748,6 +9202,7 @@
       document.getElementById('perfil-flag-escala').checked = false
       document.getElementById('perfil-flag-escalas').checked = false
       document.getElementById('perfil-flag-comunicacoes').checked = false
+      document.getElementById('perfil-flag-visitantes').checked = false
       document.getElementById('perfil-erro').style.display = 'none'
       document.getElementById('btn-excluir-perfil').style.display = 'none'
       document.getElementById('modal-perfil-acesso').classList.add('aberto')
@@ -8767,6 +9222,7 @@
       document.getElementById('perfil-flag-escala').checked = !!perfil.acesso_escala_global
       document.getElementById('perfil-flag-escalas').checked = !!perfil.acesso_escalas
       document.getElementById('perfil-flag-comunicacoes').checked = !!perfil.acesso_comunicacoes
+      document.getElementById('perfil-flag-visitantes').checked = !!perfil.acesso_visitantes
       document.getElementById('perfil-erro').style.display = 'none'
       document.getElementById('btn-excluir-perfil').style.display = ''
       document.getElementById('modal-perfil-acesso').classList.add('aberto')
@@ -8789,6 +9245,7 @@
         acesso_escala_global: document.getElementById('perfil-flag-escala').checked,
         acesso_escalas: !!(document.getElementById('perfil-flag-escalas')?.checked),
         acesso_comunicacoes: !!(document.getElementById('perfil-flag-comunicacoes')?.checked),
+        acesso_visitantes: !!(document.getElementById('perfil-flag-visitantes')?.checked),
       }
       const errEl = document.getElementById('perfil-erro')
       errEl.style.display = 'none'
@@ -8798,7 +9255,8 @@
         _perfisAcessoCache = null
         toast(id ? 'Perfil atualizado.' : 'Perfil criado.', 'ok')
         fecharModalPerfil()
-        carregarCadastros()
+        if (document.getElementById('pagina-perfis')?.style.display !== 'none') carregarPerfis()
+        else carregarCadastros()
       } catch (e) {
         errEl.textContent = e.erro || 'Erro ao salvar perfil.'
         errEl.style.display = ''
@@ -8813,7 +9271,8 @@
         _perfisAcessoCache = null
         toast('Perfil excluído.', 'ok')
         fecharModalPerfil()
-        carregarCadastros()
+        if (document.getElementById('pagina-perfis')?.style.display !== 'none') carregarPerfis()
+        else carregarCadastros()
       } catch (e) {
         toast(e.erro || 'Erro ao excluir.', 'err')
       }
@@ -8951,6 +9410,70 @@
     }
   </script>
 
+  <!-- MODAL: VISITANTE -->
+  <div id="modal-visitante" class="modal-overlay" onclick="if(event.target===this)fecharModalVisitante()">
+    <div class="modal" style="max-width:500px" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 id="modal-visitante-titulo" style="font-size:1.1rem">Visitante</h2>
+        <button class="btn-fechar" onclick="fecharModalVisitante()">✕</button>
+      </div>
+      <form onsubmit="salvarVisitante(event)">
+        <input type="hidden" id="visitante-id" />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem 1rem">
+          <div class="form-grupo" style="grid-column:1/-1">
+            <label>Nome *</label>
+            <input id="visitante-nome" type="text" placeholder="Nome completo" required />
+          </div>
+          <div class="form-grupo">
+            <label>Celular</label>
+            <input id="visitante-celular" type="tel" placeholder="(00) 00000-0000" />
+          </div>
+          <div class="form-grupo">
+            <label>E-mail</label>
+            <input id="visitante-email" type="email" placeholder="email@exemplo.com" />
+          </div>
+          <div class="form-grupo">
+            <label>Data de nascimento</label>
+            <input id="visitante-data_nascimento" type="date" />
+          </div>
+          <div class="form-grupo">
+            <label>Igreja de origem</label>
+            <input id="visitante-igreja_origem" type="text" placeholder="Igreja que frequenta / frequentava" />
+          </div>
+          <div class="form-grupo">
+            <label>Bairro</label>
+            <input id="visitante-bairro" type="text" placeholder="Bairro" />
+          </div>
+          <div class="form-grupo">
+            <label>Cidade</label>
+            <input id="visitante-cidade" type="text" placeholder="Cidade" />
+          </div>
+          <div class="form-grupo" style="grid-column:1/-1">
+            <label>Como conheceu a igreja</label>
+            <input id="visitante-como_conheceu" type="text" placeholder="Ex: convite de amigo, redes sociais…" />
+          </div>
+          <div class="form-grupo" style="grid-column:1/-1">
+            <label>Observações</label>
+            <textarea id="visitante-observacoes" rows="2" placeholder="Anotações pastorais ou de acompanhamento"
+              style="resize:vertical"></textarea>
+          </div>
+        </div>
+        <div id="visitante-historico-wrap" style="display:none;margin-top:0.5rem">
+          <div style="font-size:0.75rem;font-weight:600;color:var(--texto-mutado);letter-spacing:0.05em;margin-bottom:0.4rem">HISTÓRICO DE CULTOS</div>
+          <div id="visitante-historico" style="max-height:160px;overflow-y:auto;border:1px solid var(--borda);border-radius:var(--raio);padding:0.4rem 0.6rem"></div>
+        </div>
+        <p id="visitante-erro" class="erro-msg" style="display:none;margin:0.5rem 0 0"></p>
+        <div class="modal-actions" style="padding:0;margin-top:1rem">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-excluir-visitante"
+            style="margin-right:auto;color:var(--erro)" onclick="excluirVisitante()"
+            x-show="document.getElementById('visitante-id').value">Excluir</button>
+          <button type="button" class="btn btn-ghost" onclick="fecharModalVisitante()">Cancelar</button>
+          <button type="submit" class="btn btn-primario">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: PERFIL DE ACESSO -->
   <div id="modal-perfil-acesso" class="modal-overlay" onclick="if(event.target===this)fecharModalPerfil()">
     <div class="modal" style="max-width:460px" onclick="event.stopPropagation()">
@@ -9037,6 +9560,16 @@
                 <div>💬 Acesso ao módulo de Comunicações</div>
                 <div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Visualiza e envia avisos e
                   comunicados para a equipe.</div>
+              </div>
+            </label>
+            <label
+              style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer">
+              <input type="checkbox" id="perfil-flag-visitantes"
+                style="width:auto;margin-top:0.18rem;flex-shrink:0" />
+              <div>
+                <div>👥 Acesso ao módulo de Visitantes</div>
+                <div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Pode cadastrar, visualizar e
+                  acompanhar visitantes. Ideal para recepcionistas e obreiros da porta.</div>
               </div>
             </label>
           </div>

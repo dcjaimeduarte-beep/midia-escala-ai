@@ -10,6 +10,21 @@ router.get('/visitante', (req, res) => {
   if (digitos.length < 8) return res.json({ encontrado: false })
   const sufixo = `%${digitos.slice(-8)}`
 
+  // Busca primeiro na tabela de visitantes cadastrados
+  const cadastrado = sql.get(
+    `SELECT id, nome, celular, bairro, cidade, igreja_origem AS igreja, '' AS convidado_por
+     FROM visitantes WHERE REPLACE(REPLACE(REPLACE(celular,'-',''),'(',''),')','') LIKE ?
+     ORDER BY atualizado_em DESC LIMIT 1`,
+    sufixo
+  )
+  if (cadastrado) {
+    const { total } = sql.get(
+      `SELECT COUNT(*) AS total FROM presencas WHERE visitante_id = ?`, cadastrado.id
+    ) || { total: 0 }
+    return res.json({ encontrado: true, dados: { ...cadastrado, tipo: 'visitante' }, totalVisitas: Number(total), visitante_id: cadastrado.id })
+  }
+
+  // Fallback: busca no histórico de check-ins
   const ultimo = sql.get(
     `SELECT nome, celular, bairro, igreja, convidado_por, tipo
      FROM presencas WHERE celular LIKE ? AND celular != ''
@@ -30,7 +45,23 @@ router.get('/visitante', (req, res) => {
 router.get('/buscar-nome', (req, res) => {
   const termo = (req.query.nome || '').trim()
   if (termo.length < 2) return res.json([])
+  const like = `%${termo}%`
 
+  // Busca na tabela de visitantes cadastrados primeiro
+  const cadastrados = sql.all(
+    `SELECT v.id AS visitante_id, v.nome, v.celular, v.bairro, v.cidade AS bairro2,
+       v.igreja_origem AS igreja, 'visitante' AS tipo,
+       COUNT(p.id) AS total_visitas
+     FROM visitantes v
+     LEFT JOIN presencas p ON p.visitante_id = v.id
+     WHERE LOWER(v.nome) LIKE LOWER(?)
+     GROUP BY v.id
+     ORDER BY v.nome ASC LIMIT 8`,
+    like
+  )
+  if (cadastrados.length) return res.json(cadastrados)
+
+  // Fallback: busca no histórico de check-ins
   const resultados = sql.all(
     `SELECT p.nome, p.celular, p.bairro, p.igreja, p.tipo,
        (SELECT COUNT(*) FROM presencas px
@@ -83,7 +114,7 @@ router.post('/:id', (req, res) => {
   if (!culto) return res.status(404).json({ erro: 'Culto não encontrado' })
   if (culto.encerrado) return res.status(400).json({ erro: 'Este culto já foi encerrado' })
 
-  const { nome, tipo, convidado_por, usuario_id, celular, bairro, igreja } = req.body
+  const { nome, tipo, convidado_por, usuario_id, celular, bairro, igreja, visitante_id } = req.body
   if (!nome?.trim()) return res.status(400).json({ erro: 'Nome é obrigatório' })
   if (!['membro', 'visitante', 'visitante_convidado'].includes(tipo))
     return res.status(400).json({ erro: 'Tipo inválido' })
@@ -91,8 +122,8 @@ router.post('/:id', (req, res) => {
   const id    = uuid()
   const agora = new Date().toISOString()
   sql.run(
-    `INSERT INTO presencas (id, culto_id, tipo, nome, convidado_por, usuario_id, celular, bairro, igreja, registrado_em)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO presencas (id, culto_id, tipo, nome, convidado_por, usuario_id, celular, bairro, igreja, visitante_id, registrado_em)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
     id,
     culto.id,
     tipo,
@@ -102,6 +133,7 @@ router.post('/:id', (req, res) => {
     celular?.trim() || '',
     bairro?.trim()  || '',
     igreja?.trim()  || '',
+    visitante_id || null,
     agora
   )
   res.status(201).json({ ok: true, id })

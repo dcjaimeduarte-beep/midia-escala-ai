@@ -51,6 +51,26 @@ router.post('/criar', autenticar, apenasAcessoCultosOuLider, (req, res) => {
   res.status(201).json({ ...culto, encerrado: !!culto.encerrado })
 })
 
+// PUT /culto/presenca/:id — editar dados de uma presença (admin/lider/acesso_cultos)
+router.put('/presenca/:id', autenticar, apenasAcessoCultosOuLider, (req, res) => {
+  const p = sql.get('SELECT id FROM presencas WHERE id = ?', req.params.id)
+  if (!p) return res.status(404).json({ erro: 'Presença não encontrada' })
+  const { nome, tipo, celular, bairro, igreja, convidado_por } = req.body
+  const fields = { nome, tipo, celular, bairro, igreja, convidado_por }
+  for (const [col, val] of Object.entries(fields)) {
+    if (val !== undefined) sql.run(`UPDATE presencas SET ${col}=? WHERE id=?`, String(val).trim(), req.params.id)
+  }
+  res.json({ ok: true })
+})
+
+// DELETE /culto/presenca/:id — excluir uma presença (admin/lider)
+router.delete('/presenca/:id', autenticar, apenasAdminOuLider, (req, res) => {
+  if (!sql.get('SELECT id FROM presencas WHERE id = ?', req.params.id))
+    return res.status(404).json({ erro: 'Presença não encontrada' })
+  sql.run('DELETE FROM presencas WHERE id = ?', req.params.id)
+  res.json({ ok: true })
+})
+
 router.put('/:id', autenticar, apenasAcessoCultosOuLider, (req, res) => {
   const culto = sql.get(`SELECT * FROM cultos WHERE id = ?`, req.params.id)
   if (!culto) return res.status(404).json({ erro: 'Culto não encontrado' })
@@ -109,7 +129,9 @@ router.get('/:id/presencas', autenticar, (req, res) => {
   const presencas = sql.all(
     `SELECT p.*,
        CASE WHEN p.celular = '' THEN 0
-            ELSE (SELECT COUNT(*) FROM presencas p2 WHERE p2.celular = p.celular AND p2.celular != '')
+            ELSE (SELECT COUNT(*) FROM presencas p2
+                  WHERE p2.celular = p.celular AND p2.celular != ''
+                    AND p2.tipo IN ('visitante','visitante_convidado'))
        END AS total_visitas
      FROM presencas p WHERE p.culto_id = ?
      ORDER BY p.registrado_em ASC`,

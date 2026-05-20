@@ -46,6 +46,7 @@ app.use('/backup',       require('./routes/backupRoutes'))
 app.use('/culto',        require('./routes/cultoRoutes'))
 app.use('/checkin',      require('./routes/checkinRoutes'))
 app.use('/perfil',       require('./routes/perfilRoutes'))
+app.use('/visitante',    require('./routes/visitanteRoutes'))
 
 // ─── EventBus listeners ──────────────────────────────────────────────────────
 eventBus.on('escala_criada', (escala) => {
