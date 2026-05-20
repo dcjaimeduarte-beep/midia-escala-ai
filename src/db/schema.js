@@ -381,8 +381,14 @@ function migrate() {
     );
   `)
   tryExec(`ALTER TABLE presencas ADD COLUMN visitante_id TEXT REFERENCES visitantes(id) ON DELETE SET NULL`)
-  tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_visitantes INTEGER NOT NULL DEFAULT 0`)
-  tryExec(`ALTER TABLE perfis   ADD COLUMN acesso_visitantes INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE usuarios ADD COLUMN acesso_visitantes       INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE perfis   ADD COLUMN acesso_visitantes       INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE perfis   ADD COLUMN ver_totais_financeiro   INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE usuarios ADD COLUMN ver_totais_financeiro   INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE perfis   ADD COLUMN ver_totais_dia          INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE usuarios ADD COLUMN ver_totais_dia          INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE perfis   ADD COLUMN ver_subtotais_tipo      INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE usuarios ADD COLUMN ver_subtotais_tipo      INTEGER NOT NULL DEFAULT 0`)
 
   // Tabela genérica de configurações do sistema (chave → valor JSON)
   db.exec(`
@@ -401,31 +407,36 @@ const PERFIS_MACRO = [
     nome: 'Líder',
     acesso_financeiro: 0, acesso_relatorio_financeiro: 0, acesso_financeiro_global: 0,
     acesso_financeiro_saida: 0, acesso_escala_global: 0,
-    acesso_cultos: 1, acesso_escalas: 1, acesso_comunicacoes: 1, acesso_visitantes: 1
+    acesso_cultos: 1, acesso_escalas: 1, acesso_comunicacoes: 1, acesso_visitantes: 1,
+    ver_totais_financeiro: 0, ver_totais_dia: 0, ver_subtotais_tipo: 0
   },
   {
     nome: 'Obreiro — Recepção',
     acesso_financeiro: 0, acesso_relatorio_financeiro: 0, acesso_financeiro_global: 0,
     acesso_financeiro_saida: 0, acesso_escala_global: 0,
-    acesso_cultos: 1, acesso_escalas: 0, acesso_comunicacoes: 0, acesso_visitantes: 1
+    acesso_cultos: 1, acesso_escalas: 0, acesso_comunicacoes: 0, acesso_visitantes: 1,
+    ver_totais_financeiro: 0, ver_totais_dia: 0, ver_subtotais_tipo: 0
   },
   {
     nome: 'Obreiro — Financeiro',
     acesso_financeiro: 1, acesso_relatorio_financeiro: 0, acesso_financeiro_global: 0,
     acesso_financeiro_saida: 0, acesso_escala_global: 0,
-    acesso_cultos: 1, acesso_escalas: 0, acesso_comunicacoes: 0, acesso_visitantes: 1
+    acesso_cultos: 1, acesso_escalas: 0, acesso_comunicacoes: 0, acesso_visitantes: 1,
+    ver_totais_financeiro: 0, ver_totais_dia: 0, ver_subtotais_tipo: 0
   },
   {
     nome: 'Obreiro — Mídia',
     acesso_financeiro: 0, acesso_relatorio_financeiro: 0, acesso_financeiro_global: 0,
     acesso_financeiro_saida: 0, acesso_escala_global: 0,
-    acesso_cultos: 1, acesso_escalas: 1, acesso_comunicacoes: 1, acesso_visitantes: 0
+    acesso_cultos: 1, acesso_escalas: 1, acesso_comunicacoes: 1, acesso_visitantes: 0,
+    ver_totais_financeiro: 0, ver_totais_dia: 0, ver_subtotais_tipo: 0
   },
   {
     nome: 'Financeiro — Líder',
     acesso_financeiro: 1, acesso_relatorio_financeiro: 1, acesso_financeiro_global: 0,
     acesso_financeiro_saida: 1, acesso_escala_global: 0,
-    acesso_cultos: 0, acesso_escalas: 0, acesso_comunicacoes: 0, acesso_visitantes: 0
+    acesso_cultos: 0, acesso_escalas: 0, acesso_comunicacoes: 0, acesso_visitantes: 0,
+    ver_totais_financeiro: 1, ver_totais_dia: 1, ver_subtotais_tipo: 1
   }
 ]
 
@@ -464,20 +475,20 @@ function sincronizarPerfisMacro() {
     const row = db.get('SELECT id FROM perfis WHERE nome = ?', p.nome)
     if (!row) {
       db.run(
-        `INSERT INTO perfis (id,nome,acesso_financeiro,acesso_relatorio_financeiro,acesso_financeiro_global,acesso_financeiro_saida,acesso_escala_global,acesso_cultos,acesso_escalas,acesso_comunicacoes,acesso_visitantes,criado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO perfis (id,nome,acesso_financeiro,acesso_relatorio_financeiro,acesso_financeiro_global,acesso_financeiro_saida,acesso_escala_global,acesso_cultos,acesso_escalas,acesso_comunicacoes,acesso_visitantes,ver_totais_financeiro,ver_totais_dia,ver_subtotais_tipo,criado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         uuidv4(), p.nome,
         p.acesso_financeiro, p.acesso_relatorio_financeiro, p.acesso_financeiro_global,
         p.acesso_financeiro_saida, p.acesso_escala_global,
         p.acesso_cultos, p.acesso_escalas, p.acesso_comunicacoes, p.acesso_visitantes,
-        agora
+        p.ver_totais_financeiro, p.ver_totais_dia, p.ver_subtotais_tipo, agora
       )
     } else {
       db.run(
-        `UPDATE perfis SET acesso_financeiro=?,acesso_relatorio_financeiro=?,acesso_financeiro_global=?,acesso_financeiro_saida=?,acesso_escala_global=?,acesso_cultos=?,acesso_escalas=?,acesso_comunicacoes=?,acesso_visitantes=? WHERE nome=?`,
+        `UPDATE perfis SET acesso_financeiro=?,acesso_relatorio_financeiro=?,acesso_financeiro_global=?,acesso_financeiro_saida=?,acesso_escala_global=?,acesso_cultos=?,acesso_escalas=?,acesso_comunicacoes=?,acesso_visitantes=?,ver_totais_financeiro=?,ver_totais_dia=?,ver_subtotais_tipo=? WHERE nome=?`,
         p.acesso_financeiro, p.acesso_relatorio_financeiro, p.acesso_financeiro_global,
         p.acesso_financeiro_saida, p.acesso_escala_global,
         p.acesso_cultos, p.acesso_escalas, p.acesso_comunicacoes, p.acesso_visitantes,
-        p.nome
+        p.ver_totais_financeiro, p.ver_totais_dia, p.ver_subtotais_tipo, p.nome
       )
     }
   }

@@ -4629,6 +4629,9 @@
                 p.acesso_relatorio_financeiro ? '📊 Relatórios' : '',
                 p.acesso_financeiro_saida ? '📤 Lança saídas' : '',
                 p.acesso_financeiro_global ? '🌐 Fin. global' : '',
+                p.ver_totais_financeiro ? '📈 Total geral' : '',
+                p.ver_totais_dia ? '📅 Total/dia' : '',
+                p.ver_subtotais_tipo ? '💳 Subtotal tipo' : '',
                 p.acesso_cultos ? '🙏 Cultos' : '',
                 p.acesso_escala_global ? '🎬 Piloto escalas' : '',
                 p.acesso_escalas ? '📅 Escalas' : '',
@@ -6941,11 +6944,11 @@
       let html = `<div style="font-size:0.8rem;color:var(--texto-mutado);margin-bottom:0.75rem">
     ${nomeCong ? `<span style="color:var(--texto);font-weight:600">⛪ ${esc(nomeCong)}</span> · ` : ''}${rows.length} lançamento${rows.length !== 1 ? 's' : ''} no período
   </div>
-  <div class="fin-resumo-grid">
+  ${(usuario?.role === 'admin' || !!usuario?.ver_totais_financeiro) ? `<div class="fin-resumo-grid">
     <div class="fin-stat-card"><div class="fin-stat-label">Entradas</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(entMes)}</div></div>
     <div class="fin-stat-card"><div class="fin-stat-label">Saídas</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(saiMes)}</div></div>
     <div class="fin-stat-card"><div class="fin-stat-label">Saldo</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(saldoMes)}</div></div>
-  </div>`
+  </div>` : ''}`
 
       // ── Passados colapsados ──────────────────────────────────
       if (passados.length) {
@@ -7016,7 +7019,7 @@
         for (const l of g.itens) html += _renderChip(l, false)
         html += `</div>`
       }
-      html += _subtotaisChipsDia(itens)
+      if (usuario?.role === 'admin' || !!usuario?.ver_subtotais_tipo) html += _subtotaisChipsDia(itens)
       html += `</div>`
       return html
     }
@@ -7091,8 +7094,8 @@
   </div>
   <div style="display:flex;gap:0.4rem;margin-bottom:1rem;flex-wrap:wrap">
     <button style="${btnStyle('todos')}" onclick="_setFinLancFiltro('todos')">Todos</button>
-    <button style="${btnStyle('entrada')}" onclick="_setFinLancFiltro('entrada')">↑ Entradas <span style="opacity:.7">${_fmtVal(entMes)}</span></button>
-    <button style="${btnStyle('saida')}" onclick="_setFinLancFiltro('saida')">↓ Saídas <span style="opacity:.7">${_fmtVal(saiMes)}</span></button>
+    <button style="${btnStyle('entrada')}" onclick="_setFinLancFiltro('entrada')">↑ Entradas ${(usuario?.role === 'admin' || !!usuario?.ver_totais_financeiro) ? `<span style="opacity:.7">${_fmtVal(entMes)}</span>` : ''}</button>
+    <button style="${btnStyle('saida')}" onclick="_setFinLancFiltro('saida')">↓ Saídas ${(usuario?.role === 'admin' || !!usuario?.ver_totais_financeiro) ? `<span style="opacity:.7">${_fmtVal(saiMes)}</span>` : ''}</button>
   </div>`
 
       if (!filtrados.length) return html + `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento${filtro !== 'todos' ? ' deste tipo' : ''} no período.</p>`
@@ -7112,14 +7115,14 @@
         return `<div class="fin-dia-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem;flex-wrap:wrap;gap:0.35rem">
         <span class="fin-dia-header" style="margin:0">${esc(data)}</span>
-        <span style="font-size:0.75rem;font-weight:600;display:flex;gap:0.65rem;align-items:center">
+        ${(usuario?.role === 'admin' || !!usuario?.ver_totais_dia) ? `<span style="font-size:0.75rem;font-weight:600;display:flex;gap:0.65rem;align-items:center">
           ${filtro !== 'saida'   ? `<span style="color:var(--sucesso)">+${_fmtVal(entDia)}</span>` : ''}
           ${filtro !== 'entrada' ? `<span style="color:var(--erro)">−${_fmtVal(saiDia)}</span>` : ''}
           ${filtro === 'todos'   ? `<span style="color:${saldoDia>=0?'var(--sucesso)':'var(--erro)'};border-left:1px solid rgba(255,255,255,0.12);padding-left:0.65rem">= ${_fmtVal(saldoDia)}</span>` : ''}
-        </span>
+        </span>` : ''}
       </div>
       ${_renderChipsAgrupados(itens)}
-      ${_subtotaisChipsDia(itens)}
+      ${(usuario?.role === 'admin' || !!usuario?.ver_subtotais_tipo) ? _subtotaisChipsDia(itens) : ''}
     </div>`
       }
 
@@ -9143,6 +9146,9 @@
         acesso_relatorio_financeiro: '📊 Relatórios',
         acesso_financeiro_saida: '📤 Lança saídas',
         acesso_financeiro_global: '🌐 Fin. global',
+        ver_totais_financeiro: '📈 Total geral',
+        ver_totais_dia: '📅 Total/dia',
+        ver_subtotais_tipo: '💳 Subtotal tipo',
         acesso_escala_global: '🎬 Piloto escalas',
         acesso_cultos: '🙏 Cultos',
         acesso_escalas: '📅 Escalas',
@@ -9171,6 +9177,9 @@
           p.acesso_relatorio_financeiro ? '📊 Relatórios' : '',
           p.acesso_financeiro_saida ? '📤 Lança saídas' : '',
           p.acesso_financeiro_global ? '🌐 Fin. global' : '',
+          p.ver_totais_financeiro ? '📈 Total geral' : '',
+          p.ver_totais_dia ? '📅 Total/dia' : '',
+          p.ver_subtotais_tipo ? '💳 Subtotal tipo' : '',
           p.acesso_cultos ? '🙏 Cultos' : '',
           p.acesso_escala_global ? '🎬 Piloto escalas' : '',
           p.acesso_escalas ? '📅 Escalas' : '',
@@ -9203,6 +9212,9 @@
       document.getElementById('perfil-flag-escalas').checked = false
       document.getElementById('perfil-flag-comunicacoes').checked = false
       document.getElementById('perfil-flag-visitantes').checked = false
+      document.getElementById('perfil-flag-ver-totais').checked = false
+      document.getElementById('perfil-flag-ver-totais-dia').checked = false
+      document.getElementById('perfil-flag-ver-subtotais').checked = false
       document.getElementById('perfil-erro').style.display = 'none'
       document.getElementById('btn-excluir-perfil').style.display = 'none'
       document.getElementById('modal-perfil-acesso').classList.add('aberto')
@@ -9223,6 +9235,9 @@
       document.getElementById('perfil-flag-escalas').checked = !!perfil.acesso_escalas
       document.getElementById('perfil-flag-comunicacoes').checked = !!perfil.acesso_comunicacoes
       document.getElementById('perfil-flag-visitantes').checked = !!perfil.acesso_visitantes
+      document.getElementById('perfil-flag-ver-totais').checked = !!perfil.ver_totais_financeiro
+      document.getElementById('perfil-flag-ver-totais-dia').checked = !!perfil.ver_totais_dia
+      document.getElementById('perfil-flag-ver-subtotais').checked = !!perfil.ver_subtotais_tipo
       document.getElementById('perfil-erro').style.display = 'none'
       document.getElementById('btn-excluir-perfil').style.display = ''
       document.getElementById('modal-perfil-acesso').classList.add('aberto')
@@ -9246,6 +9261,9 @@
         acesso_escalas: !!(document.getElementById('perfil-flag-escalas')?.checked),
         acesso_comunicacoes: !!(document.getElementById('perfil-flag-comunicacoes')?.checked),
         acesso_visitantes: !!(document.getElementById('perfil-flag-visitantes')?.checked),
+        ver_totais_financeiro: !!(document.getElementById('perfil-flag-ver-totais')?.checked),
+        ver_totais_dia: !!(document.getElementById('perfil-flag-ver-totais-dia')?.checked),
+        ver_subtotais_tipo: !!(document.getElementById('perfil-flag-ver-subtotais')?.checked),
       }
       const errEl = document.getElementById('perfil-erro')
       errEl.style.display = 'none'
@@ -9514,6 +9532,30 @@
                 <div>📤 Lançar saídas (despesas)</div>
                 <div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Pode registrar despesas e
                   saídas financeiras. Necessário para o admin financeiro / tesoureiro.</div>
+              </div>
+            </label>
+            <label
+              style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer;margin-left:1.5rem">
+              <input type="checkbox" id="perfil-flag-ver-totais" style="width:auto;margin-top:0.18rem;flex-shrink:0" />
+              <div>
+                <div>📈 Ver total geral (Entradas / Saídas / Saldo)</div>
+                <div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Exibe os 3 cards de resumo no topo do módulo financeiro.</div>
+              </div>
+            </label>
+            <label
+              style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer;margin-left:1.5rem">
+              <input type="checkbox" id="perfil-flag-ver-totais-dia" style="width:auto;margin-top:0.18rem;flex-shrink:0" />
+              <div>
+                <div>📅 Ver total acumulado por dia</div>
+                <div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Exibe o saldo de entrada/saída em cada linha de data.</div>
+              </div>
+            </label>
+            <label
+              style="text-transform:none;letter-spacing:0;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer;margin-left:1.5rem">
+              <input type="checkbox" id="perfil-flag-ver-subtotais" style="width:auto;margin-top:0.18rem;flex-shrink:0" />
+              <div>
+                <div>💳 Ver subtotal por forma de pagamento</div>
+                <div style="font-size:0.72rem;color:var(--texto-mutado);margin-top:0.1rem">Exibe os chips de subtotal (Cartão, Espécie, etc.) em cada dia.</div>
               </div>
             </label>
             <label

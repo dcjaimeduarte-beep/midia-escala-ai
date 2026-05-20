@@ -17,7 +17,7 @@ function autenticar(req, res, next) {
   try {
     const payload = jwt.verify(auth.split(' ')[1], SECRET)
     const row = db.get(
-      'SELECT id, nome, email, role, acesso_financeiro, acesso_financeiro_global, acesso_financeiro_saida, acesso_relatorio_financeiro, acesso_escala_global, acesso_cultos, acesso_visitantes, congregacao_id FROM usuarios WHERE id = ? AND ativo = 1',
+      'SELECT id, nome, email, role, acesso_financeiro, acesso_financeiro_global, acesso_financeiro_saida, acesso_relatorio_financeiro, acesso_escala_global, acesso_cultos, acesso_visitantes, ver_totais_financeiro, ver_totais_dia, ver_subtotais_tipo, congregacao_id FROM usuarios WHERE id = ? AND ativo = 1',
       payload.id
     )
     if (!row) return res.status(401).json({ erro: 'Usuário inválido ou inativo' })
@@ -33,6 +33,9 @@ function autenticar(req, res, next) {
       acesso_escala_global: !!row.acesso_escala_global,
       acesso_cultos: !!row.acesso_cultos,
       acesso_visitantes: !!row.acesso_visitantes,
+      ver_totais_financeiro: !!row.ver_totais_financeiro,
+      ver_totais_dia: !!row.ver_totais_dia,
+      ver_subtotais_tipo: !!row.ver_subtotais_tipo,
       congregacao_id: row.congregacao_id || null
     }
     next()
