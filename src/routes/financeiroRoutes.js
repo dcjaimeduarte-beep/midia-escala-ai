@@ -92,8 +92,8 @@ router.get('/lancamentos', autenticar, apenasFinanceiro, (req, res) => {
 
   const isGlobal = req.usuario.role === 'admin' || req.usuario.acesso_financeiro_global
   if (!isGlobal && req.usuario.congregacao_id) {
-    // Usuário sem acesso global só vê a própria congregação
-    where.push('l.congregacao_id = ?')
+    // Usuário sem acesso global vê a própria congregação + lançamentos sem congregação (criados por admin)
+    where.push('(l.congregacao_id = ? OR l.congregacao_id IS NULL)')
     params.push(req.usuario.congregacao_id)
   } else if (isGlobal && req.query.congregacao_id) {
     // Acesso global filtra por congregação; inclui lançamentos sem congregação (criados por admin sem vínculo)
@@ -237,7 +237,7 @@ router.get('/dashboard', autenticar, apenasFinanceiro, apenasRelatorioFinanceiro
   const congId = _isGlobalDash
     ? (req.query.congregacao_id || null)
     : (req.usuario.congregacao_id || null)
-  const congFilter = congId ? 'AND l.congregacao_id = ?' : ''
+  const congFilter = congId ? 'AND (l.congregacao_id = ? OR l.congregacao_id IS NULL)' : ''
   const congParam  = congId ? [congId] : []
 
   const lancamentos = db.all(`
@@ -291,7 +291,7 @@ router.get('/relatorio', autenticar, apenasFinanceiro, apenasRelatorioFinanceiro
   const relCongId = _isGlobalRel
     ? (req.query.congregacao_id || null)
     : (req.usuario.congregacao_id || null)
-  const relCongFilter = relCongId ? 'AND l.congregacao_id = ?' : ''
+  const relCongFilter = relCongId ? 'AND (l.congregacao_id = ? OR l.congregacao_id IS NULL)' : ''
   const relCongParam  = relCongId ? [relCongId] : []
 
   let periodoFilter, periodoParams
@@ -358,7 +358,7 @@ router.get('/dashboard-anual', autenticar, apenasFinanceiro, apenasRelatorioFina
   const congId   = isGlobal
     ? (req.query.congregacao_id || null)
     : (req.usuario.congregacao_id || null)
-  const cf = congId ? 'AND l.congregacao_id = ?' : ''
+  const cf = congId ? 'AND (l.congregacao_id = ? OR l.congregacao_id IS NULL)' : ''
   const cp = congId ? [congId] : []
 
   const meses = db.all(`
