@@ -44,6 +44,87 @@
       --fonte-corpo: 'Inter', system-ui, sans-serif;
     }
 
+    [data-tema="claro"] {
+      --fundo: #f0f2f5;
+      --fundo-elevado: #ffffff;
+      --fundo-card: #ffffff;
+      --fundo-soft: #e8eaed;
+      --texto: #1a1c22;
+      --texto-mutado: #5c6370;
+      --borda: rgba(0, 0, 0, 0.09);
+      --borda-forte: rgba(0, 0, 0, 0.14);
+      --sombra-card: 0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 16px rgba(0, 0, 0, 0.08);
+      --acento: #5a72a8;
+      --sucesso: #2e8b47;
+      --erro: #c0392b;
+      --dourado: #a07830;
+    }
+
+    [data-tema="claro"] header {
+      background: #ffffff;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    [data-tema="claro"] .nav-link {
+      color: var(--texto-mutado);
+    }
+    [data-tema="claro"] .nav-link:hover,
+    [data-tema="claro"] .nav-link.ativo {
+      background: rgba(0,0,0,0.06);
+      color: var(--texto);
+    }
+
+    [data-tema="claro"] .form-grupo input,
+    [data-tema="claro"] .form-grupo textarea,
+    [data-tema="claro"] .form-grupo select {
+      background: #f5f6f8;
+      border-color: rgba(0,0,0,0.14);
+    }
+
+    [data-tema="claro"] .form-grupo input:focus,
+    [data-tema="claro"] .form-grupo textarea:focus,
+    [data-tema="claro"] .form-grupo select:focus {
+      background: #fff;
+    }
+
+    [data-tema="claro"] .modal {
+      background: #ffffff;
+    }
+
+    [data-tema="claro"] .modal-overlay {
+      background: rgba(0,0,0,0.35);
+    }
+
+    [data-tema="claro"] .btn-ghost {
+      color: var(--texto-mutado);
+    }
+    [data-tema="claro"] .btn-ghost:hover {
+      background: rgba(0,0,0,0.06);
+    }
+
+    [data-tema="claro"] .sidebar,
+    [data-tema="claro"] nav {
+      background: #ffffff;
+    }
+
+    [data-tema="claro"] .fin-dia-card,
+    [data-tema="claro"] .card {
+      background: #ffffff;
+    }
+
+    [data-tema="claro"] .sort-btn {
+      background: rgba(0,0,0,0.05);
+      color: var(--texto-mutado);
+    }
+    [data-tema="claro"] .sort-btn.ativo {
+      background: var(--primaria);
+      color: #fff;
+    }
+
+    [data-tema="claro"] .chip {
+      background: rgba(0,0,0,0.06);
+    }
+
     body {
       font-family: var(--fonte-corpo);
       background: var(--fundo);
@@ -2019,6 +2100,7 @@
           <span class="usuario-role" id="hdr-role"></span>
           <span id="hdr-cong" style="font-size:0.65rem;color:var(--texto-mutado);display:none;margin-top:0.1rem"></span>
         </div>
+        <button class="btn btn-ghost btn-sm" id="btn-tema" onclick="alternarTema()" title="Alternar tema" style="font-size:1rem;padding:0.3rem 0.5rem">🌙</button>
         <button class="btn btn-ghost btn-sm" onclick="logout()">Sair</button>
         <button class="hamburger" onclick="toggleMenu()">
           <span></span><span></span><span></span>
@@ -2903,6 +2985,32 @@
 
   <script>
     // ═══════════════════════════════════════════════════════════
+    // ── TEMA ────────────────────────────────────────────────────
+    ;(function () {
+      const tema = localStorage.getItem('peniel_tema') || 'escuro'
+      if (tema === 'claro') document.documentElement.setAttribute('data-tema', 'claro')
+    })()
+
+    function alternarTema() {
+      const atual = document.documentElement.getAttribute('data-tema')
+      const novo = atual === 'claro' ? 'escuro' : 'claro'
+      if (novo === 'claro') {
+        document.documentElement.setAttribute('data-tema', 'claro')
+      } else {
+        document.documentElement.removeAttribute('data-tema')
+      }
+      localStorage.setItem('peniel_tema', novo)
+      const btn = document.getElementById('btn-tema')
+      if (btn) btn.textContent = novo === 'claro' ? '🌙' : '☀️'
+    }
+
+    function _aplicarIconeTema() {
+      const btn = document.getElementById('btn-tema')
+      if (!btn) return
+      const tema = localStorage.getItem('peniel_tema') || 'escuro'
+      btn.textContent = tema === 'claro' ? '🌙' : '☀️'
+    }
+
     // ESTADO GLOBAL
     // ═══════════════════════════════════════════════════════════
     let token = localStorage.getItem('peniel_token')
@@ -3247,6 +3355,7 @@
     function mostrarApp() {
       document.getElementById('tela-login').style.display = 'none'
       document.getElementById('tela-app').style.display = 'block'
+      _aplicarIconeTema()
 
       const primeiroNome = (usuario?.nome || 'Usuário').split(' ')[0]
       document.getElementById('hdr-nome').textContent = primeiroNome
