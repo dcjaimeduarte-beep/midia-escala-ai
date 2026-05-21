@@ -124,6 +124,11 @@ router.get('/:id/qrcode', autenticar, async (req, res) => {
 })
 
 router.get('/visitantes-geral', autenticar, apenasAcessoCultosOuLider, (req, res) => {
+  const TIPOS_VALIDOS = ['membro', 'visitante', 'visitante_convidado']
+  const tipos = (req.query.tipos || 'membro,visitante,visitante_convidado')
+    .split(',').map(t => t.trim()).filter(t => TIPOS_VALIDOS.includes(t))
+  if (!tipos.length) return res.json([])
+  const placeholders = tipos.map(() => '?').join(',')
   const rows = sql.all(
     `SELECT p.*,
        c.titulo AS culto_titulo, c.data AS culto_data,
@@ -136,8 +141,9 @@ router.get('/visitantes-geral', autenticar, apenasAcessoCultosOuLider, (req, res
      FROM presencas p
      JOIN cultos c ON c.id = p.culto_id
      LEFT JOIN eventos e ON c.evento_id = e.id
-     WHERE p.tipo IN ('visitante','visitante_convidado')
-     ORDER BY c.data DESC, c.id, p.registrado_em ASC`
+     WHERE p.tipo IN (${placeholders})
+     ORDER BY c.data DESC, c.id, p.registrado_em ASC`,
+    ...tipos
   )
   res.json(rows)
 })

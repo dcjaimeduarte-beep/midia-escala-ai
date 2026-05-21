@@ -2269,7 +2269,7 @@
               <option value="60000">1min</option>
             </select>
             <button class="btn btn-ghost btn-sm" onclick="carregarCultos()" style="font-size:0.78rem">↻</button>
-            <button class="btn btn-secundario btn-sm" id="btn-relatorio-visitantes-topo" onclick="_relatorioVisitantesGeral()"
+            <button class="btn btn-secundario btn-sm" id="btn-relatorio-visitantes-topo" onclick="document.getElementById('modal-relatorio-visitantes').classList.add('aberto')"
               style="display:none;font-size:0.78rem">📋 Visitantes</button>
             <button class="btn btn-primario" id="btn-novo-culto-topo" onclick="abrirModalNovoCulto()"
               style="display:none">+ Novo Check-in</button>
@@ -8309,6 +8309,32 @@
      modificar nenhum código existente acima)
 ════════════════════════════════════════════════════ -->
 
+  <!-- Modal seleção tipos relatório visitantes -->
+  <div id="modal-relatorio-visitantes" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('aberto')">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:340px">
+      <h3 class="modal-titulo">📋 Relatório de Visitantes</h3>
+      <p style="font-size:0.83rem;color:var(--texto-mutado);margin-bottom:1rem">Selecione os tipos a incluir:</p>
+      <div style="display:flex;flex-direction:column;gap:0.65rem;margin-bottom:1.5rem">
+        <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.9rem">
+          <input type="checkbox" id="rel-tipo-membro" checked style="width:16px;height:16px;cursor:pointer">
+          Membros
+        </label>
+        <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.9rem">
+          <input type="checkbox" id="rel-tipo-visitante" checked style="width:16px;height:16px;cursor:pointer">
+          Visitantes
+        </label>
+        <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.9rem">
+          <input type="checkbox" id="rel-tipo-visitante-convidado" checked style="width:16px;height:16px;cursor:pointer">
+          Visitantes convidados
+        </label>
+      </div>
+      <div class="modal-acoes">
+        <button class="btn btn-ghost" onclick="document.getElementById('modal-relatorio-visitantes').classList.remove('aberto')">Cancelar</button>
+        <button class="btn btn-primario" onclick="_gerarRelatorioVisitantes()">Gerar relatório</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal criar culto -->
   <div id="modal-novo-culto" class="modal-overlay" onclick="if(event.target===this)fecharModalNovoCulto()">
     <div class="modal" onclick="event.stopPropagation()">
@@ -8527,12 +8553,25 @@
       }
     }
 
-    async function _relatorioVisitantesGeral() {
+    async function _gerarRelatorioVisitantes() {
+      const tipos = []
+      if (document.getElementById('rel-tipo-membro')?.checked) tipos.push('membro')
+      if (document.getElementById('rel-tipo-visitante')?.checked) tipos.push('visitante')
+      if (document.getElementById('rel-tipo-visitante-convidado')?.checked) tipos.push('visitante_convidado')
+      if (!tipos.length) { toast('Selecione ao menos um tipo.', 'err'); return }
+      document.getElementById('modal-relatorio-visitantes').classList.remove('aberto')
+      await _relatorioVisitantesGeral(tipos)
+    }
+
+    async function _relatorioVisitantesGeral(tipos) {
       try {
-        const todos = await api('GET', '/culto/visitantes-geral')
-        if (!todos.length) { toast('Nenhum visitante registrado.', 'err'); return }
+        const qs = tipos ? `?tipos=${tipos.join(',')}` : ''
+        const todos = await api('GET', `/culto/visitantes-geral${qs}`)
+        if (!todos.length) { toast('Nenhum registro encontrado para os tipos selecionados.', 'err'); return }
 
         const hoje = new Date().toLocaleDateString('pt-BR')
+        const LABELS_TIPO = { membro: 'Membros', visitante: 'Visitantes', visitante_convidado: 'Visitantes Convidados' }
+        const tituloRel = tipos ? tipos.map(t => LABELS_TIPO[t] || t).join(', ') : 'Todos'
 
         // Agrupar por culto (culto_id)
         const porCulto = {}
@@ -8547,8 +8586,8 @@
           const dataFmt = formatarDataCulto(data)
           const linhas = itens.map((p) => {
             numGlobal++
-            const vez = p.total_visitas > 1 ? `${p.total_visitas}ª vez` : '1ª vez'
-            const tipo = p.tipo === 'visitante_convidado' ? 'Convidado(a)' : 'Visitante'
+            const vez = p.tipo === 'membro' ? '—' : p.total_visitas > 1 ? `${p.total_visitas}ª vez` : '1ª vez'
+            const tipo = p.tipo === 'membro' ? 'Membro' : p.tipo === 'visitante_convidado' ? 'Convidado(a)' : 'Visitante'
             return `<tr style="${numGlobal % 2 === 0 ? 'background:#f9f9f9' : ''}">
               <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8;font-weight:600">${numGlobal}</td>
               <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8">${esc(p.nome || '—')}</td>
@@ -8566,7 +8605,7 @@
         }
 
         const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>Relatório Geral de Visitantes</title>
+<title>Relatório — ${esc(tituloRel)}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:Arial,sans-serif; font-size:12px; color:#111; padding:28px 32px; }
@@ -8581,7 +8620,7 @@
   @media print { body { padding:18px 22px; } }
 </style>
 </head><body>
-  <h1>Relatório Geral de Visitantes</h1>
+  <h1>Relatório — ${esc(tituloRel)}</h1>
   <div class="resumo">
     <div><strong>${todos.length}</strong>visitante(s) total</div>
     <div><strong>${todos.filter(p => p.total_visitas === 1).length}</strong>primeira vez</div>
