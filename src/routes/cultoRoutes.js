@@ -123,6 +123,25 @@ router.get('/:id/qrcode', autenticar, async (req, res) => {
   }
 })
 
+router.get('/visitantes-geral', autenticar, apenasAcessoCultosOuLider, (req, res) => {
+  const rows = sql.all(
+    `SELECT p.*,
+       c.titulo AS culto_titulo, c.data AS culto_data,
+       e.nome AS evento_nome,
+       CASE WHEN p.celular = '' THEN 0
+            ELSE (SELECT COUNT(*) FROM presencas p2
+                  WHERE p2.celular = p.celular AND p2.celular != ''
+                    AND p2.tipo IN ('visitante','visitante_convidado'))
+       END AS total_visitas
+     FROM presencas p
+     JOIN cultos c ON c.id = p.culto_id
+     LEFT JOIN eventos e ON c.evento_id = e.id
+     WHERE p.tipo IN ('visitante','visitante_convidado')
+     ORDER BY c.data DESC, c.id, p.registrado_em ASC`
+  )
+  res.json(rows)
+})
+
 router.get('/:id/presencas', autenticar, (req, res) => {
   if (!sql.get(`SELECT id FROM cultos WHERE id = ?`, req.params.id))
     return res.status(404).json({ erro: 'Culto não encontrado' })
