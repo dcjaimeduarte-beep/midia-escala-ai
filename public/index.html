@@ -2269,11 +2269,22 @@
               <option value="60000">1min</option>
             </select>
             <button class="btn btn-ghost btn-sm" onclick="carregarCultos()" style="font-size:0.78rem">↻</button>
-            <button class="btn btn-secundario btn-sm" id="btn-relatorio-visitantes-topo" onclick="document.getElementById('modal-relatorio-visitantes').classList.add('aberto')"
-              style="display:none;font-size:0.78rem">📋 Visitantes</button>
+            <button class="btn btn-secundario btn-sm" id="btn-relatorio-visitantes-topo" onclick="_abrirModalRelatorioVisitantes()"
+              style="display:none;font-size:0.78rem">📋 Gerar Relatório</button>
             <button class="btn btn-primario" id="btn-novo-culto-topo" onclick="abrirModalNovoCulto()"
               style="display:none">+ Novo Check-in</button>
           </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap">
+          <span style="font-size:0.78rem;color:var(--texto-mutado)">Filtrar por data:</span>
+          <input type="date" id="cultos-filtro-de"
+            style="padding:0.28rem 0.5rem;background:var(--fundo-elevado);border:1px solid var(--borda);border-radius:var(--raio);color:var(--texto);font-size:0.8rem"
+            onchange="_filtrarCultos()">
+          <span style="font-size:0.78rem;color:var(--texto-mutado)">até</span>
+          <input type="date" id="cultos-filtro-ate"
+            style="padding:0.28rem 0.5rem;background:var(--fundo-elevado);border:1px solid var(--borda);border-radius:var(--raio);color:var(--texto);font-size:0.8rem"
+            onchange="_filtrarCultos()">
+          <button class="btn btn-ghost btn-sm" onclick="_limparFiltroCultos()" style="font-size:0.75rem">Limpar</button>
         </div>
         <div id="cultos-conteudo">
           <p class="carregando">Carregando…</p>
@@ -8311,26 +8322,36 @@
 
   <!-- Modal seleção tipos relatório visitantes -->
   <div id="modal-relatorio-visitantes" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('aberto')">
-    <div class="modal" onclick="event.stopPropagation()" style="max-width:340px">
-      <h3 class="modal-titulo">📋 Relatório de Visitantes</h3>
-      <p style="font-size:0.83rem;color:var(--texto-mutado);margin-bottom:1rem">Selecione os tipos a incluir:</p>
-      <div style="display:flex;flex-direction:column;gap:0.65rem;margin-bottom:1.5rem">
-        <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.9rem">
-          <input type="checkbox" id="rel-tipo-membro" checked style="width:16px;height:16px;cursor:pointer">
-          Membros
-        </label>
-        <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.9rem">
-          <input type="checkbox" id="rel-tipo-visitante" checked style="width:16px;height:16px;cursor:pointer">
-          Visitantes
-        </label>
-        <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.9rem">
-          <input type="checkbox" id="rel-tipo-visitante-convidado" checked style="width:16px;height:16px;cursor:pointer">
-          Visitantes convidados
-        </label>
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:380px">
+      <h3 class="modal-titulo">📋 Gerar Relatório</h3>
+      <div class="form-grupo" style="margin-bottom:0.75rem">
+        <label style="font-size:0.82rem;color:var(--texto-mutado);margin-bottom:0.4rem;display:block">Período</label>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <input type="date" id="rel-data-de" style="flex:1;padding:0.4rem 0.55rem;background:var(--fundo-elevado);border:1px solid var(--borda);border-radius:var(--raio);color:var(--texto);font-size:0.85rem">
+          <span style="font-size:0.8rem;color:var(--texto-mutado)">até</span>
+          <input type="date" id="rel-data-ate" style="flex:1;padding:0.4rem 0.55rem;background:var(--fundo-elevado);border:1px solid var(--borda);border-radius:var(--raio);color:var(--texto);font-size:0.85rem">
+        </div>
       </div>
-      <div class="modal-acoes">
+      <div class="form-grupo">
+        <label style="font-size:0.82rem;color:var(--texto-mutado);margin-bottom:0.5rem;display:block">Tipos de presença</label>
+        <div style="display:flex;flex-direction:column;gap:0.55rem">
+          <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.9rem">
+            <input type="checkbox" id="rel-tipo-membro" checked style="width:16px;height:16px;cursor:pointer">
+            Membros
+          </label>
+          <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.9rem">
+            <input type="checkbox" id="rel-tipo-visitante" checked style="width:16px;height:16px;cursor:pointer">
+            Visitantes
+          </label>
+          <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.9rem">
+            <input type="checkbox" id="rel-tipo-visitante-convidado" checked style="width:16px;height:16px;cursor:pointer">
+            Visitantes convidados
+          </label>
+        </div>
+      </div>
+      <div class="modal-acoes" style="margin-top:1.25rem">
         <button class="btn btn-ghost" onclick="document.getElementById('modal-relatorio-visitantes').classList.remove('aberto')">Cancelar</button>
-        <button class="btn btn-primario" onclick="_gerarRelatorioVisitantes()">Gerar relatório</button>
+        <button class="btn btn-primario" onclick="_gerarRelatorioVisitantes()">Gerar Relatório</button>
       </div>
     </div>
   </div>
@@ -8437,68 +8458,78 @@
       })()
 
     let _cultosListTimer = null
+    let _todosCultos = []
 
-    async function carregarCultos() {
-      const el = document.getElementById('cultos-conteudo')
-      if (!el) return
-      try {
-        const cultos = await api('GET', '/culto/listar')
-        if (!cultos.length) {
-          el.innerHTML = '<p class="muted" style="margin-top:1rem">Nenhum culto cadastrado. Clique em <strong>+ Novo Check-in</strong> para começar.</p>'
-          return
-        }
-        const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-        const elHora = document.getElementById('cultos-atualizado')
-        if (elHora) elHora.textContent = agora
+    function _filtrarCultos() {
+      const de = document.getElementById('cultos-filtro-de')?.value || ''
+      const ate = document.getElementById('cultos-filtro-ate')?.value || ''
+      const lista = _todosCultos.filter(c => {
+        if (de && c.data < de) return false
+        if (ate && c.data > ate) return false
+        return true
+      })
+      _renderizarCultos(lista)
+    }
 
-        const renderCultoCard = (c) => {
-          const data = c.data ? formatarDataCulto(c.data) : '—'
-          const status = c.encerrado
-            ? `<span style="color:var(--texto-mutado);font-size:0.75rem">Encerrado</span>`
-            : `<span style="color:var(--sucesso);font-size:0.75rem">Aberto</span>`
-          const nome = c.titulo || c.evento_nome || 'Culto'
-          const totalVisitas = (c.total_visitantes ?? 0) + (c.total_convidados ?? 0)
-          return `
-        <div class="card" style="margin-bottom:0.65rem;cursor:pointer" onclick="abrirDetalheCulto('${esc(c.id)}')">
-          <div class="card-body" style="padding:1rem 1.15rem">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
-              <div>
-                <div style="font-weight:600;font-size:0.95rem">${esc(nome)}</div>
-                <div style="font-size:0.8rem;color:var(--texto-mutado);margin-top:0.2rem">${data} · ${status}</div>
-              </div>
-              <div style="display:flex;gap:1.25rem;text-align:center;flex-shrink:0">
-                <div><div style="font-size:1.1rem;font-weight:700">${c.total_presencas ?? 0}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Total</div></div>
-                <div><div style="font-size:1.1rem;font-weight:700;color:var(--acento)">${c.total_membros ?? 0}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Membros</div></div>
-                <div><div style="font-size:1.1rem;font-weight:700;color:var(--dourado)">${totalVisitas}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Visitas</div></div>
-              </div>
+    function _limparFiltroCultos() {
+      const de = document.getElementById('cultos-filtro-de')
+      const ate = document.getElementById('cultos-filtro-ate')
+      if (de) de.value = ''
+      if (ate) ate.value = ''
+      _renderizarCultos(_todosCultos)
+    }
+
+    function renderCultoCard(c) {
+      const data = c.data ? formatarDataCulto(c.data) : '—'
+      const status = c.encerrado
+        ? `<span style="color:var(--texto-mutado);font-size:0.75rem">Encerrado</span>`
+        : `<span style="color:var(--sucesso);font-size:0.75rem">Aberto</span>`
+      const nome = c.titulo || c.evento_nome || 'Culto'
+      const totalVisitas = (c.total_visitantes ?? 0) + (c.total_convidados ?? 0)
+      return `
+      <div class="card" style="margin-bottom:0.65rem;cursor:pointer" onclick="abrirDetalheCulto('${esc(c.id)}')">
+        <div class="card-body" style="padding:1rem 1.15rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
+            <div>
+              <div style="font-weight:600;font-size:0.95rem">${esc(nome)}</div>
+              <div style="font-size:0.8rem;color:var(--texto-mutado);margin-top:0.2rem">${data} · ${status}</div>
+            </div>
+            <div style="display:flex;gap:1.25rem;text-align:center;flex-shrink:0">
+              <div><div style="font-size:1.1rem;font-weight:700">${c.total_presencas ?? 0}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Total</div></div>
+              <div><div style="font-size:1.1rem;font-weight:700;color:var(--acento)">${c.total_membros ?? 0}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Membros</div></div>
+              <div><div style="font-size:1.1rem;font-weight:700;color:var(--dourado)">${totalVisitas}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Visitas</div></div>
             </div>
           </div>
-        </div>`
-        }
+        </div>
+      </div>`
+    }
 
-        const hoje = new Date().toISOString().slice(0, 10)
-        const deHoje = cultos.filter(c => c.data === hoje)
-        const futuros = cultos.filter(c => c.data > hoje && !c.encerrado)
-        const passados = cultos.filter(c => c.data < hoje || (c.data === hoje && c.encerrado))
+    function _renderizarCultos(cultos) {
+      const el = document.getElementById('cultos-conteudo')
+      if (!el) return
+      if (!cultos.length) {
+        el.innerHTML = '<p class="muted" style="margin-top:1rem">Nenhum culto encontrado.</p>'
+        return
+      }
+      const hoje = new Date().toISOString().slice(0, 10)
+      const deHoje = cultos.filter(c => c.data === hoje)
+      const futuros = cultos.filter(c => c.data > hoje && !c.encerrado)
+      const passados = cultos.filter(c => c.data < hoje || (c.data === hoje && c.encerrado))
 
-        let html = ''
-
-        if (deHoje.length) {
-          html += `<div style="margin-bottom:0.4rem;font-size:0.75rem;font-weight:600;color:var(--acento);letter-spacing:0.04em">HOJE</div>`
-          html += deHoje.map(renderCultoCard).join('')
-        }
-
-        if (futuros.length) {
-          html += `<div style="margin:${deHoje.length ? '1rem' : '0'} 0 0.4rem;font-size:0.75rem;font-weight:600;color:var(--texto-mutado);letter-spacing:0.04em">PRÓXIMOS</div>`
-          html += futuros.map(renderCultoCard).join('')
-        }
-
-        if (!deHoje.length && !futuros.length) {
-          html += '<p class="muted" style="margin-top:1rem">Nenhum culto aberto hoje.</p>'
-        }
-
-        if (passados.length) {
-          html += `<div style="margin-top:1rem">
+      let html = ''
+      if (deHoje.length) {
+        html += `<div style="margin-bottom:0.4rem;font-size:0.75rem;font-weight:600;color:var(--acento);letter-spacing:0.04em">HOJE</div>`
+        html += deHoje.map(renderCultoCard).join('')
+      }
+      if (futuros.length) {
+        html += `<div style="margin:${deHoje.length ? '1rem' : '0'} 0 0.4rem;font-size:0.75rem;font-weight:600;color:var(--texto-mutado);letter-spacing:0.04em">PRÓXIMOS</div>`
+        html += futuros.map(renderCultoCard).join('')
+      }
+      if (!deHoje.length && !futuros.length) {
+        html += '<p class="muted" style="margin-top:1rem">Nenhum culto aberto hoje.</p>'
+      }
+      if (passados.length) {
+        html += `<div style="margin-top:1rem">
         <button type="button" class="btn-toggle-passados" onclick="this.classList.toggle('aberto');this.nextElementSibling.classList.toggle('aberta');this.setAttribute('aria-expanded',this.classList.contains('aberto'))" aria-expanded="false">
           <span style="font-size:0.85rem">📋</span>
           <span>${passados.length} culto(s) anterior(es)</span>
@@ -8515,10 +8546,30 @@
           ${passados.map(c => `<div data-iso="${c.data}" data-titulo="${esc(c.titulo || c.evento_nome || c.data)}">${renderCultoCard(c)}</div>`).join('')}
         </div>
       </div>`
-        }
+      }
+      el.innerHTML = html || '<p class="muted" style="margin-top:1rem">Nenhum culto cadastrado.</p>'
+    }
 
-        el.innerHTML = html || '<p class="muted" style="margin-top:1rem">Nenhum culto cadastrado.</p>'
-        // Inicia timer se ainda não estiver rodando
+    async function carregarCultos() {
+      const el = document.getElementById('cultos-conteudo')
+      if (!el) return
+      try {
+        const cultos = await api('GET', '/culto/listar')
+        _todosCultos = cultos
+        if (!cultos.length) {
+          el.innerHTML = '<p class="muted" style="margin-top:1rem">Nenhum culto cadastrado. Clique em <strong>+ Novo Check-in</strong> para começar.</p>'
+          return
+        }
+        const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        const elHora = document.getElementById('cultos-atualizado')
+        if (elHora) elHora.textContent = agora
+
+        // Aplica filtro de data se preenchido, senão renderiza tudo
+        const de = document.getElementById('cultos-filtro-de')?.value || ''
+        const ate = document.getElementById('cultos-filtro-ate')?.value || ''
+        const filtrados = (de || ate) ? cultos.filter(c => (!de || c.data >= de) && (!ate || c.data <= ate)) : cultos
+        _renderizarCultos(filtrados)
+
         if (!_cultosListTimer) {
           const ms = parseInt(document.getElementById('cultos-intervalo')?.value || '15000', 10)
           if (ms > 0) {
@@ -8553,25 +8604,44 @@
       }
     }
 
+    function _abrirModalRelatorioVisitantes() {
+      const hoje = new Date().toISOString().slice(0, 10)
+      const primeiroDiaMes = hoje.slice(0, 8) + '01'
+      const filtroDeVal = document.getElementById('cultos-filtro-de')?.value
+      const filtroAteVal = document.getElementById('cultos-filtro-ate')?.value
+      const de = document.getElementById('rel-data-de')
+      const ate = document.getElementById('rel-data-ate')
+      if (de) de.value = filtroDeVal || primeiroDiaMes
+      if (ate) ate.value = filtroAteVal || hoje
+      document.getElementById('modal-relatorio-visitantes').classList.add('aberto')
+    }
+
     async function _gerarRelatorioVisitantes() {
       const tipos = []
       if (document.getElementById('rel-tipo-membro')?.checked) tipos.push('membro')
       if (document.getElementById('rel-tipo-visitante')?.checked) tipos.push('visitante')
       if (document.getElementById('rel-tipo-visitante-convidado')?.checked) tipos.push('visitante_convidado')
       if (!tipos.length) { toast('Selecione ao menos um tipo.', 'err'); return }
+      const de = document.getElementById('rel-data-de')?.value || ''
+      const ate = document.getElementById('rel-data-ate')?.value || ''
       document.getElementById('modal-relatorio-visitantes').classList.remove('aberto')
-      await _relatorioVisitantesGeral(tipos)
+      await _relatorioVisitantesGeral(tipos, de, ate)
     }
 
-    async function _relatorioVisitantesGeral(tipos) {
+    async function _relatorioVisitantesGeral(tipos, de, ate) {
       try {
-        const qs = tipos ? `?tipos=${tipos.join(',')}` : ''
-        const todos = await api('GET', `/culto/visitantes-geral${qs}`)
-        if (!todos.length) { toast('Nenhum registro encontrado para os tipos selecionados.', 'err'); return }
+        const params = new URLSearchParams()
+        if (tipos?.length) params.set('tipos', tipos.join(','))
+        if (de) params.set('de', de)
+        if (ate) params.set('ate', ate)
+        const todos = await api('GET', `/culto/visitantes-geral?${params}`)
+        if (!todos.length) { toast('Nenhum registro encontrado para os filtros selecionados.', 'err'); return }
 
         const hoje = new Date().toLocaleDateString('pt-BR')
         const LABELS_TIPO = { membro: 'Membros', visitante: 'Visitantes', visitante_convidado: 'Visitantes Convidados' }
         const tituloRel = tipos ? tipos.map(t => LABELS_TIPO[t] || t).join(', ') : 'Todos'
+        const fmtDate = iso => iso ? iso.split('-').reverse().join('/') : ''
+        const periodoLabel = de || ate ? `${fmtDate(de) || '…'} a ${fmtDate(ate) || '…'}` : 'Todos os períodos'
 
         // Agrupar por culto (culto_id)
         const porCulto = {}
@@ -8597,10 +8667,11 @@
               <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8">${esc(p.convidado_por || '—')}</td>
               <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8;text-align:center">${tipo}</td>
               <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8;text-align:center;font-weight:600;color:#16a34a">${vez}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8;white-space:nowrap;color:#555">${fmtDate(p.culto_data)}</td>
             </tr>`
           }).join('')
           secoes += `
-            <tr><td colspan="8" style="padding:10px 8px 4px;background:#e8e8e8;font-weight:700;font-size:11px;letter-spacing:.03em;text-transform:uppercase">${esc(titulo)} — ${esc(dataFmt)} <span style="font-weight:400;color:#666">(${itens.length} visitante${itens.length !== 1 ? 's' : ''})</span></td></tr>
+            <tr><td colspan="9" style="padding:10px 8px 4px;background:#e8e8e8;font-weight:700;font-size:11px;letter-spacing:.03em;text-transform:uppercase">${esc(titulo)} — ${esc(dataFmt)} <span style="font-weight:400;color:#666">(${itens.length} registro${itens.length !== 1 ? 's' : ''})</span></td></tr>
             ${linhas}`
         }
 
@@ -8610,6 +8681,7 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:Arial,sans-serif; font-size:12px; color:#111; padding:28px 32px; }
   h1 { font-size:17px; font-weight:700; margin-bottom:3px; }
+  .sub { font-size:11px; color:#666; margin-bottom:4px; }
   .resumo { display:inline-flex; gap:24px; margin:10px 0 20px; padding:9px 14px; background:#f4f4f4; border-radius:5px; border-left:4px solid #333; }
   .resumo div { font-size:11px; color:#555; }
   .resumo strong { font-size:15px; display:block; margin-top:2px; color:#111; }
@@ -8621,15 +8693,16 @@
 </style>
 </head><body>
   <h1>Relatório — ${esc(tituloRel)}</h1>
+  <div class="sub">Período: ${esc(periodoLabel)}</div>
   <div class="resumo">
-    <div><strong>${todos.length}</strong>visitante(s) total</div>
-    <div><strong>${todos.filter(p => p.total_visitas === 1).length}</strong>primeira vez</div>
+    <div><strong>${todos.length}</strong>registro(s) total</div>
+    <div><strong>${todos.filter(p => p.tipo !== 'membro' && p.total_visitas === 1).length}</strong>primeira vez</div>
     <div><strong>${todos.filter(p => p.tipo === 'visitante_convidado').length}</strong>convidado(s)</div>
     <div><strong>${Object.keys(porCulto).length}</strong>culto(s)</div>
   </div>
   <table>
     <thead><tr>
-      <th>#</th><th>Nome</th><th>Celular</th><th>Bairro</th><th>Igreja de Origem</th><th>Convidado por</th><th>Tipo</th><th>Visitas</th>
+      <th>#</th><th>Nome</th><th>Celular</th><th>Bairro</th><th>Igreja de Origem</th><th>Convidado por</th><th>Tipo</th><th>Visitas</th><th>Registrado em</th>
     </tr></thead>
     <tbody>${secoes}</tbody>
   </table>
@@ -8637,7 +8710,7 @@
   <script>window.onload = () => window.print()<\/script>
 </body></html>`
 
-        const win = window.open('', '_blank', 'width=1100,height=750')
+        const win = window.open('', '_blank', 'width=1200,height=750')
         if (win) { win.document.write(html); win.document.close() }
         else toast('Permita popups para gerar o relatório.', 'err')
       } catch (e) {

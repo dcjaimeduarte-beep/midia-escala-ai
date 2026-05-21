@@ -128,7 +128,13 @@ router.get('/visitantes-geral', autenticar, apenasAcessoCultosOuLider, (req, res
   const tipos = (req.query.tipos || 'membro,visitante,visitante_convidado')
     .split(',').map(t => t.trim()).filter(t => TIPOS_VALIDOS.includes(t))
   if (!tipos.length) return res.json([])
+  const de = req.query.de || null
+  const ate = req.query.ate || null
   const placeholders = tipos.map(() => '?').join(',')
+  const params = [...tipos]
+  let dateClause = ''
+  if (de) { dateClause += ' AND c.data >= ?'; params.push(de) }
+  if (ate) { dateClause += ' AND c.data <= ?'; params.push(ate) }
   const rows = sql.all(
     `SELECT p.*,
        c.titulo AS culto_titulo, c.data AS culto_data,
@@ -141,9 +147,9 @@ router.get('/visitantes-geral', autenticar, apenasAcessoCultosOuLider, (req, res
      FROM presencas p
      JOIN cultos c ON c.id = p.culto_id
      LEFT JOIN eventos e ON c.evento_id = e.id
-     WHERE p.tipo IN (${placeholders})
+     WHERE p.tipo IN (${placeholders})${dateClause}
      ORDER BY c.data DESC, c.id, p.registrado_em ASC`,
-    ...tipos
+    ...params
   )
   res.json(rows)
 })
