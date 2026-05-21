@@ -8637,13 +8637,19 @@
         const todos = await api('GET', `/culto/visitantes-geral?${params}`)
         if (!todos.length) { toast('Nenhum registro encontrado para os filtros selecionados.', 'err'); return }
 
+        // Logo como base64 para funcionar no print
+        let logoSrc = ''
+        try {
+          const blob = await fetch('/docs/Foguinho%20vazado.png').then(r => r.blob())
+          logoSrc = await new Promise(resolve => { const fr = new FileReader(); fr.onload = () => resolve(fr.result); fr.readAsDataURL(blob) })
+        } catch {}
+
         const hoje = new Date().toLocaleDateString('pt-BR')
         const LABELS_TIPO = { membro: 'Membros', visitante: 'Visitantes', visitante_convidado: 'Visitantes Convidados' }
         const tituloRel = tipos ? tipos.map(t => LABELS_TIPO[t] || t).join(', ') : 'Todos'
         const fmtDate = iso => iso ? iso.split('-').reverse().join('/') : ''
         const periodoLabel = de || ate ? `${fmtDate(de) || '…'} a ${fmtDate(ate) || '…'}` : 'Todos os períodos'
 
-        // Agrupar por culto (culto_id)
         const porCulto = {}
         for (const p of todos) {
           if (!porCulto[p.culto_id]) porCulto[p.culto_id] = { titulo: p.culto_titulo || p.evento_nome || 'Culto', data: p.culto_data, itens: [] }
@@ -8657,57 +8663,88 @@
           const linhas = itens.map((p) => {
             numGlobal++
             const vez = p.tipo === 'membro' ? '—' : p.total_visitas > 1 ? `${p.total_visitas}ª vez` : '1ª vez'
-            const tipo = p.tipo === 'membro' ? 'Membro' : p.tipo === 'visitante_convidado' ? 'Convidado(a)' : 'Visitante'
-            return `<tr style="${numGlobal % 2 === 0 ? 'background:#f9f9f9' : ''}">
-              <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8;font-weight:600">${numGlobal}</td>
-              <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8">${esc(p.nome || '—')}</td>
-              <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8">${esc(p.celular || '—')}</td>
-              <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8">${esc(p.bairro || '—')}</td>
-              <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8">${esc(p.igreja || '—')}</td>
-              <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8">${esc(p.convidado_por || '—')}</td>
-              <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8;text-align:center">${tipo}</td>
-              <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8;text-align:center;font-weight:600;color:#16a34a">${vez}</td>
-              <td style="padding:6px 8px;border-bottom:1px solid #e8e8e8;white-space:nowrap;color:#555">${fmtDate(p.culto_data)}</td>
+            const badgeClass = p.tipo === 'membro' ? 'badge-membro' : p.tipo === 'visitante_convidado' ? 'badge-convidado' : 'badge-visitante'
+            const tipoLabel = p.tipo === 'membro' ? 'Membro' : p.tipo === 'visitante_convidado' ? 'Convidado(a)' : 'Visitante'
+            return `<tr class="data-row${numGlobal % 2 === 0 ? ' alt' : ''}">
+              <td class="num">${numGlobal}</td>
+              <td class="nome">${esc(p.nome || '—')}</td>
+              <td>${esc(p.celular || '—')}</td>
+              <td>${esc(p.bairro || '—')}</td>
+              <td>${esc(p.igreja || '—')}</td>
+              <td>${esc(p.convidado_por || '—')}</td>
+              <td><span class="badge ${badgeClass}">${tipoLabel}</span></td>
+              <td class="visita">${vez}</td>
+              <td class="data-col">${fmtDate(p.culto_data)}</td>
             </tr>`
           }).join('')
-          secoes += `
-            <tr><td colspan="9" style="padding:10px 8px 4px;background:#e8e8e8;font-weight:700;font-size:11px;letter-spacing:.03em;text-transform:uppercase">${esc(titulo)} — ${esc(dataFmt)} <span style="font-weight:400;color:#666">(${itens.length} registro${itens.length !== 1 ? 's' : ''})</span></td></tr>
-            ${linhas}`
+          secoes += `<tr class="section-row"><td colspan="9">${esc(titulo)} — ${esc(dataFmt)} <span class="sec-count">${itens.length} registro${itens.length !== 1 ? 's' : ''}</span></td></tr>${linhas}`
         }
 
         const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Relatório — ${esc(tituloRel)}</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:Arial,sans-serif; font-size:12px; color:#111; padding:28px 32px; }
-  h1 { font-size:17px; font-weight:700; margin-bottom:3px; }
-  .sub { font-size:11px; color:#666; margin-bottom:4px; }
-  .resumo { display:inline-flex; gap:24px; margin:10px 0 20px; padding:9px 14px; background:#f4f4f4; border-radius:5px; border-left:4px solid #333; }
-  .resumo div { font-size:11px; color:#555; }
-  .resumo strong { font-size:15px; display:block; margin-top:2px; color:#111; }
-  table { width:100%; border-collapse:collapse; }
-  th { padding:6px 8px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:#555; background:#e8e8e8; border-bottom:2px solid #bbb; }
-  td { font-size:11px; vertical-align:top; }
-  .rodape { margin-top:20px; font-size:10px; color:#999; text-align:right; border-top:1px solid #e0e0e0; padding-top:8px; }
-  @media print { body { padding:18px 22px; } }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#1a1a1a;background:#fff;padding:28px 32px}
+  .header{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:3px solid #1c1c3a;margin-bottom:18px}
+  .header-left{display:flex;align-items:center;gap:12px}
+  .logo{width:46px;height:46px;object-fit:contain}
+  .church-name{font-size:17px;font-weight:800;color:#1c1c3a;line-height:1.15}
+  .church-sub{font-size:9.5px;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+  .header-right{text-align:right}
+  .report-title{font-size:13px;font-weight:700;color:#1c1c3a}
+  .report-period{font-size:9.5px;color:#999;margin-top:3px}
+  .resumo{display:flex;gap:10px;margin-bottom:18px}
+  .resumo-item{flex:1;padding:9px 12px;background:#f5f5f8;border-radius:6px;border-top:3px solid #1c1c3a}
+  .resumo-item strong{font-size:19px;font-weight:800;display:block;color:#1c1c3a;line-height:1.1}
+  .resumo-item span{font-size:8.5px;color:#999;text-transform:uppercase;letter-spacing:.05em}
+  table{width:100%;border-collapse:collapse}
+  thead th{background:#1c1c3a;color:#fff;padding:7px 8px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+  .section-row td{background:#ebebf0;padding:7px 9px;font-weight:700;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:#333;border-top:2px solid #d0d0dc}
+  .sec-count{font-weight:400;color:#777;text-transform:none;font-size:9px;margin-left:6px}
+  .data-row td{padding:5px 8px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+  .data-row.alt td{background:#f9f9fb}
+  .num{font-weight:700;width:24px;color:#888}
+  .nome{font-weight:600;color:#111}
+  .visita{font-weight:700;color:#16a34a;text-align:center}
+  .data-col{white-space:nowrap;color:#666;font-size:10px}
+  .badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:8.5px;font-weight:700;white-space:nowrap}
+  .badge-visitante{background:#dbeafe;color:#1d4ed8}
+  .badge-membro{background:#dcfce7;color:#15803d}
+  .badge-convidado{background:#fef3c7;color:#b45309}
+  .rodape{margin-top:20px;padding-top:8px;border-top:1px solid #e8e8e8;display:flex;justify-content:space-between;font-size:9px;color:#bbb}
+  @media print{body{padding:18px 24px}@page{margin:12mm}}
 </style>
 </head><body>
-  <h1>Relatório — ${esc(tituloRel)}</h1>
-  <div class="sub">Período: ${esc(periodoLabel)}</div>
-  <div class="resumo">
-    <div><strong>${todos.length}</strong>registro(s) total</div>
-    <div><strong>${todos.filter(p => p.tipo !== 'membro' && p.total_visitas === 1).length}</strong>primeira vez</div>
-    <div><strong>${todos.filter(p => p.tipo === 'visitante_convidado').length}</strong>convidado(s)</div>
-    <div><strong>${Object.keys(porCulto).length}</strong>culto(s)</div>
+<div class="header">
+  <div class="header-left">
+    ${logoSrc ? `<img src="${logoSrc}" class="logo" alt="Peniel">` : '<span style="font-size:36px">🔥</span>'}
+    <div>
+      <div class="church-name">Igreja Peniel</div>
+      <div class="church-sub">Ministério Profético · Casa de Adoração</div>
+    </div>
   </div>
-  <table>
-    <thead><tr>
-      <th>#</th><th>Nome</th><th>Celular</th><th>Bairro</th><th>Igreja de Origem</th><th>Convidado por</th><th>Tipo</th><th>Visitas</th><th>Registrado em</th>
-    </tr></thead>
-    <tbody>${secoes}</tbody>
-  </table>
-  <div class="rodape">Gerado em ${hoje} · Igreja Peniel Mídia</div>
-  <script>window.onload = () => window.print()<\/script>
+  <div class="header-right">
+    <div class="report-title">Relatório — ${esc(tituloRel)}</div>
+    <div class="report-period">Período: ${esc(periodoLabel)}</div>
+  </div>
+</div>
+<div class="resumo">
+  <div class="resumo-item"><strong>${todos.length}</strong><span>Registros</span></div>
+  <div class="resumo-item"><strong>${todos.filter(p => p.tipo !== 'membro' && p.total_visitas === 1).length}</strong><span>1ª vez</span></div>
+  <div class="resumo-item"><strong>${todos.filter(p => p.tipo === 'visitante_convidado').length}</strong><span>Convidados</span></div>
+  <div class="resumo-item"><strong>${Object.keys(porCulto).length}</strong><span>Cultos</span></div>
+</div>
+<table>
+  <thead><tr>
+    <th>#</th><th>Nome</th><th>Celular</th><th>Bairro</th><th>Igreja de Origem</th><th>Convidado por</th><th>Tipo</th><th style="text-align:center">Visitas</th><th>Data</th>
+  </tr></thead>
+  <tbody>${secoes}</tbody>
+</table>
+<div class="rodape">
+  <span>Igreja Peniel Mídia — Sistema de Gestão</span>
+  <span>Gerado em ${hoje}</span>
+</div>
+<script>window.onload=()=>window.print()<\/script>
 </body></html>`
 
         const win = window.open('', '_blank', 'width=1200,height=750')
