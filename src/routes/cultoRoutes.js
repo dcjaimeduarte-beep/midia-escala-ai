@@ -141,8 +141,10 @@ router.get('/visitantes-geral', autenticar, apenasAcessoCultosOuLider, (req, res
        e.nome AS evento_nome,
        CASE WHEN p.celular = '' THEN 0
             ELSE (SELECT COUNT(*) FROM presencas p2
+                  JOIN cultos c2 ON c2.id = p2.culto_id
                   WHERE p2.celular = p.celular AND p2.celular != ''
-                    AND p2.tipo IN ('visitante','visitante_convidado'))
+                    AND p2.tipo IN ('visitante','visitante_convidado')
+                    AND c2.data <= c.data)
        END AS total_visitas
      FROM presencas p
      JOIN cultos c ON c.id = p.culto_id
@@ -161,8 +163,10 @@ router.get('/:id/presencas', autenticar, (req, res) => {
     `SELECT p.*,
        CASE WHEN p.celular = '' THEN 0
             ELSE (SELECT COUNT(*) FROM presencas p2
+                  JOIN cultos c2 ON c2.id = p2.culto_id
                   WHERE p2.celular = p.celular AND p2.celular != ''
-                    AND p2.tipo IN ('visitante','visitante_convidado'))
+                    AND p2.tipo IN ('visitante','visitante_convidado')
+                    AND c2.data <= (SELECT data FROM cultos WHERE id = p.culto_id))
        END AS total_visitas
      FROM presencas p WHERE p.culto_id = ?
      ORDER BY p.registrado_em ASC`,
