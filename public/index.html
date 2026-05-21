@@ -1004,6 +1004,36 @@
       display: flex;
     }
 
+    .sort-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      padding: 0.45rem 0;
+      margin-bottom: 0.3rem;
+      border-bottom: 1px solid var(--borda);
+    }
+    .sort-bar-label {
+      font-size: 0.7rem;
+      color: var(--texto-mutado);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-right: 0.15rem;
+    }
+    .sort-btn {
+      padding: 0.18rem 0.55rem;
+      font-size: 0.72rem;
+      border-radius: 999px;
+      border: 1px solid var(--borda);
+      background: var(--fundo-elevado);
+      color: var(--texto-mutado);
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      white-space: nowrap;
+    }
+    .sort-btn:hover { color: var(--texto); background: var(--fundo-soft); }
+    .sort-btn.ativo { background: var(--primaria); color: #fff; border-color: var(--primaria); }
+
     .escala-passada-card-collapsed .dash-escala-card {
       padding: 0.55rem 1rem;
     }
@@ -1435,6 +1465,10 @@
       .nav-link {
         width: 100%;
         text-align: left;
+      }
+
+      .nav-grupo {
+        width: 100%;
       }
 
       /* Financeiro — stat cards: 3 colunas compactas */
@@ -2320,6 +2354,12 @@
           <label>Tipo de culto / evento (opcional)</label>
           <select id="esc-evento">
             <option value="">— Nenhum —</option>
+          </select>
+        </div>
+        <div class="form-grupo" id="esc-cong-wrap">
+          <label>Congregação</label>
+          <select id="esc-cong">
+            <option value="">— Sem congregação —</option>
           </select>
         </div>
         <p id="esc-erro" class="erro-msg"></p>
@@ -4148,7 +4188,7 @@
     function agruparEscalasPorEvento(escalas) {
       const mapa = new Map()
       for (const e of escalas || []) {
-        const chave = `${e.data || ''}__${e.congregacao_id || ''}`
+        const chave = `${e.data || ''}__${e.evento_id || ''}`
         if (!mapa.has(chave)) {
           mapa.set(chave, {
             data: e.data,
@@ -4160,6 +4200,7 @@
         }
         const grupo = mapa.get(chave)
         if (!grupo.evento_id && e.evento_id) grupo.evento_id = e.evento_id
+        if (!grupo.congregacao_nome && e.congregacao_nome) grupo.congregacao_nome = e.congregacao_nome
         grupo.itens.push(e)
       }
       return [...mapa.values()].sort((a, b) =>
@@ -4256,6 +4297,7 @@
 
       // Seção passados — recolhida por padrão
       if (passados.length) {
+        const passadosDesc = [...passados].sort((a, b) => dataEscalaParaISO(b.data).localeCompare(dataEscalaParaISO(a.data)))
         html += `
       <div class="escala-secao-passados">
         <button type="button" class="btn-toggle-passados" onclick="toggleEscalasPassadas(this)" aria-expanded="false">
@@ -4264,7 +4306,14 @@
           <span class="chevron">▾</span>
         </button>
         <div class="escalas-passadas-lista">
-          ${passados.map(g => `<div class="escala-passada-card">${_renderCardEscalaGrupo(g, true)}</div>`).join('')}
+          <div class="sort-bar">
+            <span class="sort-bar-label">Ordenar:</span>
+            <button class="sort-btn ativo" onclick="_sortEscalasPassadas(this,'data-desc')">📅 Mais recente</button>
+            <button class="sort-btn" onclick="_sortEscalasPassadas(this,'data-asc')">📅 Mais antigo</button>
+            <button class="sort-btn" onclick="_sortEscalasPassadas(this,'az')">A → Z</button>
+            <button class="sort-btn" onclick="_sortEscalasPassadas(this,'za')">Z → A</button>
+          </div>
+          ${passadosDesc.map(g => `<div class="escala-passada-card" data-iso="${dataEscalaParaISO(g.data)}" data-evento="${esc(nomeEvento(g.evento_id) || g.data)}">${_renderCardEscalaGrupo(g, true)}</div>`).join('')}
         </div>
       </div>`
       }
@@ -4297,6 +4346,38 @@
 
       html += '</div>'
       return html
+    }
+
+    function _sortEscalasPassadas(btn, ordem) {
+      const lista = btn.closest('.escalas-passadas-lista')
+      if (!lista) return
+      btn.closest('.sort-bar').querySelectorAll('.sort-btn').forEach(b => b.classList.remove('ativo'))
+      btn.classList.add('ativo')
+      const cards = [...lista.querySelectorAll('.escala-passada-card')]
+      cards.sort((a, b) => {
+        if (ordem === 'data-desc') return b.dataset.iso.localeCompare(a.dataset.iso)
+        if (ordem === 'data-asc')  return a.dataset.iso.localeCompare(b.dataset.iso)
+        if (ordem === 'az')        return (a.dataset.evento || '').localeCompare(b.dataset.evento || '', 'pt')
+        if (ordem === 'za')        return (b.dataset.evento || '').localeCompare(a.dataset.evento || '', 'pt')
+        return 0
+      })
+      cards.forEach(c => lista.appendChild(c))
+    }
+
+    function _sortHistorico(btn, ordem) {
+      const sortBar = btn.closest('.sort-bar')
+      sortBar.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('ativo'))
+      btn.classList.add('ativo')
+      const lista = sortBar.parentElement
+      const items = [...lista.children].filter(el => el.dataset.iso !== undefined)
+      items.sort((a, b) => {
+        if (ordem === 'data-desc') return (b.dataset.iso || '').localeCompare(a.dataset.iso || '')
+        if (ordem === 'data-asc')  return (a.dataset.iso || '').localeCompare(b.dataset.iso || '')
+        if (ordem === 'az')        return (a.dataset.titulo || '').localeCompare(b.dataset.titulo || '', 'pt')
+        if (ordem === 'za')        return (b.dataset.titulo || '').localeCompare(a.dataset.titulo || '', 'pt')
+        return 0
+      })
+      items.forEach(c => lista.appendChild(c))
     }
 
     function toggleEscalasPassadas(btn) {
@@ -4457,6 +4538,14 @@
         eventoCache = Array.isArray(evs) ? evs : []
         selEv.innerHTML = '<option value="">— Nenhum —</option>' +
           eventoCache.filter(x => x.ativo !== false).map(x => `<option value="${x.id}">${esc(x.nome)}</option>`).join('')
+
+        // Congregação — carrega lista e pré-seleciona a do usuário
+        if (!congregacoesCache.length) await carregarCongregacoesCache()
+        const selCong = document.getElementById('esc-cong')
+        if (selCong) {
+          selCong.innerHTML = '<option value="">— Sem congregação —</option>' +
+            congregacoesCache.map(c => `<option value="${c.id}" ${c.id === usuario?.congregacao_id ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')
+        }
       } catch {
         select.innerHTML = '<option value="">Erro ao carregar departamentos</option>'
       }
@@ -4497,8 +4586,10 @@
       try {
         const cbs = [...document.querySelectorAll('.esc-membro-cb:checked')]
         const voluntarios = cbs.map(cb => ({ usuario_id: cb.value, funcao: '' }))
+        const congId = document.getElementById('esc-cong')?.value || ''
         const body = { data: dataBR, departamento_id: deptoId, voluntarios }
         if (eventoId) body.evento_id = eventoId
+        if (congId) body.congregacao_id = congId
         await api('POST', '/escala/criar', body)
         fecharModalEscala()
         recarregarAposMudanca('Escala criada com sucesso.')
@@ -6049,7 +6140,7 @@
               dataFmt = dataFmt.charAt(0).toUpperCase() + dataFmt.slice(1)
             } catch (_) {}
             const gid = `enc-g-${data}`
-            return `<div class="enc-grupo ${idx === 0 ? 'aberto' : ''}" id="${gid}">
+            return `<div class="enc-grupo ${idx === 0 ? 'aberto' : ''}" id="${gid}" data-iso="${data}" data-titulo="${dataFmt}">
               <button class="enc-grupo-btn" onclick="this.closest('.enc-grupo').classList.toggle('aberto')">
                 📅 ${dataFmt} <span class="enc-count">${itens.length}</span><span class="enc-chevron">▾</span>
               </button>
@@ -6058,7 +6149,13 @@
               </div>
             </div>`
           }).join('')
-          return `<p class="secao-label" style="margin-top:1.25rem">Encerrados (arquivo)</p>` + gruposHtml
+          return `<p class="secao-label" style="margin-top:1.25rem">Encerrados (arquivo)</p>
+          <div class="enc-grupos-lista">
+            <div class="sort-bar">
+              <span class="sort-bar-label">Ordenar:</span>
+              <button class="sort-btn ativo" onclick="_sortHistorico(this,'data-desc')">📅 Mais recente</button>
+              <button class="sort-btn" onclick="_sortHistorico(this,'data-asc')">📅 Mais antigo</button>
+            </div>` + gruposHtml + `</div>`
         })()
 
         const trocasHtml = pode
@@ -7144,7 +7241,14 @@
         <span>${colapsados.length} dia(s) anterior(es) · ${totalReg} lançamento(s)</span>
         <span class="chevron">▾</span>
       </button>
-      <div class="fin-passados-lista">${colapsados.map(d => renderDiaFin(d)).join('')}</div>
+      <div class="fin-passados-lista">
+        <div class="sort-bar">
+          <span class="sort-bar-label">Ordenar:</span>
+          <button class="sort-btn ativo" onclick="_sortHistorico(this,'data-desc')">📅 Mais recente</button>
+          <button class="sort-btn" onclick="_sortHistorico(this,'data-asc')">📅 Mais antigo</button>
+        </div>
+        ${colapsados.map(d => `<div data-iso="${_ddmmToISO(d)}" data-titulo="${d}">${renderDiaFin(d)}</div>`).join('')}
+      </div>
     </div>`
       }
       return html
@@ -8367,7 +8471,16 @@
           <span>${passados.length} culto(s) anterior(es)</span>
           <span class="chevron">▾</span>
         </button>
-        <div class="fin-passados-lista" style="gap:0">${passados.map(renderCultoCard).join('')}</div>
+        <div class="fin-passados-lista" style="gap:0">
+          <div class="sort-bar">
+            <span class="sort-bar-label">Ordenar:</span>
+            <button class="sort-btn ativo" onclick="_sortHistorico(this,'data-desc')">📅 Mais recente</button>
+            <button class="sort-btn" onclick="_sortHistorico(this,'data-asc')">📅 Mais antigo</button>
+            <button class="sort-btn" onclick="_sortHistorico(this,'az')">A → Z</button>
+            <button class="sort-btn" onclick="_sortHistorico(this,'za')">Z → A</button>
+          </div>
+          ${passados.map(c => `<div data-iso="${c.data}" data-titulo="${esc(c.titulo || c.evento_nome || c.data)}">${renderCultoCard(c)}</div>`).join('')}
+        </div>
       </div>`
         }
 

@@ -71,7 +71,7 @@ function podeGerirEscalaDepartamento(req, departamentoId) {
 
 // POST /escala/criar
 router.post('/criar', autenticar, verificarAcessoDepartamento, (req, res) => {
-  const { data, departamento_id, evento_id, observacao, voluntarios } = req.body
+  const { data, departamento_id, evento_id, observacao, voluntarios, congregacao_id } = req.body
   if (!data || !departamento_id)
     return res.status(400).json({ erro: 'data e departamento_id são obrigatórios' })
   if (!podeGerirEscalaDepartamento(req, departamento_id)) {
@@ -90,7 +90,7 @@ router.post('/criar', autenticar, verificarAcessoDepartamento, (req, res) => {
       evento_id: evento_id || null,
       observacao: observacao || '',
       criado_por: req.usuario.id,
-      congregacao_id: req.usuario.congregacao_id || null,
+      congregacao_id: congregacao_id || req.usuario.congregacao_id || null,
       voluntarios: voluntarios || []
     })
     syncEscalasParaMemoria()
