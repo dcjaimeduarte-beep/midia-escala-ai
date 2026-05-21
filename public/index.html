@@ -8809,10 +8809,13 @@
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#1a1a1a;background:#fff;padding:28px 32px}
-  table{width:100%;border-collapse:collapse}
-  @media print{body{padding:18px 24px}@page{margin:12mm}}
+  table{width:100%;border-collapse:separate;border-spacing:0}
+  .btn-print{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:#1c1c3a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:18px}
+  .btn-print:hover{background:#2d2d5a}
+  @media print{.btn-print{display:none}body{padding:18px 24px}@page{margin:12mm}}
 </style>
 </head><body>
+<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
 <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:3px solid #1c1c3a;margin-bottom:18px">
   <div style="display:flex;align-items:center;gap:12px">
     ${logoSrc ? `<img src="${logoSrc}" style="width:46px;height:46px;object-fit:contain" alt="Peniel">` : '<span style="font-size:36px">🔥</span>'}
@@ -8850,7 +8853,6 @@
   <span>Igreja Peniel Mídia — Sistema de Gestão</span>
   <span>Gerado em ${hoje}</span>
 </div>
-<script>window.onload=()=>window.print()<\/script>
 </body></html>`
 
         const win = window.open('', '_blank', 'width=1200,height=750')
