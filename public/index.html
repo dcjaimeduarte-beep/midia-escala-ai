@@ -7497,7 +7497,7 @@
         </div>
         <div class="fin-chips-wrap">`
           for (const l of itens) html += _renderChip(l, false)
-          html += `</div></div>`
+          html += `</div>${(usuario?.role === 'admin' || !!usuario?.ver_subtotais_tipo) ? _subtotaisChipsDia(itens) : ''}</div>`
         }
       } else {
         html += `<p class="muted" style="text-align:center;padding:2rem 0">Nenhum lançamento no mês.</p>`
@@ -8427,18 +8427,28 @@
             ? `<span style="color:var(--texto-mutado);font-size:0.75rem">Encerrado</span>`
             : `<span style="color:var(--sucesso);font-size:0.75rem">Aberto</span>`
           const nome = c.titulo || c.evento_nome || 'Culto'
+          const totalVisitas = (c.total_visitantes ?? 0) + (c.total_convidados ?? 0)
+          const btnRelatorio = totalVisitas > 0
+            ? `<button type="button" onclick="event.stopPropagation();_relatorioVisitantesCulto('${esc(c.id)}','${esc(nome)}','${esc(data)}')"
+                style="margin-top:0.55rem;padding:0.22rem 0.65rem;border-radius:var(--raio);font-size:0.73rem;border:1px solid var(--borda);background:var(--fundo-elevado);color:var(--texto-mutado);cursor:pointer">
+                📋 Relatório de visitantes
+              </button>`
+            : ''
           return `
         <div class="card" style="margin-bottom:0.65rem;cursor:pointer" onclick="abrirDetalheCulto('${esc(c.id)}')">
-          <div class="card-body" style="padding:1rem 1.15rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
-            <div>
-              <div style="font-weight:600;font-size:0.95rem">${esc(nome)}</div>
-              <div style="font-size:0.8rem;color:var(--texto-mutado);margin-top:0.2rem">${data} · ${status}</div>
+          <div class="card-body" style="padding:1rem 1.15rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
+              <div>
+                <div style="font-weight:600;font-size:0.95rem">${esc(nome)}</div>
+                <div style="font-size:0.8rem;color:var(--texto-mutado);margin-top:0.2rem">${data} · ${status}</div>
+              </div>
+              <div style="display:flex;gap:1.25rem;text-align:center;flex-shrink:0">
+                <div><div style="font-size:1.1rem;font-weight:700">${c.total_presencas ?? 0}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Total</div></div>
+                <div><div style="font-size:1.1rem;font-weight:700;color:var(--acento)">${c.total_membros ?? 0}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Membros</div></div>
+                <div><div style="font-size:1.1rem;font-weight:700;color:var(--dourado)">${totalVisitas}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Visitas</div></div>
+              </div>
             </div>
-            <div style="display:flex;gap:1.25rem;text-align:center;flex-shrink:0">
-              <div><div style="font-size:1.1rem;font-weight:700">${c.total_presencas ?? 0}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Total</div></div>
-              <div><div style="font-size:1.1rem;font-weight:700;color:var(--acento)">${c.total_membros ?? 0}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Membros</div></div>
-              <div><div style="font-size:1.1rem;font-weight:700;color:var(--dourado)">${(c.total_visitantes ?? 0) + (c.total_convidados ?? 0)}</div><div style="font-size:0.68rem;color:var(--texto-mutado)">Visitas</div></div>
-            </div>
+            ${btnRelatorio}
           </div>
         </div>`
         }
@@ -8517,6 +8527,72 @@
             _cultosListTimer = null
           }
         }, ms)
+      }
+    }
+
+    async function _relatorioVisitantesCulto(cultoId, nome, dataFmt) {
+      try {
+        const presencas = await api('GET', `/culto/${cultoId}/presencas`)
+        const visitantes = presencas.filter(p => p.tipo === 'visitante' || p.tipo === 'visitante_convidado')
+        if (!visitantes.length) { toast('Nenhum visitante registrado neste culto.', 'err'); return }
+
+        const hoje = new Date().toLocaleDateString('pt-BR')
+        const linhas = visitantes.map((p, i) => {
+          const vez = p.total_visitas > 1 ? `${p.total_visitas}ª vez` : '1ª vez'
+          const tipo = p.tipo === 'visitante_convidado' ? 'Convidado(a)' : 'Visitante'
+          return `<tr style="${i % 2 === 0 ? '' : 'background:#f9f9f9'}">
+            <td style="padding:7px 9px;border-bottom:1px solid #e8e8e8;font-weight:600">${i + 1}</td>
+            <td style="padding:7px 9px;border-bottom:1px solid #e8e8e8">${esc(p.nome || '—')}</td>
+            <td style="padding:7px 9px;border-bottom:1px solid #e8e8e8">${esc(p.celular || '—')}</td>
+            <td style="padding:7px 9px;border-bottom:1px solid #e8e8e8">${esc(p.bairro || '—')}</td>
+            <td style="padding:7px 9px;border-bottom:1px solid #e8e8e8">${esc(p.igreja || '—')}</td>
+            <td style="padding:7px 9px;border-bottom:1px solid #e8e8e8">${esc(p.convidado_por || '—')}</td>
+            <td style="padding:7px 9px;border-bottom:1px solid #e8e8e8;text-align:center">${tipo}</td>
+            <td style="padding:7px 9px;border-bottom:1px solid #e8e8e8;text-align:center;font-weight:600;color:#16a34a">${vez}</td>
+          </tr>`
+        }).join('')
+
+        const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Relatório de Visitantes — ${nome}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:Arial,sans-serif; font-size:12px; color:#111; padding:28px 32px; }
+  h1 { font-size:17px; font-weight:700; margin-bottom:3px; }
+  .sub { font-size:11px; color:#666; margin-bottom:6px; }
+  .resumo { display:inline-flex; gap:24px; margin-bottom:20px; padding:9px 14px; background:#f4f4f4; border-radius:5px; border-left:4px solid #333; }
+  .resumo div { font-size:11px; color:#555; }
+  .resumo strong { font-size:15px; display:block; margin-top:2px; color:#111; }
+  table { width:100%; border-collapse:collapse; margin-top:4px; }
+  thead tr { background:#e8e8e8; }
+  th { padding:6px 9px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:#555; border-bottom:2px solid #bbb; }
+  td { font-size:11.5px; vertical-align:top; }
+  .rodape { margin-top:20px; font-size:10px; color:#999; text-align:right; border-top:1px solid #e0e0e0; padding-top:8px; }
+  @media print { body { padding:18px 22px; } }
+</style>
+</head><body>
+  <h1>Relatório de Visitantes</h1>
+  <div class="sub">${esc(nome)} · ${esc(dataFmt)}</div>
+  <div class="resumo">
+    <div><strong>${visitantes.length}</strong>visitante(s) registrado(s)</div>
+    <div><strong>${visitantes.filter(p => p.total_visitas === 1).length}</strong>primeira vez</div>
+    <div><strong>${visitantes.filter(p => p.tipo === 'visitante_convidado').length}</strong>convidado(s)</div>
+  </div>
+  <table>
+    <thead><tr>
+      <th>#</th><th>Nome</th><th>Celular</th><th>Bairro</th><th>Igreja de Origem</th><th>Convidado por</th><th>Tipo</th><th>Visitas</th>
+    </tr></thead>
+    <tbody>${linhas}</tbody>
+  </table>
+  <div class="rodape">Gerado em ${hoje} · Igreja Peniel Mídia</div>
+  <script>window.onload = () => window.print()<\/script>
+</body></html>`
+
+        const win = window.open('', '_blank', 'width=1000,height=700')
+        if (win) { win.document.write(html); win.document.close() }
+        else toast('Permita popups para gerar o relatório.', 'err')
+      } catch (e) {
+        toast('Erro ao gerar relatório.', 'err')
+        console.error(e)
       }
     }
 
