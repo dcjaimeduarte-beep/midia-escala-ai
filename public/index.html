@@ -2602,6 +2602,7 @@
         <p id="edit-usuario-erro" class="erro-msg"></p>
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost" onclick="inativarUsuarioEditUsuario()">Inativar</button>
+          <button type="button" id="btn-bloquear-usuario" class="btn btn-ghost" style="display:none" onclick="toggleBloquearAcessoUsuario()">🔒 Bloquear acesso</button>
           <button type="button" class="btn btn-ghost" style="margin-right:auto;color:var(--erro)"
             onclick="excluirUsuarioEditUsuario()">Excluir membro</button>
           <button type="button" class="btn btn-ghost" onclick="fecharModalEditUsuario()">Cancelar</button>
@@ -5323,6 +5324,17 @@
           selPerfil.value = v
         }
 
+        const btnBloquear = document.getElementById('btn-bloquear-usuario')
+        if (btnBloquear) {
+          if (usuario?.role === 'admin' && u.id !== usuario?.id) {
+            btnBloquear.style.display = ''
+            btnBloquear.textContent = u.bloqueado ? '🔓 Desbloquear acesso' : '🔒 Bloquear acesso'
+            btnBloquear.dataset.bloqueado = u.bloqueado ? '1' : '0'
+          } else {
+            btnBloquear.style.display = 'none'
+          }
+        }
+
         renderEditUsuarioDepartamentosList(u)
         await preencherSelectAddDeptoEditUsuario(u)
         document.getElementById('modal-edit-usuario').classList.add('aberto')
@@ -5406,6 +5418,26 @@
       } catch (e) {
         const err = document.getElementById('edit-usuario-erro')
         err.textContent = e.erro || 'Não foi possível inativar.'
+        err.style.display = 'block'
+      }
+    }
+
+    async function toggleBloquearAcessoUsuario() {
+      const id = document.getElementById('edit-usuario-id').value
+      if (!id) return
+      const btn = document.getElementById('btn-bloquear-usuario')
+      const atualmenteBloqueado = btn?.dataset.bloqueado === '1'
+      const msg = atualmenteBloqueado
+        ? 'Desbloquear o acesso deste membro ao sistema?'
+        : 'Bloquear o acesso deste membro? Ele não conseguirá entrar no sistema até ser desbloqueado por um administrador.'
+      if (!confirm(msg)) return
+      try {
+        await api('PUT', `/usuario/${id}`, { bloqueado: !atualmenteBloqueado })
+        fecharModalEditUsuario()
+        recarregarAposMudanca(atualmenteBloqueado ? 'Acesso desbloqueado.' : 'Acesso bloqueado.')
+      } catch (e) {
+        const err = document.getElementById('edit-usuario-erro')
+        err.textContent = e.erro || 'Não foi possível alterar o bloqueio.'
         err.style.display = 'block'
       }
     }
@@ -5803,7 +5835,7 @@
             ${usuarios.map(u => `
               <tr data-seq="${seqMap[u.id] || ''}">
                 <td style="text-align:center;color:var(--texto-mutado);font-size:0.78rem;white-space:nowrap">${seqMap[u.id] || ''}</td>
-                <td><strong>${esc(u.nome)}</strong></td>
+                <td><strong>${esc(u.nome)}</strong>${u.bloqueado ? ' <span class="badge badge-vermelho" title="Acesso bloqueado pelo administrador" style="font-size:0.7rem;vertical-align:middle">🔒 bloqueado</span>' : ''}</td>
                 <td style="color:var(--texto-mutado)">${esc(u.email)}</td>
                 <td style="color:var(--texto-mutado);white-space:nowrap">${esc(u.celular || '—')}</td>
                 <td>${celulaPerfil(u)}</td>

@@ -309,6 +309,7 @@ function migrate() {
   tryExec(`ALTER TABLE presencas ADD COLUMN bairro  TEXT NOT NULL DEFAULT ''`)
   tryExec(`ALTER TABLE presencas ADD COLUMN igreja  TEXT NOT NULL DEFAULT ''`)
   tryExec(`ALTER TABLE usuarios  ADD COLUMN acesso_cultos INTEGER NOT NULL DEFAULT 0`)
+  tryExec(`ALTER TABLE usuarios  ADD COLUMN bloqueado INTEGER NOT NULL DEFAULT 0`)
 
   // Garante departamento Obreiros (financeiro + introdução / check-in)
   const { n: nObreiros } = db.get(`SELECT COUNT(*) as n FROM departamentos WHERE nome = 'Obreiros'`) || { n: 0 }

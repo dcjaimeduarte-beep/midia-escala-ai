@@ -47,7 +47,7 @@ function departamentosDoUsuario(usuarioId) {
 router.get('/listar', autenticar, (req, res) => {
   if (req.usuario.role === 'admin') {
     const usuarios = sql.all(
-      `SELECT u.id, u.nome, u.email, u.celular, u.role, u.ativo, u.avatar, u.criado_em,
+      `SELECT u.id, u.nome, u.email, u.celular, u.role, u.ativo, u.bloqueado, u.avatar, u.criado_em,
               u.precisa_trocar_senha, u.acesso_financeiro, u.acesso_relatorio_financeiro, u.acesso_cultos,
               u.acesso_financeiro_global, u.acesso_financeiro_saida, u.acesso_escala_global, u.acesso_escalas, u.acesso_comunicacoes,
               u.congregacao_id, u.perfil_id,
@@ -59,6 +59,7 @@ router.get('/listar', autenticar, (req, res) => {
     const lista = usuarios.map((u) => ({
       ...u,
       ativo: !!u.ativo,
+      bloqueado: !!u.bloqueado,
       precisa_trocar_senha: !!u.precisa_trocar_senha,
       acesso_financeiro: !!u.acesso_financeiro,
       acesso_relatorio_financeiro: !!u.acesso_relatorio_financeiro,
@@ -134,6 +135,7 @@ router.get('/:id', autenticar, (req, res) => {
   res.json({
     ...semSenha,
     ativo: !!semSenha.ativo,
+    bloqueado: !!semSenha.bloqueado,
     precisa_trocar_senha: !!semSenha.precisa_trocar_senha,
     departamentos
   })
@@ -154,7 +156,7 @@ router.put('/:id', autenticar, async (req, res) => {
   if (!podeEditar)
     return res.status(403).json({ erro: 'Sem permissão para alterar cadastros' })
 
-  const { nome, email, celular, data_nascimento, senha, ativo, avatar, role, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, acesso_financeiro_saida, acesso_escala_global, acesso_cultos, congregacao_id, perfil_id } = req.body
+  const { nome, email, celular, data_nascimento, senha, ativo, bloqueado, avatar, role, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, acesso_financeiro_saida, acesso_escala_global, acesso_cultos, congregacao_id, perfil_id } = req.body
 
   if (role !== undefined) {
     if (req.usuario.role !== 'admin')
@@ -175,6 +177,8 @@ router.put('/:id', autenticar, async (req, res) => {
   if (avatar !== undefined) sql.run(`UPDATE usuarios SET avatar = ? WHERE id = ?`, avatar, req.params.id)
   if (ativo !== undefined && req.usuario.role === 'admin')
     sql.run(`UPDATE usuarios SET ativo = ? WHERE id = ?`, ativo ? 1 : 0, req.params.id)
+  if (bloqueado !== undefined && admin)
+    sql.run(`UPDATE usuarios SET bloqueado = ? WHERE id = ?`, bloqueado ? 1 : 0, req.params.id)
   if (senha) {
     const hash = await bcrypt.hash(senha, 10)
     sql.run(`UPDATE usuarios SET senha = ? WHERE id = ?`, hash, req.params.id)
@@ -212,10 +216,11 @@ router.put('/:id', autenticar, async (req, res) => {
   }
 
   syncTudoParaMemoria()
-  const atual = sql.get(`SELECT id, nome, email, celular, role, ativo, avatar, criado_em, precisa_trocar_senha, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, acesso_financeiro_saida, acesso_escala_global, acesso_cultos, perfil_id FROM usuarios WHERE id = ?`, req.params.id)
+  const atual = sql.get(`SELECT id, nome, email, celular, role, ativo, bloqueado, avatar, criado_em, precisa_trocar_senha, acesso_financeiro, acesso_relatorio_financeiro, acesso_financeiro_global, acesso_financeiro_saida, acesso_escala_global, acesso_cultos, perfil_id FROM usuarios WHERE id = ?`, req.params.id)
   res.json({
     ...atual,
     ativo: !!atual.ativo,
+    bloqueado: !!atual.bloqueado,
     precisa_trocar_senha: !!atual.precisa_trocar_senha,
     acesso_financeiro: !!atual.acesso_financeiro,
     acesso_relatorio_financeiro: !!atual.acesso_relatorio_financeiro,

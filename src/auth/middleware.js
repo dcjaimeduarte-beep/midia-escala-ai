@@ -17,10 +17,11 @@ function autenticar(req, res, next) {
   try {
     const payload = jwt.verify(auth.split(' ')[1], SECRET)
     const row = db.get(
-      'SELECT id, nome, email, role, acesso_financeiro, acesso_financeiro_global, acesso_financeiro_saida, acesso_relatorio_financeiro, acesso_escala_global, acesso_cultos, acesso_visitantes, ver_totais_financeiro, ver_totais_dia, ver_subtotais_tipo, congregacao_id FROM usuarios WHERE id = ? AND ativo = 1',
+      'SELECT id, nome, email, role, acesso_financeiro, acesso_financeiro_global, acesso_financeiro_saida, acesso_relatorio_financeiro, acesso_escala_global, acesso_cultos, acesso_visitantes, ver_totais_financeiro, ver_totais_dia, ver_subtotais_tipo, congregacao_id, bloqueado FROM usuarios WHERE id = ? AND ativo = 1',
       payload.id
     )
     if (!row) return res.status(401).json({ erro: 'Usuário inválido ou inativo' })
+    if (row.bloqueado) return res.status(403).json({ erro: 'Acesso bloqueado pelo administrador' })
     req.usuario = {
       id: row.id,
       nome: row.nome,
