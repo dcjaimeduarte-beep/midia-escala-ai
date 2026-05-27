@@ -4090,6 +4090,7 @@
 
         let avisoSemDepartamentoHtml = ''
         let totalVoluntariosComEquipe = somaVinculosPorDepto
+        let totalSemDepto = 0
         if (usuario?.role === 'admin') {
           try {
             const listaUsers = await api('GET', '/usuario/listar')
@@ -4097,6 +4098,7 @@
             const semDepto = todos.filter((u) => !(u.departamentos || []).length)
             const comDepto = todos.filter((u) => (u.departamentos || []).length)
             totalVoluntariosComEquipe = comDepto.length
+            totalSemDepto = semDepto.length
             if (semDepto.length) {
               const amostra = semDepto
                 .slice(0, 4)
@@ -4194,6 +4196,12 @@
           <div class="stat-label">${usuario?.role === 'admin' ? 'Nas equipes' : 'Meus vínculos'}</div>
           <div class="stat-valor">${usuario?.role === 'admin' ? totalVoluntariosComEquipe : meusVinculosCount}<span class="stat-unidade">${usuario?.role === 'admin' ? 'pessoas' : 'departamentos'}</span></div>
         </div>
+        ${usuario?.role === 'admin' ? `
+        <div class="stat-card" style="cursor:pointer" onclick="navegar('equipe');setTimeout(()=>setFiltroEquipeStatus('sem-depto'),120)" title="Ver obreiros sem departamento">
+          <div class="stat-icone">🙏</div>
+          <div class="stat-label">Obreiros / sem equipe</div>
+          <div class="stat-valor">${totalSemDepto}<span class="stat-unidade">pessoas</span></div>
+        </div>` : ''}
         <div class="stat-card">
           <div class="stat-icone">🏛️</div>
           <div class="stat-label">Departamentos</div>
@@ -5758,9 +5766,11 @@
         const usuarios =
           filtroEquipeStatus === 'todos'
             ? usuariosBase
-            : usuariosBase.filter((u) =>
-              filtroEquipeStatus === 'ativos' ? u.ativo !== false : u.ativo === false
-            )
+            : filtroEquipeStatus === 'sem-depto'
+              ? usuariosBase.filter((u) => !(u.departamentos || []).length && u.ativo !== false)
+              : usuariosBase.filter((u) =>
+                filtroEquipeStatus === 'ativos' ? u.ativo !== false : u.ativo === false
+              )
         _equipeStatusCount = usuarios.length
 
         if (!usuariosBase.length) {
@@ -5799,6 +5809,7 @@
               <option value="ativos" ${filtroEquipeStatus === 'ativos' ? 'selected' : ''}>Somente ativos</option>
               <option value="inativos" ${filtroEquipeStatus === 'inativos' ? 'selected' : ''}>Somente inativos</option>
               <option value="todos" ${filtroEquipeStatus === 'todos' ? 'selected' : ''}>Todos</option>
+              <option value="sem-depto" ${filtroEquipeStatus === 'sem-depto' ? 'selected' : ''}>Sem departamento</option>
             </select>
             <input type="text" placeholder="🔍 Pesquisar por nome…" value="${esc(filtroEquipeNome)}"
               oninput="_filtrarEquipeNome(this.value)"
