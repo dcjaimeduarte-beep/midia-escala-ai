@@ -2604,7 +2604,7 @@
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost" onclick="inativarUsuarioEditUsuario()">Inativar</button>
           <button type="button" id="btn-bloquear-usuario" class="btn btn-ghost" style="display:none" onclick="toggleBloquearAcessoUsuario()">🔒 Bloquear acesso</button>
-          <button type="button" class="btn btn-ghost" style="margin-right:auto;color:var(--erro)"
+          <button type="button" id="btn-excluir-usuario" class="btn btn-ghost" style="margin-right:auto;color:var(--erro)"
             onclick="excluirUsuarioEditUsuario()">Excluir membro</button>
           <button type="button" class="btn btn-ghost" onclick="fecharModalEditUsuario()">Cancelar</button>
           <button type="submit" class="btn btn-primario">Salvar</button>
@@ -5332,6 +5332,9 @@
           if (v === 'admin' && usuario?.role !== 'admin') v = 'voluntario'
           selPerfil.value = v
         }
+
+        const btnExcluir = document.getElementById('btn-excluir-usuario')
+        if (btnExcluir) btnExcluir.style.display = u.id === usuario?.id ? 'none' : ''
 
         const btnBloquear = document.getElementById('btn-bloquear-usuario')
         if (btnBloquear) {

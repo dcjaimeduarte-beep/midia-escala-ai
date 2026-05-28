@@ -232,6 +232,9 @@ router.put('/:id', autenticar, async (req, res) => {
 
 // DELETE /usuario/:id — admin (exclusão total do cadastro)
 router.delete('/:id', autenticar, apenasAdmin, (req, res) => {
+  if (req.params.id === req.usuario.id)
+    return res.status(403).json({ erro: 'Você não pode excluir o próprio cadastro.' })
+
   const alvo = sql.get(`SELECT id, role FROM usuarios WHERE id = ?`, req.params.id)
   if (!alvo) return res.status(404).json({ erro: 'Usuário não encontrado' })
 
