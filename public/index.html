@@ -2281,6 +2281,10 @@
             <input type="date" id="fin-data-fim" onchange="_setFinPeriodo()"
               style="flex:1;min-width:120px;padding:0.28rem 0.55rem;border-radius:var(--raio);background:var(--fundo);border:1px solid var(--borda);color:var(--texto);font-size:0.82rem;cursor:pointer" />
           </div>
+          <label id="fin-saldo-ant-label" style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--texto-mutado);cursor:pointer;white-space:nowrap;margin-left:0.5rem" title="Inclui o saldo acumulado de todos os meses anteriores ao período selecionado">
+            <input type="checkbox" id="fin-saldo-ant-chk" onchange="toggleSaldoAnterior(this)" style="cursor:pointer;accent-color:var(--primaria)">
+            Puxar saldo anterior
+          </label>
         </div>
 
         <!-- Sub-tabs -->
@@ -7282,7 +7286,11 @@
       const mes = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`
       try {
         const rows = await api('GET', `/financeiro/lancamentos?${_finApiParams()}`)
-        el.innerHTML = _renderDashboard(rows)
+        finSaldoAntData = null
+        if (finUsarSaldoAnterior) {
+          try { finSaldoAntData = await _fetchSaldoAnt(mes) } catch(e) {}
+        }
+        el.innerHTML = _renderDashboard(rows, finSaldoAntData)
       } catch (e) {
         el.innerHTML = `<p class="muted">Não foi possível carregar: ${e.erro || 'Erro'}</p>`
       }
@@ -7294,13 +7302,17 @@
       el.innerHTML = '<p class="carregando">Carregando…</p>'
       try {
         const rows = await api('GET', `/financeiro/lancamentos?${_finApiParams()}`)
-        el.innerHTML = _renderDashboard(rows)
+        finSaldoAntData = null
+        if (finUsarSaldoAnterior) {
+          try { finSaldoAntData = await _fetchSaldoAnt(mes) } catch(e) {}
+        }
+        el.innerHTML = _renderDashboard(rows, finSaldoAntData)
       } catch (e) {
         el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
       }
     }
 
-    function _renderDashboard(rows) {
+    function _renderDashboard(rows, saldoAnt = null) {
       const hoje = _dataHoje()
       const isoHoje = _ddmmToISO(hoje)
 
@@ -7323,7 +7335,8 @@
       const entMes = rows.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
       const saiMes = rows.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
       const saldoMes = entMes - saiMes
-      const saldoCls = saldoMes >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'
+      const saldoFinal = saldoAnt !== null ? saldoAnt.saldo + saldoMes : saldoMes
+      const saldoCls = saldoFinal >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'
 
       const _congSel = document.getElementById('fin-cong-select')
       const nomeCong = finCongFiltro
@@ -7334,9 +7347,10 @@
     ${nomeCong ? `<span style="color:var(--texto);font-weight:600">⛪ ${esc(nomeCong)}</span> · ` : ''}${rows.length} lançamento${rows.length !== 1 ? 's' : ''} no período
   </div>
   ${(usuario?.role === 'admin' || !!usuario?.ver_totais_financeiro) ? `<div class="fin-resumo-grid">
+    ${saldoAnt !== null ? `<div class="fin-stat-card"><div class="fin-stat-label">Saldo Anterior</div><div class="fin-stat-valor ${saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'}">${_fmtVal(saldoAnt.saldo)}</div></div>` : ''}
     <div class="fin-stat-card"><div class="fin-stat-label">Entradas</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(entMes)}</div></div>
     <div class="fin-stat-card"><div class="fin-stat-label">Saídas</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(saiMes)}</div></div>
-    <div class="fin-stat-card"><div class="fin-stat-label">Saldo</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(saldoMes)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">${saldoAnt !== null ? 'Saldo Final' : 'Saldo'}</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(saldoFinal)}</div></div>
   </div>` : ''}`
 
       // ── Passados colapsados ──────────────────────────────────
@@ -7613,20 +7627,18 @@
     // ── RELATÓRIO MENSAL ────────────────────────────────────────
 
     async function _fetchSaldoAnt(mes) {
-      const primeiroDia = `${mes}-01`
+      // usa finPeriodo.inicio se disponível; senão o primeiro dia do mês
+      const ate = finPeriodo.inicio || `${mes}-01`
       const congParam = finCongFiltro ? `&congregacao_id=${encodeURIComponent(finCongFiltro)}` : ''
-      return api('GET', `/financeiro/saldo-acumulado?ate=${primeiroDia}${congParam}`)
+      return api('GET', `/financeiro/saldo-acumulado?ate=${ate}${congParam}`)
     }
 
     async function toggleSaldoAnterior(cb) {
       finUsarSaldoAnterior = cb.checked
-      const el = document.getElementById('fin-relatorio')
-      if (!el || !finRelatorioData) return
       finSaldoAntData = null
-      if (finUsarSaldoAnterior) {
-        try { finSaldoAntData = await _fetchSaldoAnt(finRelatorioData.mes) } catch(e) {}
-      }
-      el.innerHTML = _renderRelatorio(finRelatorioData, finSaldoAntData)
+      if (finAbaAtiva === 'dashboard') await carregarFinDashboard()
+      else if (finAbaAtiva === 'relatorio') await carregarFinRelatorio()
+      else if (finAbaAtiva === 'anual') await carregarFinAnual()
     }
 
     async function carregarFinRelatorio() {
@@ -7670,15 +7682,9 @@
       const [ano, mesN] = mes.split('-')
       const nomeMes = new Date(parseInt(ano), parseInt(mesN) - 1, 1).toLocaleString('pt-BR', { month: 'long' })
 
-      const toggleHtml = `<label style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--texto-mutado);cursor:pointer" title="Quando marcado, soma o saldo acumulado de todos os meses anteriores ao saldo do mês">
-      <input type="checkbox" ${finUsarSaldoAnterior ? 'checked' : ''} onchange="toggleSaldoAnterior(this)" style="cursor:pointer;accent-color:var(--primaria)">
-      Puxar saldo anterior
-    </label>`
-
       let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
     <span style="font-size:0.8rem;color:var(--texto-mutado)">${nomeMes} de ${ano}</span>
     <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
-      ${toggleHtml}
       <button onclick="_imprimirRelatorio()" style="padding:0.3rem 0.7rem;border-radius:var(--raio);font-size:0.78rem;border:1px solid var(--borda);cursor:pointer;background:var(--fundo-elevado);color:var(--texto)" title="Imprimir / PDF">🖨️ Imprimir</button>
       <input type="month" value="${mes}" onchange="filtrarFinRelatorio(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
     </div>
@@ -7847,15 +7853,20 @@
           api('GET', `/financeiro/dashboard-anual?ano=${anoParam}${congParam}`),
           api('GET', `/financeiro/relatorio?mes=${mesParam}${congParam}`)
         ])
-        el.innerHTML = _renderDashAnual(anualData, mensalData, String(mesParam))
+        finSaldoAntData = null
+        if (finUsarSaldoAnterior) {
+          try { finSaldoAntData = await _fetchSaldoAnt(mesParam) } catch(e) {}
+        }
+        el.innerHTML = _renderDashAnual(anualData, mensalData, String(mesParam), finSaldoAntData)
       } catch (e) {
         el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
       }
     }
 
-    function _renderDashAnual(anualData, mensalData, mesSel) {
+    function _renderDashAnual(anualData, mensalData, mesSel, saldoAnt = null) {
       const { ano, meses, categorias, totais: totAno } = anualData
       const { por_categoria: porCatMes, totais: totMes } = mensalData
+      const saldoMesFinal = saldoAnt !== null ? saldoAnt.saldo + totMes.saldo : totMes.saldo
       const anoNum = parseInt(ano)
       const mesIdx = parseInt((mesSel || '').split('-')[1] || new Date().getMonth() + 1) - 1
 
@@ -8050,10 +8061,11 @@
     <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:0.75rem">
 
       <!-- KPIs -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem">
+      <div style="display:grid;grid-template-columns:repeat(${saldoAnt !== null ? 4 : 3},1fr);gap:0.65rem">
+        ${saldoAnt !== null ? _kpi('Saldo Anterior', _fmtVal(saldoAnt.saldo), saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg', '') : ''}
         ${_kpi('Entradas — ' + nomeMes, _fmtVal(totMes.entradas), 'fin-stat-entrada', spkEnt)}
         ${_kpi('Saídas — ' + nomeMes, _fmtVal(totMes.saidas), 'fin-stat-saida', spkSai)}
-        ${_kpi('Saldo — ' + nomeMes, _fmtVal(totMes.saldo), totMes.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg', spkSald)}
+        ${_kpi((saldoAnt !== null ? 'Saldo Final — ' : 'Saldo — ') + nomeMes, _fmtVal(saldoMesFinal), saldoMesFinal >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg', spkSald)}
       </div>
 
       <!-- Análise Anual + Donut mês -->
