@@ -3018,6 +3018,10 @@
             style="padding:0.35rem 0.55rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.88rem;cursor:pointer" />
         </div>
       </div>
+      <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.85rem;font-size:0.82rem;color:var(--texto-mutado);cursor:pointer" title="Inclui o saldo acumulado de todos os lançamentos anteriores ao período selecionado">
+        <input type="checkbox" id="imp-saldo-anterior" style="cursor:pointer;accent-color:var(--primaria)">
+        Puxar saldo anterior ao período
+      </label>
       <div class="modal-actions" style="margin-top:1.25rem">
         <button type="button" class="btn btn-ghost"
           onclick="document.getElementById('modal-imprimir-periodo').classList.remove('aberto')">Cancelar</button>
@@ -7169,10 +7173,11 @@
       document.getElementById('modal-imprimir-periodo').classList.add('aberto')
     }
 
-    function _confirmarImpressao() {
+    async function _confirmarImpressao() {
       document.getElementById('modal-imprimir-periodo').classList.remove('aberto')
       const isoInicio = document.getElementById('imp-data-inicio').value.trim() || null
       const isoFim = document.getElementById('imp-data-fim').value.trim() || null
+      const usarSaldoAnt = document.getElementById('imp-saldo-anterior')?.checked
 
       let rows = [...(finLancamentosData || [])]
       if (isoInicio) rows = rows.filter(l => _ddmmToISO(l.data) >= isoInicio)
@@ -7183,6 +7188,16 @@
       const congNome = finCongFiltro
         ? (sel ? [...sel.options].find(o => o.value === finCongFiltro)?.text : null) || ''
         : (usuario?.role !== 'admin' ? usuario?.congregacao?.nome || '' : '')
+
+      // Busca saldo anterior se solicitado
+      let saldoAntVal = null
+      if (usarSaldoAnt && isoInicio) {
+        try {
+          const congParam = finCongFiltro ? `&congregacao_id=${encodeURIComponent(finCongFiltro)}` : ''
+          const res = await api('GET', `/financeiro/saldo-acumulado?ate=${isoInicio}${congParam}`)
+          saldoAntVal = res.saldo
+        } catch(e) {}
+      }
 
       // Agrupar por data (ordem decrescente)
       const porData = {}
@@ -7195,6 +7210,7 @@
       const entTotal = rows.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
       const saiTotal = rows.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
       const saldo = entTotal - saiTotal
+      const saldoFinal = saldoAntVal !== null ? saldoAntVal + saldo : saldo
       const hoje = new Date().toLocaleDateString('pt-BR')
       const fmtIso = iso => iso ? iso.split('-').reverse().join('/') : '?'
       const periodo = fmtIso(isoInicio) + (isoFim && isoFim !== isoInicio ? ' a ' + fmtIso(isoFim) : '')
@@ -7271,15 +7287,17 @@
   <h1>Lançamentos Financeiros${congNome ? ' — ' + esc(congNome) : ''}</h1>
   <div class="meta">Período: ${esc(periodo)} · Gerado em ${hoje} · ${rows.length} lançamento${rows.length !== 1 ? 's' : ''}</div>
   <div class="resumo">
+    ${saldoAntVal !== null ? `<div><span>Saldo Anterior</span><strong class="${saldoAntVal >= 0 ? 'entrada' : 'saida'}">${saldoAntVal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoAntVal))}</strong></div>` : ''}
     <div><span>Entradas</span><strong class="entrada">+ R$ ${_formatCurrency(entTotal)}</strong></div>
     <div><span>Saídas</span><strong class="saida">− R$ ${_formatCurrency(saiTotal)}</strong></div>
-    <div><span>Saldo</span><strong class="${saldo >= 0 ? 'entrada' : 'saida'}">${saldo >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldo))}</strong></div>
+    <div><span>${saldoAntVal !== null ? 'Saldo Final' : 'Saldo'}</span><strong class="${saldoFinal >= 0 ? 'entrada' : 'saida'}">${saldoFinal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoFinal))}</strong></div>
   </div>
   ${blocos}
   <div class="total-geral">
+    ${saldoAntVal !== null ? `<span><span>Saldo Anterior</span><strong class="${saldoAntVal >= 0 ? 'entrada' : 'saida'}">${saldoAntVal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoAntVal))}</strong></span>` : ''}
     <span><span>Total Entradas</span><strong class="entrada">+ R$ ${_formatCurrency(entTotal)}</strong></span>
     <span><span>Total Saídas</span><strong class="saida">− R$ ${_formatCurrency(saiTotal)}</strong></span>
-    <span><span>Saldo Geral</span><strong class="${saldo >= 0 ? 'entrada' : 'saida'}">${saldo >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldo))}</strong></span>
+    <span><span>${saldoAntVal !== null ? 'Saldo Final' : 'Saldo Geral'}</span><strong class="${saldoFinal >= 0 ? 'entrada' : 'saida'}">${saldoFinal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoFinal))}</strong></span>
   </div>
   <script>window.onload = () => { window.print() }<\/script>
   </body></html>`
