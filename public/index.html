@@ -2258,6 +2258,8 @@
             style="display:none">+ Em lote</button>
           <button class="btn btn-ghost" id="btn-abrir-culto" onclick="abrirModalQuickCulto()"
             style="display:none;border:1px solid var(--borda)">📅 + Culto</button>
+          <button class="btn btn-ghost" id="btn-ajuste-saldo" onclick="abrirModalAjusteSaldo()"
+            style="display:none;border:1px solid var(--borda)">⚖️ Ajuste de Saldo</button>
         </div>
 
         <!-- Filtro de congregação (admin / acesso global) -->
@@ -2956,6 +2958,44 @@
           <button type="submit" class="btn btn-primario">Salvar</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL AJUSTE DE SALDO -->
+  <div id="modal-ajuste-saldo" class="modal-overlay"
+    onclick="if(event.target===this)this.classList.remove('aberto')">
+    <div class="modal" style="max-width:460px" onclick="event.stopPropagation()">
+      <h3 class="modal-titulo">⚖️ Ajuste de Saldo</h3>
+      <p class="muted" style="font-size:0.83rem;margin:-0.25rem 0 1rem">
+        Cria um lançamento de ajuste para corrigir o saldo. O registro fica no histórico e pode ser excluído se necessário.
+      </p>
+      <div id="ajuste-saldo-atual" style="background:var(--fundo-elevado);border:1px solid var(--borda);border-radius:var(--raio);padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem">
+        <span style="color:var(--texto-mutado)">Saldo atual acumulado:</span>
+        <span id="ajuste-saldo-valor" style="font-weight:700;margin-left:0.5rem">…</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+        <div class="form-grupo" style="margin:0">
+          <label>Data do ajuste</label>
+          <input id="ajuste-data" type="date"
+            style="padding:0.35rem 0.55rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.88rem;cursor:pointer" />
+        </div>
+        <div class="form-grupo" style="margin:0">
+          <label>Saldo desejado após ajuste (R$)</label>
+          <input id="ajuste-saldo-desejado" type="number" step="0.01" value="0" placeholder="0,00"
+            style="padding:0.35rem 0.55rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.88rem" />
+        </div>
+      </div>
+      <div class="form-grupo" style="margin-bottom:0.75rem">
+        <label>Descrição</label>
+        <input id="ajuste-descricao" type="text" value="Ajuste de Saldo"
+          style="padding:0.35rem 0.55rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.88rem;width:100%" />
+      </div>
+      <div id="ajuste-preview" style="font-size:0.82rem;color:var(--texto-mutado);min-height:1.4rem;margin-bottom:0.5rem"></div>
+      <div class="modal-actions" style="margin-top:0.75rem">
+        <button type="button" class="btn btn-ghost"
+          onclick="document.getElementById('modal-ajuste-saldo').classList.remove('aberto')">Cancelar</button>
+        <button type="button" class="btn btn-primario" onclick="confirmarAjusteSaldo()">✅ Criar ajuste</button>
+      </div>
     </div>
   </div>
 
@@ -6802,10 +6842,12 @@
       const btnNovo = document.getElementById('btn-novo-lancamento')
       const btnLote = document.getElementById('btn-lancamento-lote')
       const btnCulto = document.getElementById('btn-abrir-culto')
+      const btnAjuste = document.getElementById('btn-ajuste-saldo')
       const mostrar = aba === 'lancamentos' ? '' : 'none'
       if (btnNovo) btnNovo.style.display = mostrar
       if (btnLote) btnLote.style.display = mostrar
       if (btnCulto) btnCulto.style.display = mostrar
+      if (btnAjuste) btnAjuste.style.display = (usuario?.role === 'admin' && (aba === 'dashboard' || aba === 'relatorio')) ? '' : 'none'
       if (aba === 'dashboard') carregarFinDashboard()
       else if (aba === 'lancamentos') carregarFinLancamentos()
       else if (aba === 'relatorio') carregarFinRelatorio()
@@ -7028,6 +7070,96 @@
       if (v.length > 4) v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4)
       else if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2)
       input.value = v
+    }
+
+    async function abrirModalAjusteSaldo() {
+      const modal = document.getElementById('modal-ajuste-saldo')
+      const elValor = document.getElementById('ajuste-saldo-valor')
+      const elData = document.getElementById('ajuste-data')
+      const elDesejado = document.getElementById('ajuste-saldo-desejado')
+      const elPreview = document.getElementById('ajuste-preview')
+
+      // data padrão = hoje
+      const hoje = new Date()
+      elData.value = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`
+      elDesejado.value = '0'
+      elPreview.textContent = ''
+      elValor.textContent = 'carregando…'
+      modal.classList.add('aberto')
+
+      // busca saldo total até amanhã (inclui lançamentos de hoje)
+      try {
+        const amanha = new Date(hoje); amanha.setDate(amanha.getDate() + 1)
+        const amanhaStr = `${amanha.getFullYear()}-${String(amanha.getMonth()+1).padStart(2,'0')}-${String(amanha.getDate()).padStart(2,'0')}`
+        const congParam = finCongFiltro ? `&congregacao_id=${encodeURIComponent(finCongFiltro)}` : ''
+        const res = await api('GET', `/financeiro/saldo-acumulado?ate=${amanhaStr}${congParam}`)
+        const cls = res.saldo >= 0 ? 'color:var(--sucesso)' : 'color:var(--erro)'
+        elValor.innerHTML = `<span style="${cls}">${_fmtVal(res.saldo)}</span>`
+        elDesejado.dataset.saldoAtual = res.saldo
+
+        const atualizarPreview = () => {
+          const desejado = parseFloat(elDesejado.value) || 0
+          const atual = parseFloat(elDesejado.dataset.saldoAtual) || 0
+          const diff = desejado - atual
+          if (Math.abs(diff) < 0.005) {
+            elPreview.innerHTML = '<span style="color:var(--sucesso)">✓ Saldo já está no valor desejado — nenhum ajuste necessário.</span>'
+          } else if (diff > 0) {
+            elPreview.innerHTML = `Será criada uma <strong style="color:var(--sucesso)">entrada</strong> de <strong>${_fmtVal(diff)}</strong> na data selecionada.`
+          } else {
+            elPreview.innerHTML = `Será criada uma <strong style="color:var(--erro)">saída</strong> de <strong>${_fmtVal(Math.abs(diff))}</strong> na data selecionada.`
+          }
+        }
+        elDesejado.oninput = atualizarPreview
+        atualizarPreview()
+      } catch(e) {
+        elValor.textContent = 'Erro ao carregar'
+      }
+    }
+
+    async function confirmarAjusteSaldo() {
+      const elData = document.getElementById('ajuste-data')
+      const elDesejado = document.getElementById('ajuste-saldo-desejado')
+      const elDesc = document.getElementById('ajuste-descricao')
+      const atual = parseFloat(elDesejado.dataset.saldoAtual) || 0
+      const desejado = parseFloat(elDesejado.value) || 0
+      const diff = desejado - atual
+      const dataISO = elData.value
+      if (!dataISO) { toast('Informe a data do ajuste.', 'err'); return }
+      if (Math.abs(diff) < 0.005) { toast('Saldo já está no valor desejado.', 'info'); return }
+
+      // converte data ISO → DD/MM/YYYY
+      const [y, m, d] = dataISO.split('-')
+      const dataBR = `${d}/${m}/${y}`
+
+      // garante categoria "Ajuste de Saldo" do tipo correto
+      const tipo = diff > 0 ? 'entrada' : 'saida'
+      let catId = finCategorias.find(c => c.nome === 'Ajuste de Saldo' && c.tipo === tipo)?.id
+      if (!catId) {
+        try {
+          const nova = await api('POST', '/financeiro/categorias', { nome: 'Ajuste de Saldo', tipo })
+          catId = nova.id
+          finCategorias.push(nova)
+        } catch(e) {
+          toast('Erro ao criar categoria de ajuste: ' + (e.erro || ''), 'err'); return
+        }
+      }
+
+      try {
+        await api('POST', '/financeiro/lancamentos', {
+          data: dataBR,
+          categoria_id: catId,
+          valor: Math.abs(diff),
+          tipo,
+          descricao: elDesc.value.trim() || 'Ajuste de Saldo',
+          historico: `Ajuste manual. Saldo anterior: ${_fmtVal(atual)}. Saldo desejado: ${_fmtVal(desejado)}.`
+        })
+        document.getElementById('modal-ajuste-saldo').classList.remove('aberto')
+        toast('Ajuste de saldo criado com sucesso.', 'ok')
+        if (finAbaAtiva === 'dashboard') carregarFinDashboard()
+        else if (finAbaAtiva === 'relatorio') carregarFinRelatorio()
+      } catch(e) {
+        toast('Erro ao criar ajuste: ' + (e.erro || ''), 'err')
+      }
     }
 
     function _imprimirLancamentos() {
