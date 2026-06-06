@@ -7338,6 +7338,13 @@
       const saldoFinal = saldoAnt !== null ? saldoAnt.saldo + saldoMes : saldoMes
       const saldoCls = saldoFinal >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'
 
+      const agora = new Date()
+      const anoMesAtual = finPeriodo.inicio
+        ? finPeriodo.inicio.slice(0, 7)
+        : `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`
+      const tagMes = _fmtMesTag(anoMesAtual)
+      const tagPrev = _fmtMesPrevTag(anoMesAtual)
+
       const _congSel = document.getElementById('fin-cong-select')
       const nomeCong = finCongFiltro
         ? (_congSel ? [..._congSel.options].find(o => o.value === finCongFiltro)?.text : null) || usuario?.congregacao?.nome
@@ -7347,10 +7354,10 @@
     ${nomeCong ? `<span style="color:var(--texto);font-weight:600">⛪ ${esc(nomeCong)}</span> · ` : ''}${rows.length} lançamento${rows.length !== 1 ? 's' : ''} no período
   </div>
   ${(usuario?.role === 'admin' || !!usuario?.ver_totais_financeiro) ? `<div class="fin-resumo-grid">
-    ${saldoAnt !== null ? `<div class="fin-stat-card"><div class="fin-stat-label">Saldo Anterior</div><div class="fin-stat-valor ${saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'}">${_fmtVal(saldoAnt.saldo)}</div></div>` : ''}
-    <div class="fin-stat-card"><div class="fin-stat-label">Entradas</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(entMes)}</div></div>
-    <div class="fin-stat-card"><div class="fin-stat-label">Saídas</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(saiMes)}</div></div>
-    <div class="fin-stat-card"><div class="fin-stat-label">${saldoAnt !== null ? 'Saldo Final' : 'Saldo'}</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(saldoFinal)}</div></div>
+    ${saldoAnt !== null ? `<div class="fin-stat-card"><div class="fin-stat-label">Saldo Anterior${tagPrev}</div><div class="fin-stat-valor ${saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'}">${_fmtVal(saldoAnt.saldo)}</div></div>` : ''}
+    <div class="fin-stat-card"><div class="fin-stat-label">Entradas${tagMes}</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(entMes)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Saídas${tagMes}</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(saiMes)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">${saldoAnt !== null ? 'Saldo Final' : 'Saldo'}${tagMes}</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(saldoFinal)}</div></div>
   </div>` : ''}`
 
       // ── Passados colapsados ──────────────────────────────────
@@ -7626,6 +7633,20 @@
 
     // ── RELATÓRIO MENSAL ────────────────────────────────────────
 
+    function _fmtMesTag(anoMes) {
+      if (!anoMes) return ''
+      const [y, m] = anoMes.split('-').map(Number)
+      const label = new Date(y, m - 1, 1).toLocaleString('pt-BR', { month: 'short' }).replace('.', '') + '/' + String(y).slice(2)
+      return `<span style="font-size:0.6rem;opacity:0.5;font-weight:400;margin-left:0.3rem">${label}</span>`
+    }
+    function _fmtMesPrevTag(anoMes) {
+      if (!anoMes) return ''
+      const [y, m] = anoMes.split('-').map(Number)
+      const d = new Date(y, m - 2, 1)
+      const label = d.toLocaleString('pt-BR', { month: 'short' }).replace('.', '') + '/' + String(d.getFullYear()).slice(2)
+      return `<span style="font-size:0.6rem;opacity:0.5;font-weight:400;margin-left:0.3rem">até ${label}</span>`
+    }
+
     async function _fetchSaldoAnt(mes) {
       // usa finPeriodo.inicio se disponível; senão o primeiro dia do mês
       const ate = finPeriodo.inicio || `${mes}-01`
@@ -7690,10 +7711,10 @@
     </div>
   </div>
   <div class="fin-resumo-grid">
-    ${saldoAnt !== null ? `<div class="fin-stat-card"><div class="fin-stat-label">Saldo Anterior</div><div class="fin-stat-valor ${saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'}">${_fmtVal(saldoAnt.saldo)}</div></div>` : ''}
-    <div class="fin-stat-card"><div class="fin-stat-label">Entradas</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(totais.entradas)}</div></div>
-    <div class="fin-stat-card"><div class="fin-stat-label">Saídas</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(totais.saidas)}</div></div>
-    <div class="fin-stat-card"><div class="fin-stat-label">${saldoAnt !== null ? 'Saldo Final' : 'Saldo'}</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(saldoFinal)}</div></div>
+    ${saldoAnt !== null ? `<div class="fin-stat-card"><div class="fin-stat-label">Saldo Anterior${_fmtMesPrevTag(mes)}</div><div class="fin-stat-valor ${saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'}">${_fmtVal(saldoAnt.saldo)}</div></div>` : ''}
+    <div class="fin-stat-card"><div class="fin-stat-label">Entradas${_fmtMesTag(mes)}</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(totais.entradas)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Saídas${_fmtMesTag(mes)}</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(totais.saidas)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">${saldoAnt !== null ? 'Saldo Final' : 'Saldo'}${_fmtMesTag(mes)}</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(saldoFinal)}</div></div>
   </div>`
 
       if (totais.entradas > 0 || totais.saidas > 0) {
@@ -8062,7 +8083,7 @@
 
       <!-- KPIs -->
       <div style="display:grid;grid-template-columns:repeat(${saldoAnt !== null ? 4 : 3},1fr);gap:0.65rem">
-        ${saldoAnt !== null ? _kpi('Saldo Anterior', _fmtVal(saldoAnt.saldo), saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg', '') : ''}
+        ${saldoAnt !== null ? _kpi('Saldo Anterior ' + _fmtMesPrevTag(mesSel), _fmtVal(saldoAnt.saldo), saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg', '') : ''}
         ${_kpi('Entradas — ' + nomeMes, _fmtVal(totMes.entradas), 'fin-stat-entrada', spkEnt)}
         ${_kpi('Saídas — ' + nomeMes, _fmtVal(totMes.saidas), 'fin-stat-saida', spkSai)}
         ${_kpi((saldoAnt !== null ? 'Saldo Final — ' : 'Saldo — ') + nomeMes, _fmtVal(saldoMesFinal), saldoMesFinal >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg', spkSald)}
