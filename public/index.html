@@ -6732,6 +6732,8 @@
     let finEscalas = []
     let finLancamentosData = []
     let finRelatorioData = null
+    let finUsarSaldoAnterior = false
+    let finSaldoAntData = null
     let finCongFiltro = null   // null = todas (admin); string = id da congregação
     let finPeriodo = { inicio: '', fim: '' }  // YYYY-MM-DD
 
@@ -7151,6 +7153,127 @@
       win.document.close()
     }
 
+    function _imprimirRelatorio() {
+      const data = finRelatorioData
+      if (!data) { toast('Carregue o relatório antes de imprimir.', 'err'); return }
+      const { mes, totais, lancamentos } = data
+      const [ano, mesN] = mes.split('-')
+      const nomeMes = new Date(parseInt(ano), parseInt(mesN) - 1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
+      const hoje = new Date().toLocaleDateString('pt-BR')
+
+      const sel = document.getElementById('fin-cong-select')
+      const congNome = finCongFiltro
+        ? (sel ? [...sel.options].find(o => o.value === finCongFiltro)?.text : null) || ''
+        : (usuario?.role !== 'admin' ? usuario?.congregacao?.nome || '' : '')
+
+      // saldo acumulado anterior se ativo
+      const saldoAntVal = (finUsarSaldoAnterior && finSaldoAntData != null) ? finSaldoAntData.saldo : null
+
+      const saldoFinal = saldoAntVal !== null ? saldoAntVal + totais.saldo : totais.saldo
+      const sinalFinal = saldoFinal >= 0 ? '+' : '−'
+
+      const resumoExtra = saldoAntVal !== null
+        ? `<div><span>Saldo Anterior</span><strong class="${saldoAntVal >= 0 ? 'entrada' : 'saida'}">${saldoAntVal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoAntVal))}</strong></div>`
+        : ''
+      const saldoLabel = saldoAntVal !== null ? 'Saldo Final' : 'Saldo'
+
+      const porData = {}
+      for (const l of lancamentos) {
+        if (!porData[l.data]) porData[l.data] = []
+        porData[l.data].push(l)
+      }
+      const datasOrdenadas = Object.keys(porData).sort((a, b) => _ddmmToISO(b).localeCompare(_ddmmToISO(a)))
+
+      let blocos = ''
+      for (const dataStr of datasOrdenadas) {
+        const itens = porData[dataStr]
+        const dEnt = itens.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
+        const dSai = itens.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
+        const linhas = itens.map(l => {
+          const cor = l.tipo === 'entrada' ? '#16a34a' : '#dc2626'
+          const sinal = l.tipo === 'entrada' ? '+' : '−'
+          return `<tr>
+        <td class="cat">${esc(l.categoria_nome || '')}</td>
+        <td class="desc">${esc(l.descricao || '')}</td>
+        <td class="hist">${esc(l.historico || '')}</td>
+        <td class="culto">${esc(l.evento_nome || '')}</td>
+        <td class="val" style="color:${cor}">${sinal} R$ ${_formatCurrency(l.valor)}</td>
+        <td class="lanc">${esc(l.lancado_por_nome || '')}</td>
+      </tr>`
+        }).join('')
+        const subEnt = dEnt > 0 ? `<span class="entrada">+ R$ ${_formatCurrency(dEnt)}</span>` : ''
+        const subSai = dSai > 0 ? `<span class="saida">− R$ ${_formatCurrency(dSai)}</span>` : ''
+        const subSaldo = `<span class="${dEnt - dSai >= 0 ? 'entrada' : 'saida'}">${dEnt - dSai >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(dEnt - dSai))}</span>`
+        blocos += `
+      <div class="grupo">
+        <div class="grupo-header"><span class="grupo-data">${esc(dataStr)}</span></div>
+        <table>
+          <thead><tr><th>Categoria</th><th>Descrição</th><th>Histórico da Despesa</th><th>Culto</th><th>Valor</th><th>Lançado por</th></tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>
+        <div class="grupo-footer">
+          <span class="grupo-stats">${subEnt}${dEnt > 0 && dSai > 0 ? '<span class="sep"> / </span>' : ''}${subSai}<span class="sep"> = </span>${subSaldo}</span>
+        </div>
+      </div>`
+      }
+
+      const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Relatório Financeiro — ${nomeMes}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:Arial,sans-serif; font-size:12px; color:#111; padding:28px 32px; }
+    h1 { font-size:17px; font-weight:700; margin-bottom:3px; }
+    .meta { font-size:11px; color:#666; margin-bottom:18px; }
+    .resumo { display:flex; gap:28px; margin-bottom:22px; padding:11px 16px; background:#f4f4f4; border-radius:5px; border-left:4px solid #333; flex-wrap:wrap; }
+    .resumo div { font-size:11px; color:#555; }
+    .resumo strong { font-size:15px; display:block; margin-top:2px; }
+    .entrada { color:#16a34a; font-weight:700; }
+    .saida   { color:#dc2626; font-weight:700; }
+    .grupo { margin-bottom:22px; page-break-inside:avoid; }
+    .grupo-header { display:flex; justify-content:space-between; align-items:baseline; padding:6px 10px; background:#e8e8e8; border-radius:4px 4px 0 0; border-bottom:2px solid #bbb; }
+    .grupo-data  { font-weight:700; font-size:13px; }
+    .grupo-footer { display:flex; justify-content:flex-end; padding:5px 10px; background:#f4f4f4; border-top:1px solid #ccc; border-radius:0 0 4px 4px; }
+    .grupo-stats { font-size:11px; display:flex; gap:4px; align-items:center; }
+    .sep { color:#888; }
+    table { width:100%; border-collapse:collapse; }
+    th { padding:5px 9px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.04em; background:#f8f8f8; border-bottom:1px solid #ccc; color:#555; }
+    td { padding:5px 9px; border-bottom:1px solid #ececec; vertical-align:top; font-size:11.5px; }
+    td.val { font-weight:600; white-space:nowrap; }
+    td.cat { font-weight:500; }
+    td.culto { color:#444; }
+    td.hist { color:#555; font-style:italic; }
+    td.lanc { color:#666; }
+    tr:last-child td { border-bottom:none; }
+    .total-geral { margin-top:10px; padding:10px 16px; background:#f0f0f0; border-radius:4px; display:flex; gap:28px; border-top:2px solid #999; flex-wrap:wrap; }
+    .total-geral span { font-size:12px; }
+    .total-geral strong { font-size:14px; display:block; margin-top:2px; }
+    .btn-print{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:#1c1c3a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:18px}
+    @media print { body { padding:16px; } .grupo { page-break-inside:avoid; } .btn-print{display:none} @page{margin:12mm} }
+  </style></head><body>
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+  <h1>Relatório Financeiro — ${esc(nomeMes)}${congNome ? ' — ' + esc(congNome) : ''}</h1>
+  <div class="meta">Gerado em ${hoje} · ${lancamentos.length} lançamento${lancamentos.length !== 1 ? 's' : ''}</div>
+  <div class="resumo">
+    ${resumoExtra}
+    <div><span>Entradas</span><strong class="entrada">+ R$ ${_formatCurrency(totais.entradas)}</strong></div>
+    <div><span>Saídas</span><strong class="saida">− R$ ${_formatCurrency(totais.saidas)}</strong></div>
+    <div><span>${saldoLabel}</span><strong class="${saldoFinal >= 0 ? 'entrada' : 'saida'}">${sinalFinal} R$ ${_formatCurrency(Math.abs(saldoFinal))}</strong></div>
+  </div>
+  ${blocos}
+  <div class="total-geral">
+    ${saldoAntVal !== null ? `<span><span>Saldo Anterior</span><strong class="${saldoAntVal >= 0 ? 'entrada' : 'saida'}">${saldoAntVal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoAntVal))}</strong></span>` : ''}
+    <span><span>Total Entradas</span><strong class="entrada">+ R$ ${_formatCurrency(totais.entradas)}</strong></span>
+    <span><span>Total Saídas</span><strong class="saida">− R$ ${_formatCurrency(totais.saidas)}</strong></span>
+    <span><span>${saldoLabel}</span><strong class="${saldoFinal >= 0 ? 'entrada' : 'saida'}">${sinalFinal} R$ ${_formatCurrency(Math.abs(saldoFinal))}</strong></span>
+  </div>
+  <script>window.onload = () => { window.print() }<\/script>
+  </body></html>`
+
+      const win = window.open('', '_blank')
+      win.document.write(html)
+      win.document.close()
+    }
+
     async function carregarFinDashboard() {
       const el = document.getElementById('fin-dashboard')
       if (!el) return
@@ -7489,16 +7612,35 @@
 
     // ── RELATÓRIO MENSAL ────────────────────────────────────────
 
+    async function _fetchSaldoAnt(mes) {
+      const primeiroDia = `${mes}-01`
+      const congParam = finCongFiltro ? `&congregacao_id=${encodeURIComponent(finCongFiltro)}` : ''
+      return api('GET', `/financeiro/saldo-acumulado?ate=${primeiroDia}${congParam}`)
+    }
+
+    async function toggleSaldoAnterior(cb) {
+      finUsarSaldoAnterior = cb.checked
+      const el = document.getElementById('fin-relatorio')
+      if (!el || !finRelatorioData) return
+      finSaldoAntData = null
+      if (finUsarSaldoAnterior) {
+        try { finSaldoAntData = await _fetchSaldoAnt(finRelatorioData.mes) } catch(e) {}
+      }
+      el.innerHTML = _renderRelatorio(finRelatorioData, finSaldoAntData)
+    }
+
     async function carregarFinRelatorio() {
       const el = document.getElementById('fin-relatorio')
       if (!el) return
       el.innerHTML = '<p class="carregando">Carregando…</p>'
-      const agora = new Date()
-      const mes = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`
       try {
         const data = await api('GET', `/financeiro/relatorio?${_finApiParams()}`)
         finRelatorioData = data
-        el.innerHTML = _renderRelatorio(data)
+        finSaldoAntData = null
+        if (finUsarSaldoAnterior) {
+          try { finSaldoAntData = await _fetchSaldoAnt(data.mes) } catch(e) {}
+        }
+        el.innerHTML = _renderRelatorio(data, finSaldoAntData)
       } catch (e) {
         el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
       }
@@ -7511,26 +7653,41 @@
       try {
         const data = await api('GET', `/financeiro/relatorio?${_finApiParams()}`)
         finRelatorioData = data
-        el.innerHTML = _renderRelatorio(data)
+        finSaldoAntData = null
+        if (finUsarSaldoAnterior) {
+          try { finSaldoAntData = await _fetchSaldoAnt(data.mes) } catch(e) {}
+        }
+        el.innerHTML = _renderRelatorio(data, finSaldoAntData)
       } catch (e) {
         el.innerHTML = `<p class="muted">Erro: ${e.erro || ''}</p>`
       }
     }
 
-    function _renderRelatorio(data) {
+    function _renderRelatorio(data, saldoAnt = null) {
       const { mes, totais, por_categoria, por_data, lancamentos } = data
-      const saldoCls = totais.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'
+      const saldoFinal = saldoAnt !== null ? saldoAnt.saldo + totais.saldo : totais.saldo
+      const saldoCls = saldoFinal >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'
       const [ano, mesN] = mes.split('-')
       const nomeMes = new Date(parseInt(ano), parseInt(mesN) - 1, 1).toLocaleString('pt-BR', { month: 'long' })
 
+      const toggleHtml = `<label style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--texto-mutado);cursor:pointer" title="Quando marcado, soma o saldo acumulado de todos os meses anteriores ao saldo do mês">
+      <input type="checkbox" ${finUsarSaldoAnterior ? 'checked' : ''} onchange="toggleSaldoAnterior(this)" style="cursor:pointer;accent-color:var(--primaria)">
+      Puxar saldo anterior
+    </label>`
+
       let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
     <span style="font-size:0.8rem;color:var(--texto-mutado)">${nomeMes} de ${ano}</span>
-    <input type="month" value="${mes}" onchange="filtrarFinRelatorio(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
+    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+      ${toggleHtml}
+      <button onclick="_imprimirRelatorio()" style="padding:0.3rem 0.7rem;border-radius:var(--raio);font-size:0.78rem;border:1px solid var(--borda);cursor:pointer;background:var(--fundo-elevado);color:var(--texto)" title="Imprimir / PDF">🖨️ Imprimir</button>
+      <input type="month" value="${mes}" onchange="filtrarFinRelatorio(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
+    </div>
   </div>
   <div class="fin-resumo-grid">
+    ${saldoAnt !== null ? `<div class="fin-stat-card"><div class="fin-stat-label">Saldo Anterior</div><div class="fin-stat-valor ${saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'}">${_fmtVal(saldoAnt.saldo)}</div></div>` : ''}
     <div class="fin-stat-card"><div class="fin-stat-label">Entradas</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(totais.entradas)}</div></div>
     <div class="fin-stat-card"><div class="fin-stat-label">Saídas</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(totais.saidas)}</div></div>
-    <div class="fin-stat-card"><div class="fin-stat-label">Saldo</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(totais.saldo)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">${saldoAnt !== null ? 'Saldo Final' : 'Saldo'}</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(saldoFinal)}</div></div>
   </div>`
 
       if (totais.entradas > 0 || totais.saidas > 0) {
@@ -7557,14 +7714,15 @@
           }
           _svgSlices = `<path d="${_arc(0, _pEnt)}" fill="rgba(92,173,106,0.82)"/><path d="${_arc(_pEnt, 1)}" fill="rgba(232,93,93,0.75)"/>`
         }
-        const _saldoCor = totais.saldo >= 0 ? 'rgba(92,173,106,0.95)' : 'rgba(232,93,93,0.95)'
+        const _saldoCor = saldoFinal >= 0 ? 'rgba(92,173,106,0.95)' : 'rgba(232,93,93,0.95)'
+        const _saldoLabel = saldoAnt !== null ? 'Saldo Final' : 'Saldo'
         html += `<div class="fin-relatorio-chart-wrapper">
       <p style="font-size:0.78rem;font-weight:600;margin:0 0 1.1rem;color:var(--texto-mutado)">Entradas × Saídas</p>
       <div style="display:flex;align-items:center;gap:1.75rem;flex-wrap:wrap">
         <svg width="160" height="160" viewBox="0 0 160 160" style="flex-shrink:0;overflow:visible">
           ${_svgSlices}
-          <text x="${_cx}" y="${_cy - 7}" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="10.5" font-family="inherit">Saldo</text>
-          <text x="${_cx}" y="${_cy + 10}" text-anchor="middle" fill="${_saldoCor}" font-size="12.5" font-weight="bold" font-family="inherit">${_fmtVal(totais.saldo)}</text>
+          <text x="${_cx}" y="${_cy - 7}" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="10.5" font-family="inherit">${_saldoLabel}</text>
+          <text x="${_cx}" y="${_cy + 10}" text-anchor="middle" fill="${_saldoCor}" font-size="12.5" font-weight="bold" font-family="inherit">${_fmtVal(saldoFinal)}</text>
         </svg>
         <div style="display:flex;flex-direction:column;gap:1rem;flex:1;min-width:130px">
           <div>
