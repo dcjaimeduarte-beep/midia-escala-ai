@@ -6780,7 +6780,7 @@
     let finEscalas = []
     let finLancamentosData = []
     let finRelatorioData = null
-    let finUsarSaldoAnterior = false
+    let finUsarSaldoAnterior = localStorage.getItem('fin_saldo_anterior') !== 'false'
     let finSaldoAntData = null
     let finCongFiltro = null   // null = todas (admin); string = id da congregação
     let finPeriodo = { inicio: '', fim: '' }  // YYYY-MM-DD
@@ -6908,6 +6908,10 @@
         const bar = document.getElementById('fin-cong-bar')
         if (bar) bar.style.display = 'none'
       }
+
+      // Sincroniza checkbox com estado persistido
+      const chkSaldo = document.getElementById('fin-saldo-ant-chk')
+      if (chkSaldo) chkSaldo.checked = finUsarSaldoAnterior
 
       finTab(finAbaAtiva)
     }
@@ -7806,6 +7810,7 @@
 
     async function toggleSaldoAnterior(cb) {
       finUsarSaldoAnterior = cb.checked
+      localStorage.setItem('fin_saldo_anterior', cb.checked ? 'true' : 'false')
       finSaldoAntData = null
       if (finAbaAtiva === 'dashboard') await carregarFinDashboard()
       else if (finAbaAtiva === 'relatorio') await carregarFinRelatorio()
