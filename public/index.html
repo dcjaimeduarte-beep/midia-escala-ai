@@ -6782,6 +6782,7 @@
     let finRelatorioData = null
     let finUsarSaldoAnterior = localStorage.getItem('fin_saldo_anterior') !== 'false'
     let finSaldoAntData = null
+    let finRelFiltroCategoria = ''
     let finCongFiltro = null   // null = todas (admin); string = id da congregação
     let finPeriodo = { inicio: '', fim: '' }  // YYYY-MM-DD
 
@@ -7817,10 +7818,18 @@
       else if (finAbaAtiva === 'anual') await carregarFinAnual()
     }
 
+    function _setFinRelFiltroCategoria(val) {
+      finRelFiltroCategoria = val.trim().toLowerCase()
+      const el = document.getElementById('fin-relatorio')
+      if (!el || !finRelatorioData) return
+      el.innerHTML = _renderRelatorio(finRelatorioData, finSaldoAntData)
+    }
+
     async function carregarFinRelatorio() {
       const el = document.getElementById('fin-relatorio')
       if (!el) return
       el.innerHTML = '<p class="carregando">Carregando…</p>'
+      finRelFiltroCategoria = ''
       try {
         const data = await api('GET', `/financeiro/relatorio?${_finApiParams()}`)
         finRelatorioData = data
@@ -7838,6 +7847,7 @@
       const el = document.getElementById('fin-relatorio')
       if (!el || !mes) return
       el.innerHTML = '<p class="carregando">Carregando…</p>'
+      finRelFiltroCategoria = ''
       try {
         const data = await api('GET', `/financeiro/relatorio?${_finApiParams()}`)
         finRelatorioData = data
@@ -7852,18 +7862,46 @@
     }
 
     function _renderRelatorio(data, saldoAnt = null) {
-      const { mes, totais, por_categoria, por_data, lancamentos } = data
+      const filtrocat = finRelFiltroCategoria
+
+      // Aplica filtro de categoria (parcial, case-insensitive)
+      const lancamentos = filtrocat
+        ? data.lancamentos.filter(l => (l.categoria_nome || '').toLowerCase().includes(filtrocat))
+        : data.lancamentos
+
+      // Recalcula totais e por_categoria com base nos lançamentos filtrados
+      const totais = filtrocat ? (() => {
+        const ent = lancamentos.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
+        const sai = lancamentos.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
+        return { entradas: ent, saidas: sai, saldo: ent - sai }
+      })() : data.totais
+
+      const por_categoria = filtrocat ? (() => {
+        const map = {}
+        for (const l of lancamentos) {
+          if (!map[l.categoria_id]) map[l.categoria_id] = { nome: l.categoria_nome, tipo: l.categoria_tipo, total: 0 }
+          map[l.categoria_id].total += l.valor
+        }
+        return Object.values(map).sort((a, b) => b.total - a.total)
+      })() : data.por_categoria
+
       const saldoFinal = saldoAnt !== null ? saldoAnt.saldo + totais.saldo : totais.saldo
       const saldoCls = saldoFinal >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'
       const [ano, mesN] = mes.split('-')
       const nomeMes = new Date(parseInt(ano), parseInt(mesN) - 1, 1).toLocaleString('pt-BR', { month: 'long' })
 
-      let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
+      let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;flex-wrap:wrap;gap:0.5rem">
     <span style="font-size:0.8rem;color:var(--texto-mutado)">${nomeMes} de ${ano}</span>
     <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
       <button onclick="_imprimirRelatorio()" style="padding:0.3rem 0.7rem;border-radius:var(--raio);font-size:0.78rem;border:1px solid var(--borda);cursor:pointer;background:var(--fundo-elevado);color:var(--texto)" title="Imprimir / PDF">🖨️ Imprimir</button>
       <input type="month" value="${mes}" onchange="filtrarFinRelatorio(this.value)" style="padding:0.3rem 0.6rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem"/>
     </div>
+  </div>
+  <div style="margin-bottom:0.75rem;position:relative">
+    <input type="search" placeholder="🔍 Filtrar por categoria…" value="${esc(finRelFiltroCategoria)}"
+      oninput="_setFinRelFiltroCategoria(this.value)"
+      style="width:100%;padding:0.35rem 0.7rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid ${filtrocat ? 'var(--primaria)' : 'var(--borda)'};color:var(--texto);font-size:0.82rem;box-sizing:border-box"/>
+    ${filtrocat ? `<span style="font-size:0.72rem;color:var(--primaria);margin-top:0.25rem;display:block">Exibindo apenas categorias com "${esc(finRelFiltroCategoria)}" — ${lancamentos.length} lançamento${lancamentos.length !== 1 ? 's' : ''}</span>` : ''}
   </div>
   <div class="fin-resumo-grid">
     ${saldoAnt !== null ? `<div class="fin-stat-card"><div class="fin-stat-label">Saldo Anterior${_fmtMesPrevTag(mes)}</div><div class="fin-stat-valor ${saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'}">${_fmtVal(saldoAnt.saldo)}</div></div>` : ''}
