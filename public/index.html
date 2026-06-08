@@ -3002,8 +3002,8 @@
   <!-- MODAL PERÍODO IMPRESSÃO -->
   <div id="modal-imprimir-periodo" class="modal-overlay"
     onclick="if(event.target===this)this.classList.remove('aberto')">
-    <div class="modal" style="max-width:420px" onclick="event.stopPropagation()">
-      <h3 class="modal-titulo">Imprimir Lançamentos</h3>
+    <div class="modal" style="max-width:440px" onclick="event.stopPropagation()">
+      <h3 class="modal-titulo" id="imp-modal-titulo">Imprimir</h3>
       <p class="muted" style="font-size:0.83rem;margin:-0.25rem 0 1rem">Defina o período que deseja imprimir. Deixe em
         branco para incluir todos os lançamentos carregados.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
@@ -3017,6 +3017,11 @@
           <input id="imp-data-fim" type="date"
             style="padding:0.35rem 0.55rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.88rem;cursor:pointer" />
         </div>
+      </div>
+      <div class="form-grupo" style="margin:0.85rem 0 0">
+        <label>Filtrar por categoria (opcional)</label>
+        <input id="imp-filtro-categoria" type="search" placeholder="Ex: missões, dízimo, aluguel…"
+          style="padding:0.35rem 0.55rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.88rem;width:100%;box-sizing:border-box" />
       </div>
       <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.85rem;font-size:0.82rem;color:var(--texto-mutado);cursor:pointer" title="Inclui o saldo acumulado de todos os lançamentos anteriores ao período selecionado">
         <input type="checkbox" id="imp-saldo-anterior" style="cursor:pointer;accent-color:var(--primaria)">
@@ -6783,6 +6788,7 @@
     let finUsarSaldoAnterior = localStorage.getItem('fin_saldo_anterior') !== 'false'
     let finSaldoAntData = null
     let finRelFiltroCategoria = ''
+    let finImprimirOrigem = 'lancamentos'
     let finCongFiltro = null   // null = todas (admin); string = id da congregação
     let finPeriodo = { inicio: '', fim: '' }  // YYYY-MM-DD
 
@@ -7173,8 +7179,12 @@
 
     function _imprimirLancamentos() {
       if (!finLancamentosData?.length) { toast('Sem lançamentos para imprimir.', 'err'); return }
+      finImprimirOrigem = 'lancamentos'
+      const titulo = document.getElementById('imp-modal-titulo')
+      if (titulo) titulo.textContent = 'Imprimir Lançamentos'
       document.getElementById('imp-data-inicio').value = finPeriodo.inicio || ''
       document.getElementById('imp-data-fim').value = finPeriodo.fim || ''
+      document.getElementById('imp-filtro-categoria').value = ''
       document.getElementById('modal-imprimir-periodo').classList.add('aberto')
     }
 
@@ -7183,10 +7193,16 @@
       const isoInicio = document.getElementById('imp-data-inicio').value.trim() || null
       const isoFim = document.getElementById('imp-data-fim').value.trim() || null
       const usarSaldoAnt = document.getElementById('imp-saldo-anterior')?.checked
+      const filtroCat = (document.getElementById('imp-filtro-categoria')?.value || '').trim().toLowerCase()
 
-      let rows = [...(finLancamentosData || [])]
+      const fonteRows = finImprimirOrigem === 'relatorio'
+        ? [...(finRelatorioData?.lancamentos || [])]
+        : [...(finLancamentosData || [])]
+
+      let rows = fonteRows
       if (isoInicio) rows = rows.filter(l => _ddmmToISO(l.data) >= isoInicio)
       if (isoFim) rows = rows.filter(l => _ddmmToISO(l.data) <= isoFim)
+      if (filtroCat) rows = rows.filter(l => (l.categoria_nome || '').toLowerCase().includes(filtroCat))
       if (!rows.length) { toast('Nenhum lançamento no período informado.', 'err'); return }
 
       const sel = document.getElementById('fin-cong-select')
@@ -7219,6 +7235,8 @@
       const hoje = new Date().toLocaleDateString('pt-BR')
       const fmtIso = iso => iso ? iso.split('-').reverse().join('/') : '?'
       const periodo = fmtIso(isoInicio) + (isoFim && isoFim !== isoInicio ? ' a ' + fmtIso(isoFim) : '')
+      const tituloImp = finImprimirOrigem === 'relatorio' ? 'Relatório Financeiro' : 'Lançamentos Financeiros'
+      const metaFiltro = filtroCat ? ` · Categoria: "${filtroCat}"` : ''
 
       let blocos = ''
       for (const data of datasOrdenadas) {
@@ -7289,8 +7307,8 @@
     .total-geral strong { font-size:14px; display:block; margin-top:2px; }
     @media print { body { padding:16px; } .grupo { page-break-inside:avoid; } }
   </style></head><body>
-  <h1>Lançamentos Financeiros${congNome ? ' — ' + esc(congNome) : ''}</h1>
-  <div class="meta">Período: ${esc(periodo)} · Gerado em ${hoje} · ${rows.length} lançamento${rows.length !== 1 ? 's' : ''}</div>
+  <h1>${tituloImp}${congNome ? ' — ' + esc(congNome) : ''}</h1>
+  <div class="meta">Período: ${esc(periodo)} · Gerado em ${hoje} · ${rows.length} lançamento${rows.length !== 1 ? 's' : ''}${metaFiltro}</div>
   <div class="resumo">
     ${saldoAntVal !== null ? `<div><span>Saldo Anterior</span><strong class="${saldoAntVal >= 0 ? 'entrada' : 'saida'}">${saldoAntVal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoAntVal))}</strong></div>` : ''}
     <div><span>Entradas</span><strong class="entrada">+ R$ ${_formatCurrency(entTotal)}</strong></div>
@@ -7313,124 +7331,24 @@
     }
 
     function _imprimirRelatorio() {
-      const data = finRelatorioData
-      if (!data) { toast('Carregue o relatório antes de imprimir.', 'err'); return }
-      const { mes, totais, lancamentos } = data
-      const [ano, mesN] = mes.split('-')
-      const nomeMes = new Date(parseInt(ano), parseInt(mesN) - 1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
-      const hoje = new Date().toLocaleDateString('pt-BR')
-
-      const sel = document.getElementById('fin-cong-select')
-      const congNome = finCongFiltro
-        ? (sel ? [...sel.options].find(o => o.value === finCongFiltro)?.text : null) || ''
-        : (usuario?.role !== 'admin' ? usuario?.congregacao?.nome || '' : '')
-
-      // saldo acumulado anterior se ativo
-      const saldoAntVal = (finUsarSaldoAnterior && finSaldoAntData != null) ? finSaldoAntData.saldo : null
-
-      const saldoFinal = saldoAntVal !== null ? saldoAntVal + totais.saldo : totais.saldo
-      const sinalFinal = saldoFinal >= 0 ? '+' : '−'
-
-      const resumoExtra = saldoAntVal !== null
-        ? `<div><span>Saldo Anterior</span><strong class="${saldoAntVal >= 0 ? 'entrada' : 'saida'}">${saldoAntVal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoAntVal))}</strong></div>`
-        : ''
-      const saldoLabel = saldoAntVal !== null ? 'Saldo Final' : 'Saldo'
-
-      const porData = {}
-      for (const l of lancamentos) {
-        if (!porData[l.data]) porData[l.data] = []
-        porData[l.data].push(l)
+      if (!finRelatorioData) { toast('Carregue o relatório antes de imprimir.', 'err'); return }
+      finImprimirOrigem = 'relatorio'
+      const titulo = document.getElementById('imp-modal-titulo')
+      if (titulo) titulo.textContent = 'Imprimir Relatório Mensal'
+      const mes = finRelatorioData.mes
+      if (mes) {
+        const [ano, mesN] = mes.split('-')
+        const ultimoDia = new Date(parseInt(ano), parseInt(mesN), 0).getDate()
+        document.getElementById('imp-data-inicio').value = `${mes}-01`
+        document.getElementById('imp-data-fim').value = `${mes}-${String(ultimoDia).padStart(2, '0')}`
+      } else {
+        document.getElementById('imp-data-inicio').value = finPeriodo.inicio || ''
+        document.getElementById('imp-data-fim').value = finPeriodo.fim || ''
       }
-      const datasOrdenadas = Object.keys(porData).sort((a, b) => _ddmmToISO(b).localeCompare(_ddmmToISO(a)))
-
-      let blocos = ''
-      for (const dataStr of datasOrdenadas) {
-        const itens = porData[dataStr]
-        const dEnt = itens.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
-        const dSai = itens.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
-        const linhas = itens.map(l => {
-          const cor = l.tipo === 'entrada' ? '#16a34a' : '#dc2626'
-          const sinal = l.tipo === 'entrada' ? '+' : '−'
-          return `<tr>
-        <td class="cat">${esc(l.categoria_nome || '')}</td>
-        <td class="desc">${esc(l.descricao || '')}</td>
-        <td class="hist">${esc(l.historico || '')}</td>
-        <td class="culto">${esc(l.evento_nome || '')}</td>
-        <td class="val" style="color:${cor}">${sinal} R$ ${_formatCurrency(l.valor)}</td>
-        <td class="lanc">${esc(l.lancado_por_nome || '')}</td>
-      </tr>`
-        }).join('')
-        const subEnt = dEnt > 0 ? `<span class="entrada">+ R$ ${_formatCurrency(dEnt)}</span>` : ''
-        const subSai = dSai > 0 ? `<span class="saida">− R$ ${_formatCurrency(dSai)}</span>` : ''
-        const subSaldo = `<span class="${dEnt - dSai >= 0 ? 'entrada' : 'saida'}">${dEnt - dSai >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(dEnt - dSai))}</span>`
-        blocos += `
-      <div class="grupo">
-        <div class="grupo-header"><span class="grupo-data">${esc(dataStr)}</span></div>
-        <table>
-          <thead><tr><th>Categoria</th><th>Descrição</th><th>Histórico da Despesa</th><th>Culto</th><th>Valor</th><th>Lançado por</th></tr></thead>
-          <tbody>${linhas}</tbody>
-        </table>
-        <div class="grupo-footer">
-          <span class="grupo-stats">${subEnt}${dEnt > 0 && dSai > 0 ? '<span class="sep"> / </span>' : ''}${subSai}<span class="sep"> = </span>${subSaldo}</span>
-        </div>
-      </div>`
-      }
-
-      const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-  <title>Relatório Financeiro — ${nomeMes}</title>
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:Arial,sans-serif; font-size:12px; color:#111; padding:28px 32px; }
-    h1 { font-size:17px; font-weight:700; margin-bottom:3px; }
-    .meta { font-size:11px; color:#666; margin-bottom:18px; }
-    .resumo { display:flex; gap:28px; margin-bottom:22px; padding:11px 16px; background:#f4f4f4; border-radius:5px; border-left:4px solid #333; flex-wrap:wrap; }
-    .resumo div { font-size:11px; color:#555; }
-    .resumo strong { font-size:15px; display:block; margin-top:2px; }
-    .entrada { color:#16a34a; font-weight:700; }
-    .saida   { color:#dc2626; font-weight:700; }
-    .grupo { margin-bottom:22px; page-break-inside:avoid; }
-    .grupo-header { display:flex; justify-content:space-between; align-items:baseline; padding:6px 10px; background:#e8e8e8; border-radius:4px 4px 0 0; border-bottom:2px solid #bbb; }
-    .grupo-data  { font-weight:700; font-size:13px; }
-    .grupo-footer { display:flex; justify-content:flex-end; padding:5px 10px; background:#f4f4f4; border-top:1px solid #ccc; border-radius:0 0 4px 4px; }
-    .grupo-stats { font-size:11px; display:flex; gap:4px; align-items:center; }
-    .sep { color:#888; }
-    table { width:100%; border-collapse:collapse; }
-    th { padding:5px 9px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.04em; background:#f8f8f8; border-bottom:1px solid #ccc; color:#555; }
-    td { padding:5px 9px; border-bottom:1px solid #ececec; vertical-align:top; font-size:11.5px; }
-    td.val { font-weight:600; white-space:nowrap; }
-    td.cat { font-weight:500; }
-    td.culto { color:#444; }
-    td.hist { color:#555; font-style:italic; }
-    td.lanc { color:#666; }
-    tr:last-child td { border-bottom:none; }
-    .total-geral { margin-top:10px; padding:10px 16px; background:#f0f0f0; border-radius:4px; display:flex; gap:28px; border-top:2px solid #999; flex-wrap:wrap; }
-    .total-geral span { font-size:12px; }
-    .total-geral strong { font-size:14px; display:block; margin-top:2px; }
-    .btn-print{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:#1c1c3a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:18px}
-    @media print { body { padding:16px; } .grupo { page-break-inside:avoid; } .btn-print{display:none} @page{margin:12mm} }
-  </style></head><body>
-  <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
-  <h1>Relatório Financeiro — ${esc(nomeMes)}${congNome ? ' — ' + esc(congNome) : ''}</h1>
-  <div class="meta">Gerado em ${hoje} · ${lancamentos.length} lançamento${lancamentos.length !== 1 ? 's' : ''}</div>
-  <div class="resumo">
-    ${resumoExtra}
-    <div><span>Entradas</span><strong class="entrada">+ R$ ${_formatCurrency(totais.entradas)}</strong></div>
-    <div><span>Saídas</span><strong class="saida">− R$ ${_formatCurrency(totais.saidas)}</strong></div>
-    <div><span>${saldoLabel}</span><strong class="${saldoFinal >= 0 ? 'entrada' : 'saida'}">${sinalFinal} R$ ${_formatCurrency(Math.abs(saldoFinal))}</strong></div>
-  </div>
-  ${blocos}
-  <div class="total-geral">
-    ${saldoAntVal !== null ? `<span><span>Saldo Anterior</span><strong class="${saldoAntVal >= 0 ? 'entrada' : 'saida'}">${saldoAntVal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoAntVal))}</strong></span>` : ''}
-    <span><span>Total Entradas</span><strong class="entrada">+ R$ ${_formatCurrency(totais.entradas)}</strong></span>
-    <span><span>Total Saídas</span><strong class="saida">− R$ ${_formatCurrency(totais.saidas)}</strong></span>
-    <span><span>${saldoLabel}</span><strong class="${saldoFinal >= 0 ? 'entrada' : 'saida'}">${sinalFinal} R$ ${_formatCurrency(Math.abs(saldoFinal))}</strong></span>
-  </div>
-  <script>window.onload = () => { window.print() }<\/script>
-  </body></html>`
-
-      const win = window.open('', '_blank')
-      win.document.write(html)
-      win.document.close()
+      document.getElementById('imp-filtro-categoria').value = finRelFiltroCategoria || ''
+      const chkSaldo = document.getElementById('imp-saldo-anterior')
+      if (chkSaldo) chkSaldo.checked = finUsarSaldoAnterior
+      document.getElementById('modal-imprimir-periodo').classList.add('aberto')
     }
 
     async function carregarFinDashboard() {
