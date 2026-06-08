@@ -7863,6 +7863,8 @@
 
     function _renderRelatorio(data, saldoAnt = null) {
       const filtrocat = finRelFiltroCategoria
+      const mes = data.mes
+      const por_data = data.por_data
 
       // Aplica filtro de categoria (parcial, case-insensitive)
       const lancamentos = filtrocat
