@@ -7210,12 +7210,19 @@
         ? (sel ? [...sel.options].find(o => o.value === finCongFiltro)?.text : null) || ''
         : (usuario?.role !== 'admin' ? usuario?.congregacao?.nome || '' : '')
 
-      // Busca saldo anterior se solicitado
+      let logoSrc = ''
+      try {
+        const blob = await fetch('/docs/Foguinho%20vazado.png').then(r => r.blob())
+        logoSrc = await new Promise(resolve => { const fr = new FileReader(); fr.onload = () => resolve(fr.result); fr.readAsDataURL(blob) })
+      } catch {}
+
+      // Busca saldo anterior se solicitado (respeita filtro de categoria quando ativo)
       let saldoAntVal = null
       if (usarSaldoAnt && isoInicio) {
         try {
           const congParam = finCongFiltro ? `&congregacao_id=${encodeURIComponent(finCongFiltro)}` : ''
-          const res = await api('GET', `/financeiro/saldo-acumulado?ate=${isoInicio}${congParam}`)
+          const catParam = filtroCat ? `&categoria=${encodeURIComponent(filtroCat)}` : ''
+          const res = await api('GET', `/financeiro/saldo-acumulado?ate=${isoInicio}${congParam}${catParam}`)
           saldoAntVal = res.saldo
         } catch(e) {}
       }
@@ -7276,44 +7283,59 @@
       }
 
       const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-  <title>Lançamentos Financeiros</title>
+  <title>${tituloImp}${congNome ? ' — ' + esc(congNome) : ''}</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:Arial,sans-serif; font-size:12px; color:#111; padding:28px 32px; }
-    h1 { font-size:17px; font-weight:700; margin-bottom:3px; }
-    .meta { font-size:11px; color:#666; margin-bottom:18px; }
-    .resumo { display:flex; gap:28px; margin-bottom:22px; padding:11px 16px; background:#f4f4f4; border-radius:5px; border-left:4px solid #333; }
-    .resumo div { font-size:11px; color:#555; }
-    .resumo strong { font-size:15px; display:block; margin-top:2px; }
-    .entrada { color:#16a34a; font-weight:700; }
-    .saida   { color:#dc2626; font-weight:700; }
-    .grupo { margin-bottom:22px; page-break-inside:avoid; }
-    .grupo-header { display:flex; justify-content:space-between; align-items:baseline; padding:6px 10px; background:#e8e8e8; border-radius:4px 4px 0 0; border-bottom:2px solid #bbb; }
-    .grupo-data  { font-weight:700; font-size:13px; }
-    .grupo-footer { display:flex; justify-content:flex-end; padding:5px 10px; background:#f4f4f4; border-top:1px solid #ccc; border-radius:0 0 4px 4px; }
-    .grupo-stats { font-size:11px; display:flex; gap:4px; align-items:center; }
-    .sep { color:#888; }
-    table { width:100%; border-collapse:collapse; }
-    th { padding:5px 9px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.04em; background:#f8f8f8; border-bottom:1px solid #ccc; color:#555; }
-    td { padding:5px 9px; border-bottom:1px solid #ececec; vertical-align:top; font-size:11.5px; }
-    td.val { font-weight:600; white-space:nowrap; }
-    td.cat { font-weight:500; }
-    td.culto { color:#444; }
-    td.hist { color:#555; font-style:italic; }
-    td.lanc { color:#666; }
-    tr:last-child td { border-bottom:none; }
-    .total-geral { margin-top:10px; padding:10px 16px; background:#f0f0f0; border-radius:4px; display:flex; gap:28px; border-top:2px solid #999; }
-    .total-geral span { font-size:12px; }
-    .total-geral strong { font-size:14px; display:block; margin-top:2px; }
-    @media print { body { padding:16px; } .grupo { page-break-inside:avoid; } }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#1a1a1a;padding:28px 32px}
+    .btn-print{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:#1c1c3a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:18px}
+    .btn-print:hover{background:#2d2d5a}
+    .resumo{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+    .resumo-card{flex:1;padding:9px 12px;box-shadow:inset 0 0 0 1000px #eef0f6;border-radius:6px;border-top:3px solid #1c1c3a}
+    .resumo-card span{font-size:8.5px;color:#999;text-transform:uppercase;letter-spacing:.05em}
+    .resumo-card strong{font-size:17px;font-weight:800;display:block;color:#1c1c3a;line-height:1.1;margin-top:2px}
+    .entrada{color:#16a34a!important;font-weight:700}
+    .saida{color:#dc2626!important;font-weight:700}
+    .grupo{margin-bottom:22px;page-break-inside:avoid}
+    .grupo-header{display:flex;justify-content:space-between;align-items:baseline;padding:6px 10px;box-shadow:inset 0 0 0 1000px #dde0e8;border-radius:4px 4px 0 0;border-bottom:2px solid #bbbccc}
+    .grupo-data{font-weight:700;font-size:13px}
+    .grupo-footer{display:flex;justify-content:flex-end;padding:5px 10px;background:#f4f4f4;border-top:1px solid #ccc;border-radius:0 0 4px 4px}
+    .grupo-stats{font-size:11px;display:flex;gap:4px;align-items:center}
+    .sep{color:#888}
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    th{padding:6px 8px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;box-shadow:inset 0 0 0 1000px #1c1c3a;color:#fff}
+    td{padding:5px 8px;border-bottom:1px solid #efefef;vertical-align:top;font-size:11px}
+    tr:nth-child(even) td{box-shadow:inset 0 0 0 1000px #f0f1f6}
+    td.val{font-weight:600;white-space:nowrap}
+    td.cat{font-weight:600;color:#111}
+    td.culto{color:#444}
+    td.hist{color:#555;font-style:italic}
+    td.lanc{color:#666}
+    tr:last-child td{border-bottom:none}
+    .total-geral{margin-top:14px;padding:10px 16px;box-shadow:inset 0 0 0 1000px #eef0f6;border-radius:6px;display:flex;gap:24px;flex-wrap:wrap;border-top:3px solid #1c1c3a}
+    .total-geral span{font-size:11px;color:#555}
+    .total-geral strong{font-size:14px;display:block;margin-top:2px}
+    @media print{.btn-print{display:none}body{padding:18px 24px}@page{margin:12mm}}
   </style></head><body>
-  <h1>${tituloImp}${congNome ? ' — ' + esc(congNome) : ''}</h1>
-  <div class="meta">Período: ${esc(periodo)} · Gerado em ${hoje} · ${rows.length} lançamento${rows.length !== 1 ? 's' : ''}${metaFiltro}</div>
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:3px solid #1c1c3a;margin-bottom:18px">
+    <div style="display:flex;align-items:center;gap:12px">
+      ${logoSrc ? `<img src="${logoSrc}" style="width:46px;height:46px;object-fit:contain" alt="Peniel">` : '<span style="font-size:36px">🔥</span>'}
+      <div>
+        <div style="font-size:17px;font-weight:800;color:#1c1c3a;line-height:1.15">Igreja Peniel</div>
+        <div style="font-size:9.5px;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Ministério Profético · Casa de Adoração</div>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:13px;font-weight:700;color:#1c1c3a">${tituloImp}${congNome ? ' — ' + esc(congNome) : ''}</div>
+      <div style="font-size:9.5px;color:#999;margin-top:3px">Período: ${esc(periodo)}${metaFiltro ? ' · ' + esc(metaFiltro.replace(' · ', '')) : ''}</div>
+      <div style="font-size:9px;color:#bbb;margin-top:2px">${rows.length} lançamento${rows.length !== 1 ? 's' : ''} · Gerado em ${hoje}</div>
+    </div>
+  </div>
   <div class="resumo">
-    ${saldoAntVal !== null ? `<div><span>Saldo Anterior</span><strong class="${saldoAntVal >= 0 ? 'entrada' : 'saida'}">${saldoAntVal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoAntVal))}</strong></div>` : ''}
-    <div><span>Entradas</span><strong class="entrada">+ R$ ${_formatCurrency(entTotal)}</strong></div>
-    <div><span>Saídas</span><strong class="saida">− R$ ${_formatCurrency(saiTotal)}</strong></div>
-    <div><span>${saldoAntVal !== null ? 'Saldo Final' : 'Saldo'}</span><strong class="${saldoFinal >= 0 ? 'entrada' : 'saida'}">${saldoFinal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoFinal))}</strong></div>
+    ${saldoAntVal !== null ? `<div class="resumo-card"><span>Saldo Anterior</span><strong class="${saldoAntVal >= 0 ? 'entrada' : 'saida'}">${saldoAntVal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoAntVal))}</strong></div>` : ''}
+    <div class="resumo-card"><span>Entradas</span><strong class="entrada">+ R$ ${_formatCurrency(entTotal)}</strong></div>
+    <div class="resumo-card"><span>Saídas</span><strong class="saida">− R$ ${_formatCurrency(saiTotal)}</strong></div>
+    <div class="resumo-card"><span>${saldoAntVal !== null ? 'Saldo Final' : 'Saldo'}</span><strong class="${saldoFinal >= 0 ? 'entrada' : 'saida'}">${saldoFinal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoFinal))}</strong></div>
   </div>
   ${blocos}
   <div class="total-geral">
@@ -7321,6 +7343,10 @@
     <span><span>Total Entradas</span><strong class="entrada">+ R$ ${_formatCurrency(entTotal)}</strong></span>
     <span><span>Total Saídas</span><strong class="saida">− R$ ${_formatCurrency(saiTotal)}</strong></span>
     <span><span>${saldoAntVal !== null ? 'Saldo Final' : 'Saldo Geral'}</span><strong class="${saldoFinal >= 0 ? 'entrada' : 'saida'}">${saldoFinal >= 0 ? '+' : '−'} R$ ${_formatCurrency(Math.abs(saldoFinal))}</strong></span>
+  </div>
+  <div style="margin-top:20px;padding-top:8px;border-top:1px solid #e8e8e8;display:flex;justify-content:space-between;font-size:9px;color:#bbb">
+    <span>Igreja Peniel Mídia — Sistema de Gestão</span>
+    <span>Gerado em ${hoje}</span>
   </div>
   <script>window.onload = () => { window.print() }<\/script>
   </body></html>`

@@ -384,9 +384,9 @@ router.get('/dashboard-anual', autenticar, apenasFinanceiro, apenasRelatorioFina
   res.json({ ano: anoStr, meses, categorias, totais: { entradas: totalEnt, saidas: totalSai, saldo: totalEnt - totalSai } })
 })
 
-// GET /financeiro/saldo-acumulado?ate=YYYY-MM-DD — saldo de todos os lançamentos antes da data informada
+// GET /financeiro/saldo-acumulado?ate=YYYY-MM-DD[&categoria=texto][&congregacao_id=x]
 router.get('/saldo-acumulado', autenticar, apenasFinanceiro, (req, res) => {
-  const { ate } = req.query
+  const { ate, categoria } = req.query
   if (!ate) return res.status(400).json({ erro: 'ate é obrigatório (YYYY-MM-DD)' })
 
   const isGlobal = req.usuario.role === 'admin' || req.usuario.acesso_financeiro_global
@@ -396,13 +396,19 @@ router.get('/saldo-acumulado', autenticar, apenasFinanceiro, (req, res) => {
   const cf = congId ? 'AND (l.congregacao_id = ? OR l.congregacao_id IS NULL)' : ''
   const cp = congId ? [congId] : []
 
+  const catFiltro = categoria ? categoria.trim() : ''
+  const catJoin = catFiltro ? 'LEFT JOIN categorias_financeiro c ON c.id = l.categoria_id' : ''
+  const catWhere = catFiltro ? 'AND LOWER(c.nome) LIKE ?' : ''
+  const catParam = catFiltro ? [`%${catFiltro.toLowerCase()}%`] : []
+
   const row = db.get(`
     SELECT
       COALESCE(SUM(CASE WHEN l.tipo='entrada' THEN l.valor ELSE 0 END), 0) AS entradas,
       COALESCE(SUM(CASE WHEN l.tipo='saida'   THEN l.valor ELSE 0 END), 0) AS saidas
     FROM lancamentos_financeiro l
-    WHERE substr(l.data,7,4)||'-'||substr(l.data,4,2)||'-'||substr(l.data,1,2) < ? ${cf}
-  `, ate, ...cp)
+    ${catJoin}
+    WHERE substr(l.data,7,4)||'-'||substr(l.data,4,2)||'-'||substr(l.data,1,2) < ? ${cf} ${catWhere}
+  `, ate, ...cp, ...catParam)
 
   const entradas = row?.entradas || 0
   const saidas   = row?.saidas   || 0
