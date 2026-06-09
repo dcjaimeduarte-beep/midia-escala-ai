@@ -7418,10 +7418,12 @@
     }
 
     function _setFinDashFiltroCategoria(val) {
-      finDashFiltroCategoria = val.trim().toLowerCase()
+      finDashFiltroCategoria = val
       const el = document.getElementById('fin-dashboard')
       if (!el || !finDashboardData) return
       el.innerHTML = _renderDashboard(finDashboardData, finSaldoAntData)
+      const inp = el.querySelector('input[type="search"]')
+      if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length) }
     }
 
     function _renderDashboard(rows, saldoAnt = null) {
@@ -7430,8 +7432,9 @@
 
       // Aplica filtro de categoria client-side
       const filtro = finDashFiltroCategoria
-      const rowsFiltrados = filtro
-        ? rows.filter(l => (l.categoria_nome || '').toLowerCase().includes(filtro))
+      const filtroNorm = filtro.trim().toLowerCase()
+      const rowsFiltrados = filtroNorm
+        ? rows.filter(l => (l.categoria_nome || '').toLowerCase().includes(filtroNorm))
         : rows
 
       const porData = {}
@@ -7468,7 +7471,7 @@
         ? (_congSel ? [..._congSel.options].find(o => o.value === finCongFiltro)?.text : null) || usuario?.congregacao?.nome
         : (usuario?.role !== 'admin' ? usuario?.congregacao?.nome : null)
 
-      const totalLabel = filtro
+      const totalLabel = filtroNorm
         ? `${rowsFiltrados.length} de ${rows.length} lançamento${rows.length !== 1 ? 's' : ''} (filtrado)`
         : `${rows.length} lançamento${rows.length !== 1 ? 's' : ''} no período`
 
@@ -7485,8 +7488,8 @@
   </div>
   ${(usuario?.role === 'admin' || !!usuario?.ver_totais_financeiro) ? `<div class="fin-resumo-grid">
     ${saldoAnt !== null ? `<div class="fin-stat-card"><div class="fin-stat-label">Saldo Anterior${tagPrev}</div><div class="fin-stat-valor ${saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'}">${_fmtVal(saldoAnt.saldo)}</div></div>` : ''}
-    <div class="fin-stat-card"><div class="fin-stat-label">Entradas${tagMes}${filtro ? `<span style="font-size:0.65rem;color:var(--primaria);margin-left:0.3rem">${esc(filtro)}</span>` : ''}</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(entMes)}</div></div>
-    <div class="fin-stat-card"><div class="fin-stat-label">Saídas${tagMes}${filtro ? `<span style="font-size:0.65rem;color:var(--primaria);margin-left:0.3rem">${esc(filtro)}</span>` : ''}</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(saiMes)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Entradas${tagMes}${filtroNorm ? `<span style="font-size:0.65rem;color:var(--primaria);margin-left:0.3rem">${esc(filtro)}</span>` : ''}</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(entMes)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Saídas${tagMes}${filtroNorm ? `<span style="font-size:0.65rem;color:var(--primaria);margin-left:0.3rem">${esc(filtro)}</span>` : ''}</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(saiMes)}</div></div>
     <div class="fin-stat-card"><div class="fin-stat-label">${saldoAnt !== null ? 'Saldo Final' : 'Saldo'}${tagMes}</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(saldoFinal)}</div></div>
   </div>` : ''}`
 
@@ -7794,10 +7797,12 @@
     }
 
     function _setFinRelFiltroCategoria(val) {
-      finRelFiltroCategoria = val.trim().toLowerCase()
+      finRelFiltroCategoria = val
       const el = document.getElementById('fin-relatorio')
       if (!el || !finRelatorioData) return
       el.innerHTML = _renderRelatorio(finRelatorioData, finSaldoAntData)
+      const inp = el.querySelector('input[type="search"]')
+      if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length) }
     }
 
     async function carregarFinRelatorio() {
@@ -7838,22 +7843,23 @@
 
     function _renderRelatorio(data, saldoAnt = null) {
       const filtrocat = finRelFiltroCategoria
+      const filtrocatNorm = filtrocat.trim().toLowerCase()
       const mes = data.mes
       const por_data = data.por_data
 
       // Aplica filtro de categoria (parcial, case-insensitive)
-      const lancamentos = filtrocat
-        ? data.lancamentos.filter(l => (l.categoria_nome || '').toLowerCase().includes(filtrocat))
+      const lancamentos = filtrocatNorm
+        ? data.lancamentos.filter(l => (l.categoria_nome || '').toLowerCase().includes(filtrocatNorm))
         : data.lancamentos
 
       // Recalcula totais e por_categoria com base nos lançamentos filtrados
-      const totais = filtrocat ? (() => {
+      const totais = filtrocatNorm ? (() => {
         const ent = lancamentos.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
         const sai = lancamentos.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
         return { entradas: ent, saidas: sai, saldo: ent - sai }
       })() : data.totais
 
-      const por_categoria = filtrocat ? (() => {
+      const por_categoria = filtrocatNorm ? (() => {
         const map = {}
         for (const l of lancamentos) {
           if (!map[l.categoria_id]) map[l.categoria_id] = { nome: l.categoria_nome, tipo: l.categoria_tipo, total: 0 }
@@ -7877,8 +7883,8 @@
   <div style="margin-bottom:0.75rem;position:relative">
     <input type="search" placeholder="🔍 Filtrar por categoria…" value="${esc(finRelFiltroCategoria)}"
       oninput="_setFinRelFiltroCategoria(this.value)"
-      style="width:100%;padding:0.35rem 0.7rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid ${filtrocat ? 'var(--primaria)' : 'var(--borda)'};color:var(--texto);font-size:0.82rem;box-sizing:border-box"/>
-    ${filtrocat ? `<span style="font-size:0.72rem;color:var(--primaria);margin-top:0.25rem;display:block">Exibindo apenas categorias com "${esc(finRelFiltroCategoria)}" — ${lancamentos.length} lançamento${lancamentos.length !== 1 ? 's' : ''}</span>` : ''}
+      style="width:100%;padding:0.35rem 0.7rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid ${filtrocatNorm ? 'var(--primaria)' : 'var(--borda)'};color:var(--texto);font-size:0.82rem;box-sizing:border-box"/>
+    ${filtrocatNorm ? `<span style="font-size:0.72rem;color:var(--primaria);margin-top:0.25rem;display:block">Exibindo apenas categorias com "${esc(filtrocat)}" — ${lancamentos.length} lançamento${lancamentos.length !== 1 ? 's' : ''}</span>` : ''}
   </div>
   <div class="fin-resumo-grid">
     ${saldoAnt !== null ? `<div class="fin-stat-card"><div class="fin-stat-label">Saldo Anterior${_fmtMesPrevTag(mes)}</div><div class="fin-stat-valor ${saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'}">${_fmtVal(saldoAnt.saldo)}</div></div>` : ''}
