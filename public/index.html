@@ -6788,6 +6788,8 @@
     let finUsarSaldoAnterior = localStorage.getItem('fin_saldo_anterior') !== 'false'
     let finSaldoAntData = null
     let finRelFiltroCategoria = ''
+    let finDashFiltroCategoria = ''
+    let finDashboardData = null
     let finImprimirOrigem = 'lancamentos'
     let finCongFiltro = null   // null = todas (admin); string = id da congregação
     let finPeriodo = { inicio: '', fim: '' }  // YYYY-MM-DD
@@ -7385,6 +7387,8 @@
       const mes = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`
       try {
         const rows = await api('GET', `/financeiro/lancamentos?${_finApiParams()}`)
+        finDashboardData = rows
+        finDashFiltroCategoria = ''
         finSaldoAntData = null
         if (finUsarSaldoAnterior) {
           try { finSaldoAntData = await _fetchSaldoAnt(mes) } catch(e) {}
@@ -7401,6 +7405,8 @@
       el.innerHTML = '<p class="carregando">Carregando…</p>'
       try {
         const rows = await api('GET', `/financeiro/lancamentos?${_finApiParams()}`)
+        finDashboardData = rows
+        finDashFiltroCategoria = ''
         finSaldoAntData = null
         if (finUsarSaldoAnterior) {
           try { finSaldoAntData = await _fetchSaldoAnt(mes) } catch(e) {}
@@ -7411,12 +7417,25 @@
       }
     }
 
+    function _setFinDashFiltroCategoria(val) {
+      finDashFiltroCategoria = val.trim().toLowerCase()
+      const el = document.getElementById('fin-dashboard')
+      if (!el || !finDashboardData) return
+      el.innerHTML = _renderDashboard(finDashboardData, finSaldoAntData)
+    }
+
     function _renderDashboard(rows, saldoAnt = null) {
       const hoje = _dataHoje()
       const isoHoje = _ddmmToISO(hoje)
 
+      // Aplica filtro de categoria client-side
+      const filtro = finDashFiltroCategoria
+      const rowsFiltrados = filtro
+        ? rows.filter(l => (l.categoria_nome || '').toLowerCase().includes(filtro))
+        : rows
+
       const porData = {}
-      for (const l of rows) {
+      for (const l of rowsFiltrados) {
         if (!porData[l.data]) porData[l.data] = []
         porData[l.data].push(l)
       }
@@ -7431,8 +7450,8 @@
       passados.sort((a, b) => _ddmmToISO(b.data).localeCompare(_ddmmToISO(a.data)))
       futuros.sort((a, b) => _ddmmToISO(a.data).localeCompare(_ddmmToISO(b.data)))
 
-      const entMes = rows.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
-      const saiMes = rows.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
+      const entMes = rowsFiltrados.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0)
+      const saiMes = rowsFiltrados.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0)
       const saldoMes = entMes - saiMes
       const saldoFinal = saldoAnt !== null ? saldoAnt.saldo + saldoMes : saldoMes
       const saldoCls = saldoFinal >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'
@@ -7449,13 +7468,25 @@
         ? (_congSel ? [..._congSel.options].find(o => o.value === finCongFiltro)?.text : null) || usuario?.congregacao?.nome
         : (usuario?.role !== 'admin' ? usuario?.congregacao?.nome : null)
 
-      let html = `<div style="font-size:0.8rem;color:var(--texto-mutado);margin-bottom:0.75rem">
-    ${nomeCong ? `<span style="color:var(--texto);font-weight:600">⛪ ${esc(nomeCong)}</span> · ` : ''}${rows.length} lançamento${rows.length !== 1 ? 's' : ''} no período
+      const totalLabel = filtro
+        ? `${rowsFiltrados.length} de ${rows.length} lançamento${rows.length !== 1 ? 's' : ''} (filtrado)`
+        : `${rows.length} lançamento${rows.length !== 1 ? 's' : ''} no período`
+
+      let html = `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem">
+    <span style="font-size:0.8rem;color:var(--texto-mutado)">
+      ${nomeCong ? `<span style="color:var(--texto);font-weight:600">⛪ ${esc(nomeCong)}</span> · ` : ''}${totalLabel}
+    </span>
+    <div style="position:relative">
+      <span style="position:absolute;left:0.55rem;top:50%;transform:translateY(-50%);font-size:0.78rem;color:var(--texto-mutado);pointer-events:none">🔍</span>
+      <input type="search" placeholder="Filtrar por categoria…" value="${esc(filtro)}"
+        oninput="_setFinDashFiltroCategoria(this.value)"
+        style="padding:0.28rem 0.6rem 0.28rem 1.8rem;border-radius:var(--raio);background:var(--fundo-elevado);border:1px solid var(--borda);color:var(--texto);font-size:0.78rem;width:200px" />
+    </div>
   </div>
   ${(usuario?.role === 'admin' || !!usuario?.ver_totais_financeiro) ? `<div class="fin-resumo-grid">
     ${saldoAnt !== null ? `<div class="fin-stat-card"><div class="fin-stat-label">Saldo Anterior${tagPrev}</div><div class="fin-stat-valor ${saldoAnt.saldo >= 0 ? 'fin-stat-saldo-pos' : 'fin-stat-saldo-neg'}">${_fmtVal(saldoAnt.saldo)}</div></div>` : ''}
-    <div class="fin-stat-card"><div class="fin-stat-label">Entradas${tagMes}</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(entMes)}</div></div>
-    <div class="fin-stat-card"><div class="fin-stat-label">Saídas${tagMes}</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(saiMes)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Entradas${tagMes}${filtro ? `<span style="font-size:0.65rem;color:var(--primaria);margin-left:0.3rem">${esc(filtro)}</span>` : ''}</div><div class="fin-stat-valor fin-stat-entrada">${_fmtVal(entMes)}</div></div>
+    <div class="fin-stat-card"><div class="fin-stat-label">Saídas${tagMes}${filtro ? `<span style="font-size:0.65rem;color:var(--primaria);margin-left:0.3rem">${esc(filtro)}</span>` : ''}</div><div class="fin-stat-valor fin-stat-saida">${_fmtVal(saiMes)}</div></div>
     <div class="fin-stat-card"><div class="fin-stat-label">${saldoAnt !== null ? 'Saldo Final' : 'Saldo'}${tagMes}</div><div class="fin-stat-valor ${saldoCls}">${_fmtVal(saldoFinal)}</div></div>
   </div>` : ''}`
 
